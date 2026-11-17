@@ -1,0 +1,2301 @@
+{
+  "prompts": [
+    {
+      "arguments": [],
+      "description": "What needs a decision from you today, from your work, notifications and the planning exceptions.",
+      "name": "morning-briefing",
+      "title": "Morning briefing"
+    },
+    {
+      "arguments": [
+        {
+          "description": "Only this project; every open project when empty.",
+          "name": "project_number",
+          "required": false
+        }
+      ],
+      "description": "Open bought demands without coverage, grouped by supplier, with an offer to draft the purchase orders.",
+      "name": "procurement-review",
+      "title": "Procurement review"
+    },
+    {
+      "arguments": [
+        {
+          "description": "The project number, such as P-24017.",
+          "name": "project_number",
+          "required": true
+        }
+      ],
+      "description": "A status report of one project, ready to paste into an e-mail.",
+      "name": "project-report",
+      "title": "Project report"
+    },
+    {
+      "arguments": [],
+      "description": "The production KPIs of last week compared with the week before.",
+      "name": "weekly-kpis",
+      "title": "Weekly KPIs"
+    },
+    {
+      "arguments": [
+        {
+          "description": "The number of the production lot.",
+          "name": "lot_number",
+          "required": true
+        }
+      ],
+      "description": "Walks a late production lot back to the cause of its delay.",
+      "name": "why-late",
+      "title": "Why is this lot late?"
+    }
+  ],
+  "resources": [
+    {
+      "argument": "number",
+      "description": "One production lot by its lot number, with its positions, demands, planning exceptions and latest timeline events, as explain_lot returns it.",
+      "name": "lot",
+      "title": "Production lot",
+      "tool": "explain_lot",
+      "uriTemplate": "glados://lot/{number}"
+    }
+  ],
+  "tools": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Saved calculation"
+      },
+      "description": "One saved calculation of an engineering tool (such as drive sizing or safety distance), by its document number or public id: the tool, title and note, whether it is personal or belongs to a project or product, the device it is about, its revision and release state, and its inputs and results. The results are the snapshot the tool computed in the browser when the calculation was saved, with the input and engine versions that produced them; Glados does not compute them again, so a tool changed since may now give other results. Another user's personal calculation is not found. Find the calculations of a project or product with controlled_documents.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "document_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The document number, exactly as Glados shows it, as controlled_documents lists it.",
+            "title": "Document Number"
+          },
+          "include_inputs": {
+            "default": true,
+            "description": "Include the inputs the calculation was made from.",
+            "title": "Include Inputs",
+            "type": "boolean"
+          },
+          "include_results": {
+            "default": true,
+            "description": "Include the saved results of the calculation.",
+            "title": "Include Results",
+            "type": "boolean"
+          },
+          "public_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The document's public id, as search or controlled_documents return it.",
+            "title": "Public Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The revision to read, such as A or B. Without one, the latest revision is read, which may be a draft; the result lists every revision.",
+            "title": "Revision"
+          }
+        },
+        "title": "CalculationInput",
+        "type": "object"
+      },
+      "name": "calculation",
+      "title": "Saved calculation",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Compare offers"
+      },
+      "description": "The offers of one quote request side by side: per line the item, quantity, state and award, and every supplier's answer for it with lead time, minimum quantity, no offer or an alternative item; per supplier when it was asked and answered and how many lines it priced. Prices appear only where the administrator lets agents see costs. Without a request number it lists the open quote requests.",
+      "inputSchema": {
+        "$defs": {
+          "QuoteRequestStatus": {
+            "description": "DRAFT until a supplier was sent the request, SENT while lines wait for\nan award, AWARDED once every line is awarded or dropped and one was\nawarded, CLOSED once someone closed it or dropped every line, CANCELED\nonce someone canceled it.",
+            "enum": [
+              "draft",
+              "sent",
+              "awarded",
+              "closed",
+              "canceled"
+            ],
+            "title": "QuoteRequestStatus",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "The most quote requests to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "request_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The quote request number. Without it the tool lists the quote requests so you can pick one.",
+            "title": "Request Number"
+          },
+          "statuses": {
+            "description": "When listing, only requests in one of these statuses.",
+            "items": {
+              "$ref": "#/$defs/QuoteRequestStatus"
+            },
+            "title": "Statuses",
+            "type": "array"
+          }
+        },
+        "title": "CompareOffersInput",
+        "type": "object"
+      },
+      "name": "compare_offers",
+      "title": "Compare offers",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Controlled documents"
+      },
+      "description": "The checklists, calculations and sequences of a project or product, newest change first, each with document number, revision, whether it is released, superseded or marked invalid, and who holds its edit lock. Checklists add their verdict and progress. Another user's personal documents stay hidden.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "all_revisions": {
+            "default": false,
+            "description": "Also earlier revisions, not only the latest revision of each document.",
+            "title": "All Revisions",
+            "type": "boolean"
+          },
+          "include_product_projects": {
+            "default": false,
+            "description": "With product_id, also the checklists and calculations of the product's projects.",
+            "title": "Include Product Projects",
+            "type": "boolean"
+          },
+          "kinds": {
+            "description": "Which kinds of document to list. Sequences belong to a product only, so they are left out when project_id is given.",
+            "items": {
+              "enum": [
+                "checklists",
+                "calculations",
+                "sequences"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Kinds",
+            "type": "array"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most documents per kind; each kind's total says how many exist.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only the documents of this product, by its id (find it with search).",
+            "title": "Product Id"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only the documents of this project, by its id (find it with search).",
+            "title": "Project Id"
+          },
+          "released": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "True for released documents only, false for unreleased ones, empty for both.",
+            "title": "Released"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Part of the title, name or document number.",
+            "title": "Search"
+          }
+        },
+        "title": "ControlledDocumentsInput",
+        "type": "object"
+      },
+      "name": "controlled_documents",
+      "title": "Controlled documents",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Demand coverage"
+      },
+      "description": "How the demands of a project, or of a bought or made part, are covered: for each bought item demand, made item demand and raw material demand its status, the quantity allocated, ordered, delivered and taken from stock, what remains and is still unallocated, and the orders or lots covering it. Earliest desired date first. Use it to check whether a project's parts will arrive or what still needs ordering.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "families": {
+            "description": "The demand families to read: bought items, made items and raw material (source) for lots.",
+            "items": {
+              "enum": [
+                "bought",
+                "made",
+                "source"
+              ],
+              "type": "string"
+            },
+            "title": "Families",
+            "type": "array"
+          },
+          "include_finished": {
+            "default": false,
+            "description": "Also list the fulfilled and canceled demands.",
+            "title": "Include Finished",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most demands per family to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "part_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The part number of a bought or made item, matched as text it contains. Raw material demands have no part number and are left out when only this is given.",
+            "title": "Part Number"
+          },
+          "project_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The project number. Matches every project number that contains this text, as the demand lists do; each row names its project.",
+            "title": "Project Number"
+          }
+        },
+        "title": "DemandCoverageInput",
+        "type": "object"
+      },
+      "name": "demand_coverage",
+      "title": "Demand coverage",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Draft meeting notes"
+      },
+      "description": "Submits notes of a meeting, read from what the user gave you such as handwritten notes or a photo, as a draft for the user to review in Glados. It adds to an existing meeting of the project or product (meeting_number) or proposes a new one. Write people exactly as the notes name them; the user matches them to users and contacts. Put what you could not read or had to guess into review_note rather than the text. Nothing changes and nobody is notified until the user applies the draft.",
+      "inputSchema": {
+        "$defs": {
+          "DraftAttendeeArg": {
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "anyOf": [
+                  {
+                    "maxLength": 320,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Only if the notes carry the address.",
+                "title": "Email"
+              },
+              "name": {
+                "description": "The person exactly as the notes name them, with the company if the notes give it, such as 'Hans M. (Müller GmbH)'. Never guess a full name.",
+                "maxLength": 200,
+                "minLength": 1,
+                "title": "Name",
+                "type": "string"
+              },
+              "status": {
+                "$ref": "#/$defs/MeetingAttendanceStatus",
+                "default": "present",
+                "description": "present, excused, or distribution_only for someone who only gets the notes."
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "title": "DraftAttendeeArg",
+            "type": "object"
+          },
+          "DraftCardArg": {
+            "additionalProperties": false,
+            "properties": {
+              "body": {
+                "default": "",
+                "description": "What was said, in Markdown: paragraphs, ### headings, **bold**, *italic*, - and 1. lists two levels deep, links. Other syntax shows as plain text. Keep the language of the notes.",
+                "maxLength": 100000,
+                "title": "Body",
+                "type": "string"
+              },
+              "decisions": {
+                "description": "What was decided, one per entry.",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "title": "Decisions",
+                "type": "array"
+              },
+              "internal": {
+                "default": false,
+                "description": "True for points that must not go to people outside.",
+                "title": "Internal",
+                "type": "boolean"
+              },
+              "review_note": {
+                "anyOf": [
+                  {
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "For the reviewer only, never written to the meeting: what you could not read or had to guess on this card.",
+                "title": "Review Note"
+              },
+              "scope": {
+                "anyOf": [
+                  {
+                    "maxLength": 80,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "The topic of the card, a few words, such as 'Electrical cabinet'.",
+                "title": "Scope"
+              },
+              "scope_icon": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/MeetingScopeIcon"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "The icon that fits the topic, if one does."
+              },
+              "todos": {
+                "description": "What is to be done, by whom and when.",
+                "items": {
+                  "$ref": "#/$defs/DraftTodoArg"
+                },
+                "maxItems": 50,
+                "title": "Todos",
+                "type": "array"
+              }
+            },
+            "title": "DraftCardArg",
+            "type": "object"
+          },
+          "DraftTodoArg": {
+            "additionalProperties": false,
+            "properties": {
+              "due_date": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Only if the notes give a date.",
+                "title": "Due Date"
+              },
+              "note": {
+                "anyOf": [
+                  {
+                    "maxLength": 4000,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Details, if any.",
+                "title": "Note"
+              },
+              "owners": {
+                "description": "Who does it, each exactly as the notes name them.",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "title": "Owners",
+                "type": "array"
+              },
+              "title": {
+                "description": "What is to be done.",
+                "maxLength": 300,
+                "minLength": 1,
+                "title": "Title",
+                "type": "string"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "title": "DraftTodoArg",
+            "type": "object"
+          },
+          "MeetingAttendanceStatus": {
+            "description": "Present and excused attend or miss the meeting; distribution only\nreceives the minutes without attending.",
+            "enum": [
+              "present",
+              "excused",
+              "distribution_only"
+            ],
+            "title": "MeetingAttendanceStatus",
+            "type": "string"
+          },
+          "MeetingScopeIcon": {
+            "description": "The fixed set of icons a card's scope can show. The frontend maps\neach identifier to its glyph.",
+            "enum": [
+              "topic",
+              "schedule",
+              "decision",
+              "mechanics",
+              "electrical",
+              "software",
+              "commercial",
+              "logistics",
+              "quality",
+              "safety",
+              "site",
+              "risk"
+            ],
+            "title": "MeetingScopeIcon",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "attendees": {
+            "description": "Who attended, was excused or only gets the notes, as the notes list them.",
+            "items": {
+              "$ref": "#/$defs/DraftAttendeeArg"
+            },
+            "maxItems": 100,
+            "title": "Attendees",
+            "type": "array"
+          },
+          "cards": {
+            "description": "The notes, one card per topic, in order.",
+            "items": {
+              "$ref": "#/$defs/DraftCardArg"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Cards",
+            "type": "array"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Any unique string for this one action. Repeating the call with the same key returns the records the first call created instead of creating them again.",
+            "title": "Idempotency Key"
+          },
+          "meeting_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The meeting of the project or product to add the notes to, as the meetings tool shows it. Leave it out to propose a new meeting and give new_meeting_name, new_meeting_starts_at and new_meeting_ends_at.",
+            "title": "Meeting Number"
+          },
+          "new_meeting_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "With its time zone. Without it the meeting ends as it starts.",
+            "title": "New Meeting Ends At"
+          },
+          "new_meeting_location": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Where the new meeting took place.",
+            "title": "New Meeting Location"
+          },
+          "new_meeting_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The new meeting's title.",
+            "title": "New Meeting Name"
+          },
+          "new_meeting_starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "With its time zone, such as 2026-11-10T09:00:00+01:00.",
+            "title": "New Meeting Starts At"
+          },
+          "new_meeting_tags": {
+            "description": "Short labels, only if the user asks.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "New Meeting Tags",
+            "type": "array"
+          },
+          "next_meeting_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The next meeting's day, if the notes agree one.",
+            "title": "Next Meeting Date"
+          },
+          "next_meeting_location": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Where the next meeting takes place.",
+            "title": "Next Meeting Location"
+          },
+          "next_meeting_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Its local start time, only with next_meeting_date.",
+            "title": "Next Meeting Time"
+          },
+          "product_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The product's number.",
+            "title": "Product Number"
+          },
+          "project_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The project's number.",
+            "title": "Project Number"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For the reviewer only: anything about the notes as a whole.",
+            "title": "Review Note"
+          }
+        },
+        "required": [
+          "cards"
+        ],
+        "title": "DraftMeetingNotesInput",
+        "type": "object"
+      },
+      "name": "draft_meeting_notes",
+      "title": "Draft meeting notes",
+      "x-glados-kind": "draft",
+      "x-glados-requires": [
+        "write:meetings"
+      ]
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Draft a production lot"
+      },
+      "description": "Creates a DRAFT production lot for open made item demands of one made item and one project, built from the made item's routing and linked to the demands. The lot waits for a person: they review it in Glados, assign its positions and plan it there. As for a lot created in the web app, inspection steps of the routing queue their inspection orders right away, and the result then names the status.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Any unique string for this one action. Repeating the call with the same key returns the records the first call created instead of creating them again.",
+            "title": "Idempotency Key"
+          },
+          "made_demand_ids": {
+            "description": "Made item demands the lot covers, all of one made item and one project; draft one lot per made item and project. Integer demand ids as the demand read tools show them. Only demands that are neither fulfilled nor canceled and still lack pieces are accepted.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Made Demand Ids",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "An optional note on the lot.",
+            "title": "Note"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The pieces the lot makes. Leave it out to make exactly what the demands still lack; a larger number makes spare pieces.",
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "made_demand_ids"
+        ],
+        "title": "DraftProductionLotInput",
+        "type": "object"
+      },
+      "name": "draft_production_lot",
+      "title": "Draft a production lot",
+      "x-glados-kind": "draft",
+      "x-glados-requires": [
+        "write:lots"
+      ]
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Draft a purchase order"
+      },
+      "description": "Creates a DRAFT purchase order for one supplier with lines for open bought item and source item demands. Each demand gets the share it still lacks, and demands of one item, unit and project share one line. The order stays a draft: a person reviews it in Glados and places it there; nothing is ordered or sent to the supplier. Each line is added on its own, so if one is refused the result says so and lists the draft with the lines that were added.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bought_demand_ids": {
+            "description": "Bought item demands to cover. Integer demand ids as the demand read tools show them. Only demands that are neither fulfilled nor canceled and still lack pieces are accepted.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Bought Demand Ids",
+            "type": "array"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Any unique string for this one action. Repeating the call with the same key returns the records the first call created instead of creating them again.",
+            "title": "Idempotency Key"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "An optional note on the order for the buyer.",
+            "title": "Note"
+          },
+          "source_demand_ids": {
+            "description": "Source item (raw material) demands to cover. Integer demand ids as the demand read tools show them. Only demands that are neither fulfilled nor canceled and still lack pieces are accepted.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Source Demand Ids",
+            "type": "array"
+          },
+          "supplier_id": {
+            "description": "The id of the supplier the order is for, as the read tools show it.",
+            "exclusiveMinimum": 0,
+            "title": "Supplier Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "supplier_id"
+        ],
+        "title": "DraftPurchaseOrderInput",
+        "type": "object"
+      },
+      "name": "draft_purchase_order",
+      "title": "Draft a purchase order",
+      "x-glados-kind": "draft",
+      "x-glados-requires": [
+        "write:orders"
+      ]
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "title": "Draft a quote request"
+      },
+      "description": "Creates a DRAFT quote request that asks the given suppliers for an offer on open bought item and source item demands, one line per item, unit and project. A demand share reserves nothing. The request stays a draft: a person reviews it in Glados and sends it to the suppliers there; nothing is sent.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bought_demand_ids": {
+            "description": "Bought item demands to cover. Integer demand ids as the demand read tools show them. Only demands that are neither fulfilled nor canceled and still lack pieces are accepted.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Bought Demand Ids",
+            "type": "array"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The day by which the suppliers should answer, if any.",
+            "title": "Deadline"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Any unique string for this one action. Repeating the call with the same key returns the records the first call created instead of creating them again.",
+            "title": "Idempotency Key"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "An optional note on the request.",
+            "title": "Note"
+          },
+          "source_demand_ids": {
+            "description": "Source item (raw material) demands to cover. Integer demand ids as the demand read tools show them. Only demands that are neither fulfilled nor canceled and still lack pieces are accepted.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Source Demand Ids",
+            "type": "array"
+          },
+          "supplier_ids": {
+            "description": "The ids of the suppliers to ask for an offer, as the read tools show them.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Supplier Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "supplier_ids"
+        ],
+        "title": "DraftQuoteRequestInput",
+        "type": "object"
+      },
+      "name": "draft_quote_request",
+      "title": "Draft a quote request",
+      "x-glados-kind": "draft",
+      "x-glados-requires": [
+        "write:orders"
+      ]
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "EPLAN Data Portal lookup"
+      },
+      "description": "Looks a part up in the EPLAN Data Portal, the external catalogue of manufacturer parts. Each hit carries the portal part, the bought-item values it would fill (article name, order codes, EAN, manufacturer, product family) and the Glados bought item that already describes it, if any. It calls an external service, so ask for few hits and do not repeat a call that answered. Fails when the Data Portal is switched off.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "The most portal parts to return.",
+            "maximum": 10,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "manufacturer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only with mode 'match': the Glados id of the manufacturer, which narrows several makers sharing the number to that one. Find it with the suppliers tool.",
+            "title": "Manufacturer Id"
+          },
+          "mode": {
+            "default": "match",
+            "description": "'match' returns only the parts the number names exactly. 'search' returns the portal's ranked hits for a number or a name. Prefer 'match' when you have a number.",
+            "enum": [
+              "match",
+              "search"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "query": {
+            "description": "With mode 'match', an order number, type number or EPLAN part number. With mode 'search', a number or words of a part's name, such as 'DSNU-25' or 'round cylinder'.",
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "EdpLookupInput",
+        "type": "object"
+      },
+      "name": "edp_lookup",
+      "title": "EPLAN Data Portal lookup",
+      "x-glados-kind": "read",
+      "x-glados-requires": [
+        "use:data_portal"
+      ]
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Explain a lifecycle"
+      },
+      "description": "How a status in Glados comes about: one lifecycle's states, the rules that derive its status, the actions people can take with their permissions, and the transitions with what they cause elsewhere. Without a name, lists the lifecycles.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The key of one lifecycle, such as lot_status, or its entity, such as Lot. Leave it empty to list every lifecycle with its key and what it covers.",
+            "title": "Name"
+          }
+        },
+        "title": "ExplainLifecycleInput",
+        "type": "object"
+      },
+      "name": "explain_lifecycle",
+      "title": "Explain a lifecycle",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Explain a lot"
+      },
+      "description": "Everything that explains one production lot, found by its lot number: its status, target date, material source and approval, positions with their production orders and supplier lines, the made demands it serves, where its pieces went, the raw material received for it, its planning exceptions and its latest timeline events. Use it to answer why a lot is late, unplanned, on hold or short. A lot without an approved material source waits for one by design.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "events_limit": {
+            "default": 30,
+            "description": "The most timeline events, the latest ones to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Events Limit",
+            "type": "integer"
+          },
+          "number": {
+            "description": "The lot number, such as the one on its label.",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number"
+        ],
+        "title": "ExplainLotInput",
+        "type": "object"
+      },
+      "name": "explain_lot",
+      "title": "Explain a lot",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Catalogue item"
+      },
+      "description": "Looks up a made or bought catalogue item by its part number. A made item comes with its routing (processes in order, with fabrication or inspection method and estimated minutes), its raw material and the list of all its revisions, newest first. A bought item comes with its manufacturer, order codes and status. Use it whenever a part number appears and you need to know what the part is.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "part_number": {
+            "description": "The part number of a made or bought item, exactly as Glados shows it.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Part Number",
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "A made item's revision, such as 'B'. Leave it out to get the newest revision. Bought items have no revisions and ignore it.",
+            "title": "Revision"
+          }
+        },
+        "required": [
+          "part_number"
+        ],
+        "title": "ItemInput",
+        "type": "object"
+      },
+      "name": "item",
+      "title": "Catalogue item",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Planning exceptions"
+      },
+      "description": "The shortfalls and delays a planner must decide on, computed live: demands open again after lost pieces or a close short, made demands left short by a force completed lot, live lots short of raw material and live lots late against their target date. Sorted by kind, then the earliest target or oldest cause. Use explain_lot on a lot number for the reasons behind one row.",
+      "inputSchema": {
+        "$defs": {
+          "PlanningExceptionKind": {
+            "description": "LOST_AT_RECEIPT and CLOSED_SHORT: a bought or raw material demand has\na rest open again because its order line lost pieces or was closed\nshort. LOT_ENDED_SHORT: a made demand's lot was force-completed below\nwhat the demand needs. MATERIAL_SHORT: a live lot's raw material is\npartly unallocated or waits on a line without a delivery date, so its\nfirst step cannot be planned in full. LATE: a live lot is past its\ntarget date or planned to end after it.",
+            "enum": [
+              "lost_at_receipt",
+              "closed_short",
+              "lot_ended_short",
+              "material_short",
+              "late"
+            ],
+            "title": "PlanningExceptionKind",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PlanningExceptionKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this kind. lost_at_receipt and closed_short: a bought or raw material demand is open again because its order line lost pieces or was closed short. lot_ended_short: a made demand's lot was force completed below what it needs. material_short: a live lot's raw material is partly unallocated or waits on a line without a delivery date. late: a live lot is past its target date or planned to end after it."
+          },
+          "limit": {
+            "default": 50,
+            "description": "The most rows to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "project_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only the rows of this project number, matched exactly.",
+            "title": "Project Number"
+          }
+        },
+        "title": "PlanningExceptionsInput",
+        "type": "object"
+      },
+      "name": "list_planning_exceptions",
+      "title": "Planning exceptions",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Meetings"
+      },
+      "description": "The valid meetings of a project or a product, latest start first, with number, name, times, location, tags and how many cards and open todos each has. A product's list includes the meetings of its projects. Use it to find the meeting a record of notes belongs to; it carries no notes and no attendees.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "The most meetings to return.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "product_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The product's number.",
+            "title": "Product Number"
+          },
+          "project_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The project's number.",
+            "title": "Project Number"
+          },
+          "starts_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only meetings that start on or after this day.",
+            "title": "Starts From"
+          },
+          "starts_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only meetings that start on or before this day.",
+            "title": "Starts Until"
+          }
+        },
+        "title": "MeetingsInput",
+        "type": "object"
+      },
+      "name": "meetings",
+      "title": "Meetings",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "My briefing"
+      },
+      "description": "What needs attention in planning and purchasing now: the orders, demands and lots that can give a task within the next week (the rows of the Todo page), the planning exceptions, and the status counts of lots and demands. Start here when asked what to do today or what is going wrong; follow up with the detail tools.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_lots": {
+            "default": true,
+            "description": "Include the lots, whose tasks belong to production planning.",
+            "title": "Include Lots",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 10,
+            "description": "The most rows to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "MyBriefingInput",
+        "type": "object"
+      },
+      "name": "my_briefing",
+      "title": "My briefing",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "My notifications"
+      },
+      "description": "The in-app notifications of the person you act for, newest first: fulfilled or canceled demands, canceled orders, scrapped pieces, lots that ended short, document changes and assignments. Reading them does not mark them read.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 25,
+            "description": "The most notifications to return.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "unread_only": {
+            "default": true,
+            "description": "Only the notifications not read yet.",
+            "title": "Unread Only",
+            "type": "boolean"
+          }
+        },
+        "title": "MyNotificationsInput",
+        "type": "object"
+      },
+      "name": "my_notifications",
+      "title": "My notifications",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Supplier orders"
+      },
+      "description": "Supplier purchase orders with their lines: status, supplier, ordered and expected delivery dates, and per line the item, quantities ordered and delivered, the expected delivery and whether it is overdue. Filter by order number, status or free text, or ask for overdue deliveries only. Newest orders first.",
+      "inputSchema": {
+        "$defs": {
+          "OrderStatus": {
+            "description": "Status of an Order.",
+            "enum": [
+              "draft",
+              "requested",
+              "partially_ordered",
+              "ordered",
+              "partially_delivered",
+              "delivered",
+              "canceled"
+            ],
+            "title": "OrderStatus",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "The most orders to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "open_lines_only": {
+            "default": true,
+            "description": "List only the lines not yet delivered or canceled under each order.",
+            "title": "Open Lines Only",
+            "type": "boolean"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only orders whose number contains this text.",
+            "title": "Order Number"
+          },
+          "overdue_only": {
+            "default": false,
+            "description": "Only orders with an open line whose expected delivery date has passed, the longest overdue first.",
+            "title": "Overdue Only",
+            "type": "boolean"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Free text, matched as the search box of the orders list.",
+            "title": "Search"
+          },
+          "statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/OrderStatus"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only orders in one of these statuses.",
+            "title": "Statuses"
+          }
+        },
+        "title": "OrdersInput",
+        "type": "object"
+      },
+      "name": "orders",
+      "title": "Supplier orders",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Product devices"
+      },
+      "description": "The devices of a product, by its product number: each device's name, kind, driving medium, positions with travel times, initial position, parameters, components with their bought items and signals, energy behaviour, and what is still missing on it: the plans outside Glados the product needs (such as the CAD assembly or the EPLAN plan) it is not ticked as drawn in yet, and whether a released or draft flow sequence covers it. Use only_incomplete to find the devices that still need work.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_archived": {
+            "default": false,
+            "description": "Also archived devices. They have no completeness, since no plan needs them.",
+            "title": "Include Archived",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most devices to return; device_count says how many match.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "only_incomplete": {
+            "default": false,
+            "description": "Only devices that still miss a plan the product needs or are in no flow sequence.",
+            "title": "Only Incomplete",
+            "type": "boolean"
+          },
+          "product_number": {
+            "description": "The product number, exactly as Glados shows it.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Product Number",
+            "type": "string"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only devices whose name contains this text, such as Y3 or Lift.",
+            "title": "Search"
+          }
+        },
+        "required": [
+          "product_number"
+        ],
+        "title": "ProductDevicesInput",
+        "type": "object"
+      },
+      "name": "product_devices",
+      "title": "Product devices",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Product status"
+      },
+      "description": "Where a product stands, by its product number: its details, the demand counts and order count over all projects built on it, and for each live device the plans outside Glados it is ticked as drawn in (such as the CAD assembly or the EPLAN plan) and whether a released or draft flow sequence covers it.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "The most devices to return in the device completeness list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "product_number": {
+            "description": "The product number, exactly as Glados shows it.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Product Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_number"
+        ],
+        "title": "ProductStatusInput",
+        "type": "object"
+      },
+      "name": "product_status",
+      "title": "Product status",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Production KPIs"
+      },
+      "description": "Production KPIs over a period, computed live: schedule adherence, on-time delivery, throughput time, utilization, availability, first pass yield, scrap and rework, OEE, and on request the weekly trend and the tables behind them. Narrow it to a machine, a machine pool, a project or a customer.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only the projects of this customer, by its id.",
+            "title": "Customer Id"
+          },
+          "date_from": {
+            "description": "First day of the period, as YYYY-MM-DD.",
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "description": "Last day of the period, as YYYY-MM-DD, not before date_from.",
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most rows each table view returns; its total says how many exist.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this production machine. Not together with a pool.",
+            "title": "Machine Id"
+          },
+          "machine_pool_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only the machines of this pool. Not together with a machine.",
+            "title": "Machine Pool Id"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this project, by its id (find it with search).",
+            "title": "Project Id"
+          },
+          "views": {
+            "description": "Which KPI views to compute. summary holds schedule adherence, on-time delivery, throughput time, first pass yield, scrap and rework ratios, utilization, availability and OEE. weekly holds adherence and on-time delivery per ISO week. The others are tables: utilization per machine, estimate_accuracy per fabrication method, waiting_time per position kind, late_lots with the reason for each delay, quality_by_item, scrap_by_reason and rejected_per_supplier.",
+            "items": {
+              "enum": [
+                "summary",
+                "weekly",
+                "utilization",
+                "estimate_accuracy",
+                "waiting_time",
+                "late_lots",
+                "quality_by_item",
+                "scrap_by_reason",
+                "rejected_per_supplier"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "title": "ProductionKpisInput",
+        "type": "object"
+      },
+      "name": "production_kpis",
+      "title": "Production KPIs",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Project status"
+      },
+      "description": "Where a project stands, by its project number: its status, customer, product, required delivery dates and production time budget, the unfinished work it still has (lots, production orders, order lines, demands, quote requests), the status moves you could make now, and its demand counts by status and order count.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "project_number": {
+            "description": "The project number, exactly as Glados shows it.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Project Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_number"
+        ],
+        "title": "ProjectStatusInput",
+        "type": "object"
+      },
+      "name": "project_status",
+      "title": "Project status",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Product renumber impact"
+      },
+      "description": "What giving a product a new number would affect, without changing anything: how many device names change (with examples of old and new names) and how many released calculations and checklists and their exported reports still show the old number. External systems that look the product up by number are affected too, which Glados cannot count. Use it before suggesting a renumbering.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "new_number": {
+            "description": "The number the product would get.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "New Number",
+            "type": "string"
+          },
+          "product_number": {
+            "description": "The product's current number.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Product Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_number",
+          "new_number"
+        ],
+        "title": "RenumberImpactInput",
+        "type": "object"
+      },
+      "name": "renumber_impact",
+      "title": "Product renumber impact",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Report journal"
+      },
+      "description": "Where the PDF reports of a calculation, checklist or production lot went: every download and print of any revision, newest first, with revision, language, size and hash.",
+      "inputSchema": {
+        "$defs": {
+          "UploadedPrintDocument": {
+            "description": "A document the browser renders itself and uploads as a finished PDF,\nrather than one the server renders from a print template. It needs no\ntemplate; the value is stored as the job's classifier.",
+            "enum": [
+              "calculation_report",
+              "checklist_report",
+              "inspection_report",
+              "meeting_notes"
+            ],
+            "title": "UploadedPrintDocument",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/$defs/UploadedPrintDocument",
+            "description": "The kind of report: calculation_report for a calculation, checklist_report for a checklist, inspection_report for a production lot."
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most entries to return.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "root_public_id": {
+            "description": "The public id of the calculation, checklist or production lot the report is of, as search or controlled_documents return it.",
+            "format": "uuid",
+            "title": "Root Public Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document",
+          "root_public_id"
+        ],
+        "title": "ReportJournalInput",
+        "type": "object"
+      },
+      "name": "report_journal",
+      "title": "Report journal",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Schedule board"
+      },
+      "description": "The production schedule for a window of days, as the schedule board shows it: per machine and per machine pool the booked and available minutes, the overbooked days and the production orders with their planned start and end, queue position, pin and conflicts, plus the orders on no machine yet. Narrow it to one machine or pool by name. The board is computed on read and never changes the plan.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The first day of the window. Defaults to today.",
+            "title": "Date From"
+          },
+          "days": {
+            "default": 14,
+            "description": "How many days the window covers, starting at date_from.",
+            "maximum": 92,
+            "minimum": 1,
+            "title": "Days",
+            "type": "integer"
+          },
+          "include_unassigned": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include the production orders on no machine or pool yet. Defaults to true unless a machine or pool is named.",
+            "title": "Include Unassigned"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most production orders per machine or pool to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "machine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only machines whose internal name contains this text, ignoring case.",
+            "title": "Machine"
+          },
+          "pool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only machine pools whose name contains this text, ignoring case.",
+            "title": "Pool"
+          }
+        },
+        "title": "ScheduleInput",
+        "type": "object"
+      },
+      "name": "schedule",
+      "title": "Schedule board",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Search"
+      },
+      "description": "Search Glados for a number, name or word across products, projects, bought, made and source items, orders, production lots and orders, calculations and checklists. Returns the ids and public ids the other tools take, best match first, grouped by kind.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "The most hits per kind of record; each kind's total says how many match.",
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "description": "What to look for: a number (project, product, part, order, lot), a name, an order code or a word of a description.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "resources": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "products",
+                    "projects",
+                    "bought-items",
+                    "made-items",
+                    "source-items",
+                    "orders",
+                    "production-lots",
+                    "production-orders",
+                    "calculations",
+                    "checklists",
+                    "meetings",
+                    "contacts"
+                  ],
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only these kinds of record; every kind when empty.",
+            "title": "Resources"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchInput",
+        "type": "object"
+      },
+      "name": "search",
+      "title": "Search",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Flow sequence"
+      },
+      "description": "One flow sequence of a product (such as its automatic cycle or homing) step by step: each step's actions (which device moves to which position, with values per product variant, or a described action), how long each applies (stored, continuous or pulse), the transitions to the next step with their conditions, timeouts and expected times, and the devices it moves with their initial positions. Devices and positions are named, steps numbered as in Glados. A released revision shows the names frozen at its release, a draft the current ones. Read two revisions to compare them. Find the sequences of a product with controlled_documents.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "document_number": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The document number, exactly as Glados shows it, as controlled_documents lists it.",
+            "title": "Document Number"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "With product_id, the sequence's name, such as Automatic cycle or Homing.",
+            "title": "Name"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "With name, the product the sequence belongs to, by its id (find it with search).",
+            "title": "Product Id"
+          },
+          "public_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The document's public id, as search or controlled_documents return it.",
+            "title": "Public Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The revision to read, such as A or B. Without one, the latest revision is read, which may be a draft; the result lists every revision.",
+            "title": "Revision"
+          }
+        },
+        "title": "SequenceInput",
+        "type": "object"
+      },
+      "name": "sequence",
+      "title": "Flow sequence",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Shop floor now"
+      },
+      "description": "What is in production right now: every lot in work with the piece counts of each of its stages and the machines or suppliers holding them, and the open QA tasks with their inspection method and whether the required evidence is on file.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_future_qa": {
+            "default": false,
+            "description": "Also list the QA tasks that cannot be worked yet because an earlier step is open.",
+            "title": "Include Future Qa",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most rows to return per list.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ShopFloorInput",
+        "type": "object"
+      },
+      "name": "shop_floor_now",
+      "title": "Shop floor now",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Source items"
+      },
+      "description": "Searches the source items, the raw materials made items are cut from, such as a steel bar of a given dimension. Source items have no part number, so find them by material, dimension, type or order code.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_archived": {
+            "default": false,
+            "description": "Also list archived source items.",
+            "title": "Include Archived",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most source items to return.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "search": {
+            "description": "Text to find in a source item's type, dimension, material, note or order codes, such as 'S235' or '40x20'.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Search",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search"
+        ],
+        "title": "SourceItemsInput",
+        "type": "object"
+      },
+      "name": "source_items",
+      "title": "Source items",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "title": "Suppliers"
+      },
+      "description": "Searches the suppliers and manufacturers by name, legal name or VAT id, with their level, capabilities (fabrication methods) and article groups. Use it to find who can make or deliver something, or to resolve a manufacturer id.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_archived": {
+            "default": false,
+            "description": "Also list archived suppliers.",
+            "title": "Include Archived",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "description": "The most suppliers to return.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "search": {
+            "description": "Text to find in a supplier's name, legal name or VAT id.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Search",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search"
+        ],
+        "title": "SuppliersInput",
+        "type": "object"
+      },
+      "name": "suppliers",
+      "title": "Suppliers",
+      "x-glados-kind": "read",
+      "x-glados-requires": []
+    }
+  ]
+}

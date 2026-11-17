@@ -1,0 +1,32 @@
+{
+  "glados_template": "print_template",
+  "version": 1,
+  "classifier": "order_docket",
+  "paper": "a4",
+  "copies_rule": "fixed",
+  "copies_fixed": 1,
+  "max_copies": 50,
+  "field_map": {
+    "article": "item.item_article_name",
+    "company_logo": "@company_logo",
+    "delivered_by": "delivered_by_full_name",
+    "delivery_date": "delivery_date",
+    "dimension": "item.item_dimension",
+    "order_number": "order_number",
+    "ordered_date": "ordered_date",
+    "orderer": "orderer_full_name",
+    "part_no": "item.item_part_number",
+    "position": "item.position",
+    "positions": "@row_count",
+    "printed_at": "@today",
+    "product": "item.product_number",
+    "project": "item.project_number",
+    "qr_payload": "public_id",
+    "quantity": "item.quantity",
+    "row_image": "@item_image",
+    "status": "status",
+    "supplier": "supplier_name",
+    "total_items": "total_items",
+    "unit": "item.unit"
+  }
+}

@@ -1,0 +1,46 @@
+// Messages for PDF reports and their export dialog, merged into the en-GB locale.
+export default {
+  export: {
+    title: 'Export report',
+    language: 'Language',
+    download: 'Download PDF',
+    printHeading: 'Print',
+    printer: 'Printer',
+    copies: 'Copies',
+    twoSided: 'Print both sides',
+    twoSidedRaw: 'This printer is connected without IPP, so it always prints on one side.',
+    print: 'Print',
+    unsaved: 'Only a saved record can be sent to a printer. Save it first, or download the PDF and print that.',
+    noPrinters: 'No document printer is set up. Download the PDF instead.',
+    printSent: 'Sent to {printer}.',
+    printSubstituted:
+      'Sent to {printer}, but the printer did not take every setting and may print on one side only.',
+    printFailed: 'The report could not be printed.',
+    journalFailed: 'The PDF was downloaded, but the download could not be recorded in the export journal.',
+    renderFailed: 'The PDF could not be created.',
+  },
+  document: {
+    page: 'Page {page} of {pages}',
+    exportedBy: 'Exported by {name}',
+    exportedAt: 'Exported {date}',
+    copyNotice: 'Printed copy, check the QR code for the current revision',
+  },
+  distribution: {
+    title: 'Distribution',
+    empty: 'No report of this document was downloaded or printed yet.',
+    failed: 'The distribution could not be loaded.',
+    when: 'When',
+    what: 'What',
+    revision: 'Revision',
+    language: 'Language',
+    file: 'File',
+    downloaded: 'Downloaded',
+    printed: 'Printed, {copies}×',
+  },
+  classifiers: {
+    calculation_report: 'Calculation report',
+    checklist_report: 'Checklist report',
+    inspection_report: 'Inspection report',
+    meeting_notes: 'Meeting notes',
+  },
+}

@@ -1,0 +1,17 @@
+{
+  "glados_template": "print_template",
+  "version": 1,
+  "classifier": "source_item_label",
+  "copies_rule": "fixed",
+  "copies_fixed": 1,
+  "max_copies": 50,
+  "field_map": {
+    "company_name": "@company_name",
+    "dimension": "dimension",
+    "manufacturer": "manufacturer_name",
+    "material": "material",
+    "order_code": "order_code_1",
+    "source_item_uuid": "public_id",
+    "type_name": "type_name"
+  }
+}

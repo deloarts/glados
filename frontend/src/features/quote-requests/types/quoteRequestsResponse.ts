@@ -1,0 +1,15 @@
+import type { Schemas } from '@/core/api/generated'
+
+export type QuoteRequestStatus = Schemas['QuoteRequestStatus']
+export type QuoteRequestLineState = Schemas['QuoteRequestLineState']
+export type QuoteRequestResponse = Schemas['QuoteRequestResponse']
+export type QuoteRequestLineResponse = Schemas['QuoteRequestLineResponse']
+export type QuoteRequestSupplierResponse = Schemas['QuoteRequestSupplierResponse']
+export type QuoteResponse = Schemas['QuoteResponse']
+export type QuoteExtraCostResponse = Schemas['QuoteExtraCostResponse']
+export type QuoteRequestAwardResponse = Schemas['QuoteRequestAwardResponse']
+export type AwardWarningResponse = Schemas['AwardWarningResponse']
+export type QuoteRequestLinksResponse = Schemas['QuoteRequestLinksResponse']
+export type OpenQuoteRequestRef = Schemas['OpenQuoteRequestRefResponse']
+export type QuoteRequestFile = Schemas['QuoteRequestFileResponse']
+export type QuoteFileCategory = Schemas['QuoteFileCategory']

@@ -1,0 +1,12 @@
+# Genuine hits for scripts/check_plan_refs.py, one `path::text` entry per line.
+# A flagged line is allowed when it sits in that file and contains the text.
+# Keep entries narrow: an algorithm's own step names or ordinary prose, never a
+# reference to a plan.
+
+# Step names of the webhook dispatch (plan, dispatch, record).
+backend/src/modules/platform/application/use_cases/webhook/dispatch_event_to_webhooks.py::Phase 1, plan (sequential, DB)
+backend/src/modules/platform/application/use_cases/webhook/dispatch_event_to_webhooks.py::Phase 2, dispatch
+backend/src/modules/platform/application/use_cases/webhook/dispatch_event_to_webhooks.py::Phase 3, record
+
+# "Item 1" is the made item with id 1 in the test arrangement.
+backend/tests/integration/test_demand_table_filters.py::Item 1 is fabricated with method 5

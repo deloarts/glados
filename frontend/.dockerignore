@@ -1,0 +1,29 @@
+# Keeps the build context (and therefore the build stage's image layers)
+# free of things the image has no business containing: VCS history, local
+# planning notes, editor state, and anything that might carry secrets.
+# `npm ci` inside the image reinstalls node_modules from package-lock.json,
+# so a locally-installed node_modules must never be copied in either - it
+# can differ from what the lockfile specifies (native bindings, symlinks,
+# a stale local `npm install`) and copying it would mask that drift.
+
+.git
+.github
+
+node_modules
+dist
+dist-ssr
+coverage
+
+.playground
+.vscode
+.idea
+.claude
+
+*.log
+*.local
+.env
+.env.*
+!.env.example
+
+.dockerignore
+docker/frontend.Dockerfile

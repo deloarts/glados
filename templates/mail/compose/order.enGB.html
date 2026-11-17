@@ -1,0 +1,9 @@
+<title>Purchase order</title>
+<p>Dear {{ supplier }} team,</p>
+<p>we hereby order the following items (order <strong>{{ order_number }}</strong>):</p>
+{{ table: row_no, project, quantity, unit, part_number, article_name, order_code_1, order_code_2 }}
+<p>Desired delivery by: <strong>{{ expected_delivery }}</strong></p>
+<p>{{ note }}</p>
+<p>Please send us an order confirmation with the prices and the delivery date.</p>
+<p>This mail was created automatically, please reply to <strong>{{ user_email }}</strong>.</p>
+<p>Kind regards<br><strong>{{ user_full_name }}</strong><br>{{ user_email }}</p>

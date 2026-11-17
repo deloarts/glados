@@ -1,0 +1,419 @@
+// ─── Glados Global Stylesheet ───────────────────────────────────────────────
+//
+// The app's own CSS custom properties are defined here. Colours come from
+// OpenVue's theme variables, which switch with the .p-dark class on <html>.
+// Rules on OpenVue's internal .p-* elements live in _openvue.scss.
+
+@use 'openvue';
+
+html,
+body {
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+:root,
+html {
+  // Layout
+  --header-height: 3.5rem;
+  --footer-height: 1.5rem;
+  --sidebar-width: 3.2rem;
+  --sidebar-width-wide: 14rem;
+  --bottom-nav-height: 3.5rem;
+
+  // Text on a saturated background (the primary bars, avatars, banners) is
+  // the same in both themes, unlike --p-primary-contrast-color, which turns
+  // dark under .p-dark. A light accent such as orange takes dark text.
+  --on-accent: #fff;
+  --on-light-accent: #000;
+  --header-fg: var(--on-accent);
+  // Translucent white on a saturated background: secondary text, icons, and
+  // the hover fill of a button that sits on the bar.
+  --on-accent-muted: rgb(255 255 255 / 70%);
+  --on-accent-soft: rgb(255 255 255 / 85%);
+  --on-accent-hover: rgb(255 255 255 / 15%);
+
+  // A surface that stays white in both themes. A QR code needs a light quiet
+  // zone to scan, and print and mail previews show the page as it will look.
+  --paper: #fff;
+
+  // Shadows, from a small lift to a raised tile and its hover. The dark theme
+  // deepens md and lg below, a light shadow vanishes on a dark surface. The
+  // side shadow is the overlay sidebar's edge.
+  --shadow-sm: 0 1px 4px rgb(0 0 0 / 15%);
+  --shadow-md: 0 2px 10px rgb(0 0 0 / 4%);
+  --shadow-lg: 0 6px 16px rgb(0 0 0 / 8%);
+  --shadow-side: 2px 0 12px rgb(0 0 0 / 18%);
+
+  // Fonts. Sizes are rem off the 14px root below, written as px / 14 so the
+  // pixel size at the default root stays readable. xs to xl are text sizes,
+  // 2xl and up are icons and display figures.
+  // Body text prefers the Windows fonts, which are hinted for ClearType and
+  // stay crisp at small sizes on a 100% scaled screen, where the unhinted
+  // Inter looks soft. Machines without them fall back to Inter, which ships
+  // with the app (@fontsource-variable/inter in main.ts) and is only
+  // downloaded where it is used.
+  --font-body: 'Segoe UI', 'Calibri', 'Inter Variable', 'Arial', sans-serif;
+  --font-head: 'Play', 'Roboto', 'Arial', sans-serif;
+  --font-brand: 'Audiowide', 'Play', 'Arial', sans-serif;
+  --font-size-xs: calc(10rem / 14);
+  --font-size-sm: calc(12rem / 14);
+  --font-size-md: 1rem;
+  --font-size-lg: calc(16rem / 14);
+  --font-size-xl: calc(19rem / 14);
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --font-size-5xl: 3.5rem;
+  --font-brand-size: 2rem;
+
+  // Spacing for gaps, padding and margins. Inside a block 1 to 3, between
+  // layout blocks 4 to 6.
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  // Dialog widths. A dialog takes the smallest token its content fits in.
+  --dialog-width-sm: 28rem;
+  --dialog-width-md: 40rem;
+  --dialog-width-lg: 64rem;
+  --dialog-width-full: 90vw;
+}
+
+// On a phone every dialog spans the screen, so no dialog needs a phone width
+// of its own. `_openvue.scss` gives the dialogs the full height as well.
+@media (max-width: $bp-sm) {
+  :root,
+  html {
+    --dialog-width-sm: 100vw;
+    --dialog-width-md: 100vw;
+    --dialog-width-lg: 100vw;
+    --dialog-width-full: 100vw;
+  }
+}
+
+.p-dark {
+  --shadow-md: 0 2px 10px rgb(0 0 0 / 25%);
+  --shadow-lg: 0 6px 16px rgb(0 0 0 / 35%);
+}
+
+// ─── Base Reset ─────────────────────────────────────────────────────────────
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+// The rem root, pinned at 14px. Every size in the app is a rem off it, so
+// following the browser's font-size setting instead is `font-size: 87.5%`.
+html {
+  // The root itself cannot be a rem token, rem on <html> means the browser's 16px.
+  // stylelint-disable-next-line scale-unlimited/declaration-strict-value
+  font-size: 14px;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-body);
+  // OpenVue's own tokens already follow the active theme; the layout paints
+  // the background, so there is nothing else to set here.
+  color: var(--p-text-color);
+}
+
+// ─── Scrollbar ──────────────────────────────────────────────────────────────
+// These rules were commented out, which left every scroll container relying on
+// the platform's overlay scrollbars, drawn only while actively scrolling. On a
+// wide table that removed the only cue that columns continued past the right
+// edge, so a clipped "Groups" tag or a cut-off "Creator" column read as missing
+// data rather than as something you could scroll to.
+//
+// The standard properties are used rather than ::-webkit-scrollbar: Chromium
+// honours these and ignores the -webkit- pseudo-elements once they are set, so
+// declaring both would only be dead weight. Colours come from OpenVue surface
+// tokens, which already track the active theme.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--p-surface-400) transparent;
+}
+
+.p-dark * {
+  scrollbar-color: var(--p-surface-600) transparent;
+}
+
+// ─── Typography ─────────────────────────────────────────────────────────────
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-head);
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+h1 {
+  font-size: 1.5em;
+}
+h2 {
+  font-size: 1.25em;
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, var(--p-primary-500), transparent);
+  margin: var(--space-4) 0;
+}
+
+a {
+  color: var(--p-primary-500);
+  text-decoration: none;
+  &:hover {
+    color: var(--p-primary-600);
+  }
+}
+
+.mdi {
+  font-size: var(--font-size-lg);
+  margin: -0.2rem;
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────
+
+.text-muted {
+  color: var(--p-text-muted-color);
+}
+
+// ─── Shared patterns ────────────────────────────────────────────────────────
+// The base look of the classes every feature uses. A component adds to them
+// in its own scoped styles; it does not restate them.
+
+// A form field: its label above the input, a hint below.
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+// The small uppercase caption above a read-only value in a detail grid.
+.field-label {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// A sentence that explains a field or a section.
+.hint {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-sm);
+}
+
+// A short note in place of a list or a value that is not there yet. A whole
+// empty table or panel takes the EmptyState component instead.
+.empty-note {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-sm);
+}
+
+// The smaller note directly under one input.
+.field-hint {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-xs);
+}
+
+// Two columns of fields in a dialog or a detail panel.
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+// The heading of a panel inside a page or a dialog.
+.panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+// The icon buttons at the end of a table row.
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────
+
+.card {
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  padding: var(--space-2);
+
+  // Read from the semantic content tokens so the shell tracks whichever
+  // preset is active, since Aura and Nora differ here (6px/surface.200 vs
+  // 2px/surface.400). These already resolve per colour scheme, so no
+  // .p-dark override is needed.
+  background-color: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius);
+}
+
+// ─── Admin Settings form layout ──────────────────────────────────────────────
+
+.settings-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
+}
+
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  align-items: center;
+  gap: var(--space-3);
+
+  // A caption names a read-only value or a preview, which a label cannot
+  // point at, and looks the same as a label.
+  label,
+  .field-caption {
+    font-size: var(--font-size-sm);
+    color: var(--p-text-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .hint {
+    font-size: var(--font-size-xs);
+    color: var(--p-text-muted-color);
+    font-weight: normal;
+  }
+
+  .p-inputtext,
+  .p-select,
+  .p-textarea,
+  .p-inputnumber {
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  &.field-row--toggle {
+    grid-template-columns: 16rem auto 1fr;
+  }
+}
+
+// The 16rem label column is wider than half a phone screen, which left the
+// value column around 6rem: hostnames and platform strings either wrapped into
+// a one-word-per-line ladder or ran straight off the right edge. Stacking the
+// label above its value gives the value the full width instead.
+@media (max-width: $bp-sm) {
+  .field-row,
+  .field-row.field-row--toggle {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-1);
+  }
+
+  // A toggle still belongs beside nothing in particular, but it must not
+  // stretch to the full row width now that it is on its own line.
+  .field-row--toggle > *:not(label, .field-caption) {
+    justify-self: start;
+  }
+
+  // Long unbroken values (URLs, kernel strings) wrap instead of overflowing.
+  .field-row .value {
+    overflow-wrap: anywhere;
+  }
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+// A table column as wide as its content; the table spans its container and
+// the columns without this class share what is left.
+.column-fit {
+  width: 1%;
+  white-space: nowrap;
+}
+
+// The leading "#" row number, one look on every table: small muted digits
+// of equal width, right-aligned so the numbers line up. The cell selector
+// outranks OpenVue's own `text-align: start` on body cells.
+.row-number,
+.p-datatable-tbody > tr > td.row-number {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+// The grip that drags a row of a hand-ordered table to a new place
+// (useRowDragReorder), the same grip as on the production queue cards.
+.row-drag-handle {
+  cursor: grab;
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-lg);
+}
+
+// A titled group of fields in a dialog, such as the name and the
+// components of a device.
+.dialog-section {
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  legend {
+    padding: 0 var(--space-1);
+    font-weight: 600;
+  }
+}
+
+.section-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+  margin-bottom: var(--space-1);
+}
+
+// Shared by every FormDialog's cancel/save button row. Was duplicated
+// identically (bar padding-top drift: 0.5rem on 10 of 14, 0.75rem on the
+// other 4) across each dialog's own scoped <style>; normalized to 0.5rem
+// here.
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}

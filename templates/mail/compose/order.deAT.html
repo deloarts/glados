@@ -1,0 +1,9 @@
+<title>Bestellung</title>
+<p>Hallo {{ supplier }}-Team,</p>
+<p>hiermit bestellen wir die folgenden Positionen (Bestellung <strong>{{ order_number }}</strong>):</p>
+{{ table: row_no, project, quantity, unit, part_number, article_name, order_code_1, order_code_2 }}
+<p>Gewünschter Liefertermin: <strong>{{ expected_delivery }}</strong></p>
+<p>{{ note }}</p>
+<p>Bitte schickt uns eine Auftragsbestätigung mit Preisen und Liefertermin.</p>
+<p>Diese Mail wurde automatisch erstellt, bitte antwortet an <strong>{{ user_email }}</strong>.</p>
+<p>Viele Grüße<br><strong>{{ user_full_name }}</strong><br>{{ user_email }}</p>

@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Glados Dev",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "src.bootstrap.main:app",
+        "--host", "0.0.0.0",
+        "--port", "3000",
+        "--reload"
+      ],
+      "env": {
+        "ENV_FILE": "../.env.dev"
+      },
+      "envFile": "${workspaceFolder}/../.env.dev",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}

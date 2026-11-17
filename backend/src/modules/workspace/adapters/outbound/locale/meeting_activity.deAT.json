@@ -1,0 +1,21 @@
+{
+  "title": "Aktivität in {meeting}",
+  "someone": "Jemand",
+  "list_separator": ", ",
+  "last_separator": " und ",
+  "once": "einmal",
+  "twice": "zweimal",
+  "times": "{count}-mal",
+  "one_todo": "eine Aufgabe",
+  "todos": "{count} Aufgaben",
+  "one_actor": {
+    "mentions_and_todos": "{names} hat dich in {meeting} {times} erwähnt und dir {todos} zugewiesen",
+    "mentions": "{names} hat dich in {meeting} {times} erwähnt",
+    "todos": "{names} hat dir in {meeting} {todos} zugewiesen"
+  },
+  "several_actors": {
+    "mentions_and_todos": "{names} haben dich in {meeting} {times} erwähnt und dir {todos} zugewiesen",
+    "mentions": "{names} haben dich in {meeting} {times} erwähnt",
+    "todos": "{names} haben dir in {meeting} {todos} zugewiesen"
+  }
+}

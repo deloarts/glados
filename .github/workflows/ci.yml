@@ -1,0 +1,714 @@
+name: CI
+
+on:
+  # No push trigger for main: every change reaches it as a squash-merged PR
+  # whose checks ran against an up-to-date main (required by the main
+  # ruleset), so the merge commit's tree was already verified.
+  push:
+    branches: [staging, "release/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+# One Poetry for every job, the version that wrote backend/poetry.lock (see
+# its header). backend/docker/backend.Dockerfile pins the same version in its
+# POETRY_VERSION argument and nightly.yml in its env, so bump all three
+# together.
+env:
+  POETRY_VERSION: "2.4.1"
+  PIP_AUDIT_VERSION: "2.10.1"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists changed files via the API on PRs
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # `shared` lists what can change how the code jobs behave. docs/ and
+      # the root scripts/ are not on it: no code job reads them, and the jobs
+      # that do (plan-refs, and release-check on release branches) have no
+      # path filter, so a docs-only pull request skips the code jobs, which
+      # counts as passing for their required checks.
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            shared:
+              - 'docker-compose.yml'
+              - 'docker-compose.dev.yml'
+              - '.github/**'
+              - '.pre-commit-config.yaml'
+
+  # Cheap checks that run before the expensive jobs, so a lint error or a
+  # whole-codebase guard fails the run in a few minutes instead of after the
+  # test shards. backend-tests and frontend-tests wait for this job and
+  # never start when it fails. The backend guards are the ones
+  # scripts/select_tests.py lists in GUARDS; the frontend ones are the specs
+  # behind `npm run test:guards`, which scan the whole source tree.
+  quick-checks:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      RUN_BACKEND: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true' || (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))) }}
+      RUN_FRONTEND: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true' || (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: env.RUN_BACKEND == 'true'
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        if: env.RUN_BACKEND == 'true'
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      # The virtualenv links to the interpreter it was built with, so the key
+      # carries the full Python version and a new patch release builds afresh.
+      - name: Set up Poetry cache
+        if: env.RUN_BACKEND == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install backend dependencies
+        if: env.RUN_BACKEND == 'true'
+        working-directory: backend
+        run: poetry install --no-interaction
+
+      - name: Ruff check
+        if: env.RUN_BACKEND == 'true'
+        working-directory: backend
+        run: poetry run ruff check src tests scripts alembic
+
+      - name: Ruff format check
+        if: env.RUN_BACKEND == 'true'
+        working-directory: backend
+        run: poetry run ruff format --check src tests scripts alembic
+
+      - name: import-linter
+        if: env.RUN_BACKEND == 'true'
+        working-directory: backend
+        run: poetry run lint-imports
+
+      - name: Backend guards
+        if: env.RUN_BACKEND == 'true'
+        working-directory: backend
+        run: poetry run pytest $(poetry run python scripts/select_tests.py --guards) -q
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: env.RUN_FRONTEND == 'true'
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        if: env.RUN_FRONTEND == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      # Calls the linters directly (not `npm run lint`, which runs with
+      # `--fix` and would mutate the tree and silently mask failures here).
+      - name: Lint (eslint + oxlint)
+        if: env.RUN_FRONTEND == 'true'
+        working-directory: frontend
+        run: npm run lint:check
+
+      # en-GB is the app's fallbackLocale, so a key missing there renders as
+      # a raw key path in the UI, and a key missing in de-AT shows a German
+      # user English copy. A key missing in either locale fails the build.
+      - name: i18n key parity
+        if: env.RUN_FRONTEND == 'true'
+        working-directory: frontend
+        run: npm run check:i18n
+
+      - name: Frontend guards
+        if: env.RUN_FRONTEND == 'true'
+        working-directory: frontend
+        run: npm run test:guards
+
+  # The full backend suite on every pull request, split into shards that run
+  # in parallel. pytest-split assigns single tests, not files, by the
+  # durations recorded in backend/.test_durations; a test it has no duration
+  # for counts as the average. `make test-durations` refreshes the file when
+  # the shards drift apart. Each shard writes its own coverage data;
+  # backend-verify combines them and enforces fail_under on the total, so the
+  # gate sees the whole suite.
+  backend-tests:
+    needs: [changes, quick-checks]
+    if: >-
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # Backs tests/integration/test_migrations_postgres.py, the opt-in
+      # real-Postgres migration chain + autogenerate drift check (see that
+      # module's docstring), and the backup and restore drill and the race
+      # tests of tests/pg in their own steps below; every other test in the
+      # suite runs on SQLite and never touches this service. A fresh, empty
+      # `glados_ci` database on every job run, exactly what that test's own
+      # safety guard requires.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: glados_ci
+          POSTGRES_PASSWORD: glados_ci
+          POSTGRES_DB: glados_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U glados_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      # The virtualenv links to the interpreter it was built with, so the key
+      # carries the full Python version and a new patch release builds afresh.
+      - name: Set up Poetry cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      # --cov-fail-under=0: one shard covers only part of src, the threshold
+      # is checked on the combined data in backend-verify.
+      - name: pytest (shard ${{ matrix.shard }} of 4)
+        env:
+          GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
+          COVERAGE_FILE: .coverage.shard${{ matrix.shard }}
+        run: |
+          poetry run pytest tests --ignore=tests/pg \
+            --splits 4 --group ${{ matrix.shard }} --splitting-algorithm least_duration \
+            -q --cov=src --cov-report= --cov-fail-under=0 --hypothesis-profile ci
+
+      # The backup and restore drill (tests/pg/test_backup_restore_drill.py):
+      # seed a database, back it up with the app's backup job, restore it
+      # with the restore command and compare every table's row count. It
+      # runs on every pull request, once, in the first shard, and needs the
+      # runner's pg_dump and psql, checked first so a missing tool fails the
+      # step instead of skipping the drill.
+      - name: pytest backup and restore drill (Postgres)
+        if: matrix.shard == 1
+        env:
+          GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
+        run: |
+          pg_dump --version
+          psql --version
+          poetry run pytest tests/pg/test_backup_restore_drill.py -q
+
+      # The Postgres race tests (tests/pg, see its conftest). They need the
+      # database empty, which the shard run leaves it, and run once, in the
+      # first shard; the shard run above leaves them out. At
+      # over 20 minutes they are the longest step, so they run only for a
+      # release branch, on its pushes and its pull request, as release-check
+      # does, and every night on main (nightly.yml); run them locally before
+      # a change that touches locking.
+      - name: pytest tests/pg (Postgres race tests)
+        if: >-
+          matrix.shard == 1 && (
+            (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) ||
+            (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/'))
+          )
+        env:
+          GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
+        run: poetry run pytest tests/pg -q --ignore=tests/pg/test_backup_restore_drill.py
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-shard${{ matrix.shard }}
+          path: backend/.coverage.shard${{ matrix.shard }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  backend-verify:
+    needs: [changes, quick-checks, backend-tests]
+    # Runs even when a shard failed, so this required check reports failure
+    # instead of being skipped (a skipped required check counts as passed).
+    if: >-
+      !cancelled() && (
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Require every test shard to pass
+        working-directory: .
+        run: |
+          if [ "${{ needs.quick-checks.result }}" != "success" ]; then
+            echo "::error::quick-checks finished with '${{ needs.quick-checks.result }}', so the shards did not run."
+            exit 1
+          fi
+          if [ "${{ needs.backend-tests.result }}" != "success" ]; then
+            echo "::error::backend-tests finished with '${{ needs.backend-tests.result }}'."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      # The virtualenv links to the interpreter it was built with, so the key
+      # carries the full Python version and a new patch release builds afresh.
+      - name: Set up Poetry cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Dependency vulnerability audit
+        # pip itself is audited too, so it is upgraded inside the venv first.
+        # --skip-editable leaves out the project's own editable install, which
+        # is not on PyPI and never will be.
+        run: |
+          poetry run python -m pip install --upgrade pip "pip-audit==${PIP_AUDIT_VERSION}"
+          poetry run pip-audit --skip-editable
+
+      # Ruff and import-linter ran in quick-checks.
+      - name: mypy
+        run: poetry run mypy src scripts
+
+      # Cognitive complexity ceiling per function. A new or grown function
+      # above 25 fails here, so the growth is discussed at review time.
+      - name: complexipy
+        run: poetry run complexipy src --max-complexity-allowed 25 --failed
+
+      # Report-only: lists functions over 100 lines without failing the job,
+      # so new oversized code shows up in the log until the backlog is cleared.
+      - name: Function length report
+        run: poetry run python scripts/check_function_length.py
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: coverage-shard*
+          path: backend/coverage-shards
+          merge-multiple: true
+
+      # fail_under in pyproject.toml applies to the combined report.
+      - name: Coverage (all shards)
+        run: |
+          poetry run coverage combine coverage-shards/.coverage.shard*
+          poetry run coverage report
+
+      # --strict: a failed tag fetch or a pat snapshot missing at the released
+      # tag fails the check instead of skipping the freeze. The checkout
+      # above fetched the whole history, tags included.
+      - name: OpenAPI snapshot
+        run: poetry run python scripts/check_openapi.py --strict
+
+      # Two branches that each add a migration on the same parent both merge
+      # cleanly and leave main with two heads, which `alembic upgrade head`
+      # refuses at deploy time.
+      - name: Alembic single head
+        run: |
+          heads="$(poetry run alembic heads | grep -c '(head)')"
+          if [ "$heads" -ne 1 ]; then
+            poetry run alembic heads
+            echo "::error::Alembic has $heads heads; point the newer migration's down_revision at the other head so exactly one remains."
+            exit 1
+          fi
+
+  # The frontend unit tests with coverage, split into shards that run in
+  # parallel, as the backend's are. Vitest assigns whole spec files to a
+  # shard. Each shard writes a blob report with its coverage and leaves the
+  # thresholds off, since one shard covers only part of src;
+  # frontend-verify merges the reports and enforces the thresholds on the
+  # total.
+  frontend-tests:
+    needs: [changes, quick-checks]
+    if: >-
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (shard ${{ matrix.shard }} of 3)
+        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/3
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() }}
+        with:
+          name: vitest-shard${{ matrix.shard }}
+          path: frontend/.vitest-reports/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  frontend-verify:
+    needs: [changes, quick-checks, frontend-tests]
+    # Runs even when quick-checks or a shard failed, so this required check
+    # reports failure instead of being skipped (a skipped required check
+    # counts as passed); its first step then stops it before any work.
+    if: >-
+      !cancelled() && (
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # vue-tsc over the whole app outgrows Node's default heap on the hosted
+    # runner and aborts with an out-of-memory error.
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Require the quick checks and every test shard to pass
+        working-directory: .
+        run: |
+          if [ "${{ needs.quick-checks.result }}" != "success" ]; then
+            echo "::error::quick-checks finished with '${{ needs.quick-checks.result }}'."
+            exit 1
+          fi
+          if [ "${{ needs.frontend-tests.result }}" != "success" ]; then
+            echo "::error::frontend-tests finished with '${{ needs.frontend-tests.result }}'."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only what ships in the bundle can fail the build. Dev tooling (lint,
+      # test, build) reads nothing but our own sources, and an advisory there
+      # can have no fixed release at all, as GHSA-vfj7-8cjw-p6xm in braces
+      # (pulled in by the lint config) shows. Those are still reported.
+      - name: Audit dependencies
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high || echo "::warning::npm audit reports high severity advisories in dev dependencies, see the log above."
+
+      - name: Type-check
+        run: npm run type-check
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: vitest-shard*
+          path: frontend/.vitest-reports
+          merge-multiple: true
+
+      # Lint and i18n key parity ran in quick-checks. The merged run applies
+      # the thresholds in vitest.config.ts to the coverage of all shards.
+      - name: Coverage (all shards)
+        run: npm run test:coverage:merge
+
+      # build-only: `npm run build` would run vue-tsc a second time, and the
+      # type-check step above already did.
+      - name: Build
+        run: npm run build-only
+
+  # Comments and docstrings must not reference local planning documents,
+  # see scripts/check_plan_refs.py and its allowlist.
+  plan-refs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check for planning labels
+        run: python3 scripts/check_plan_refs.py
+
+  version-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check backend/frontend version parity
+        run: |
+          BACKEND_VERSION=$(grep -m1 '^version' backend/pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          FRONTEND_VERSION=$(node -p "require('./frontend/package.json').version")
+          echo "Backend version: $BACKEND_VERSION"
+          echo "Frontend version: $FRONTEND_VERSION"
+          if [ "$BACKEND_VERSION" != "$FRONTEND_VERSION" ]; then
+            echo "::error::backend/pyproject.toml version $BACKEND_VERSION and frontend/package.json version $FRONTEND_VERSION disagree. Bump both to the same version."
+            exit 1
+          fi
+
+  # Secret scan over the full history of the checked-out ref. The history is
+  # small enough that a full scan stays fast, and it needs no special casing
+  # for new branches or force-pushes. Runs the pinned release binary
+  # directly, its checksum verified, instead of gitleaks-action.
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check
+          tar -xzf "$archive" gitleaks
+
+      - name: Scan
+        run: ./gitleaks git --redact --no-banner --verbose .
+
+  # Runs only for release branches, on their pushes and on their PR into
+  # main. Checks the branch name against the version files, the CHANGELOG
+  # section, that the tag is still free, and that the branch contains the
+  # current main, so the release-candidate image is built from exactly what
+  # the merge will tag. Skipped elsewhere, which counts as passing for the
+  # required check.
+  release-check:
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) ||
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The branch head itself, not the PR merge ref, which always
+          # contains main and would hide an outdated branch.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Check release branch
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [[ ! "$BRANCH" =~ ^release/(0\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Release branch '$BRANCH' does not match release/0.Y.Z"
+            exit 1
+          fi
+          scripts/check_release_version.sh "${BASH_REMATCH[1]}"
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::$BRANCH does not contain the current main, update it from main first."
+            exit 1
+          fi
+
+  api-types:
+    needs: changes
+    if: >-
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.shared == 'true' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      # The virtualenv links to the interpreter it was built with, so the key
+      # carries the full Python version and a new patch release builds afresh.
+      - name: Set up Poetry cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Check OpenAPI snapshot is up to date
+        working-directory: backend
+        run: |
+          poetry install --no-interaction
+          poetry run python scripts/export_openapi.py --check
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Check generated API types are up to date
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run check:api-types
+
+  # Channel images for the test servers. Runs only after the checks above
+  # pass on a push to `staging` (→ tag `staging`) or to a `release/**`
+  # branch (→ tag `release-candidate`), then moves that mutable GHCR tag to
+  # the new build. A test server pins GLADOS_VERSION to the channel name and
+  # picks it up on its next redeploy. These are never releases:
+  # when a release PR is merged, release.yml retags the candidate's digest
+  # as vX.Y.Z after starting it once.
+  #
+  # On a channel-branch push every check job above is forced to run
+  # regardless of the `changes` path filter and must succeed. release-check
+  # only runs for release branches, so it may be skipped on `staging` but
+  # must succeed on `release/**`.
+  publish-channel-image:
+    needs: [backend-verify, frontend-verify, api-types, version-parity, gitleaks, release-check]
+    if: >-
+      !cancelled() &&
+      github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) &&
+      needs.backend-verify.result == 'success' &&
+      needs.frontend-verify.result == 'success' &&
+      needs.api-types.result == 'success' &&
+      needs.version-parity.result == 'success' &&
+      needs.gitleaks.result == 'success' &&
+      (needs.release-check.result == 'success' || (needs.release-check.result == 'skipped' && github.ref == 'refs/heads/staging'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        include:
+          - component: backend
+            target: prod
+            context: ./backend
+            dockerfile: ./backend/docker/backend.Dockerfile
+          - component: frontend
+            context: ./frontend
+            dockerfile: ./frontend/docker/frontend.Dockerfile
+            build_args: |
+              VITE_API_URL=
+    concurrency:
+      group: channel-${{ matrix.component }}-${{ github.ref == 'refs/heads/staging' && 'staging' || 'release-candidate' }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # OCI labels (org.opencontainers.image.revision = commit SHA, etc.)
+      # come from metadata-action, same as release images.
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          # The owner is lowercase already, which GHCR requires.
+          images: ghcr.io/${{ github.repository_owner }}/glados/${{ matrix.component }}
+          # GitHub does not recognise the custom license, so the label is set
+          # here instead of being derived from the repository.
+          labels: |
+            org.opencontainers.image.licenses=LicenseRef-DAL-1.0.0
+          # A release candidate is also tagged with its commit, an immutable
+          # name for exactly the build these checks passed. release.yml finds
+          # the candidate by it and promotes that digest, never a rebuild.
+          tags: |
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+            type=raw,value=release-candidate,enable=${{ startsWith(github.ref, 'refs/heads/release/') }}
+            type=raw,value=sha-${{ github.sha }},enable=${{ startsWith(github.ref, 'refs/heads/release/') }}
+
+      - name: Build and push channel image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ matrix.build_args }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}

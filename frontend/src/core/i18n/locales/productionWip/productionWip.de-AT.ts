@@ -1,0 +1,62 @@
+// Messages for productionWip, merged into the de-AT locale.
+export default {
+  title: 'Fertigung in Bearbeitung',
+  tabLabel: 'WIP',
+  filters: {
+    any: 'Beliebig',
+    filterBy: 'Filtern',
+  },
+  columns: {
+    lotNumber: 'Losnummer',
+    item: 'Artikel',
+    status: 'Status',
+    priority: 'Priorität',
+    rawCount: 'Roh / Wartend',
+    finishedCount: 'Fertig',
+  },
+  stages: {
+    columns: {
+      sequence: 'Pos.',
+      kind: 'Art',
+      status: 'Status',
+      quantity: 'Menge',
+      machineOrSupplier: 'Maschine / Lieferant',
+    },
+    empty: 'Für dieses Los sind keine Arbeitsschritte erfasst.',
+  },
+  status: {
+    draft: 'Entwurf',
+    partially_planned: 'Teilweise geplant',
+    planned: 'Geplant',
+    in_progress: 'In Bearbeitung',
+    on_hold: 'Pausiert',
+    completed: 'Abgeschlossen',
+    canceled: 'Storniert',
+  },
+  priority: {
+    low: 'Niedrig',
+    normal: 'Normal',
+    high: 'Hoch',
+    critical: 'Kritisch',
+  },
+  positionKind: {
+    unassigned: 'Nicht zugewiesen',
+    external: 'Extern',
+    internal: 'Intern',
+    mixed: 'Gemischt',
+  },
+  positionStatus: {
+    pending: 'Ausstehend',
+    allocated: 'Zugeordnet',
+    ordered_or_queued: 'Bestellt / Eingeplant',
+    ordered: 'Bestellt',
+    queued: 'Eingeplant',
+    in_progress: 'In Bearbeitung',
+    partially_completed: 'Teilweise abgeschlossen',
+    completed: 'Abgeschlossen',
+    canceled: 'Storniert',
+  },
+  empty: 'Derzeit keine Lose in Fertigung.',
+  lastUpdated: 'Zuletzt aktualisiert {time}',
+  autoRefreshing: 'Automatische Aktualisierung',
+}

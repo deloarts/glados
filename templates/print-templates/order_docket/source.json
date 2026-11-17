@@ -1,0 +1,85 @@
+{
+  "page": { "width_mm": 210.0, "height_mm": 297.0 },
+  "blocks": [
+    { "type": "rect", "x": 8, "y": 8, "w": 194, "h": 281, "stroke_mm": 0.5, "pages": "all" },
+    { "type": "text", "x": 14, "y": 11.5, "size_mm": 6, "bold": true, "text": "PURCHASE ORDER", "pages": "all" },
+    {
+      "type": "text",
+      "x": 40,
+      "y": 13,
+      "size_mm": 5,
+      "bold": true,
+      "field": "order_number",
+      "max_width_mm": 60,
+      "max_lines": 1,
+      "pages": "continuation"
+    },
+    {
+      "type": "image",
+      "x": 150,
+      "y": 10.5,
+      "w": 46,
+      "h": 11,
+      "field": "company_logo",
+      "fallback_text": null,
+      "align": "right",
+      "pages": "all"
+    },
+    { "type": "line", "x": 8, "y": 24, "x2": 202, "y2": 24, "stroke_mm": 0.5, "pages": "all" },
+
+    { "type": "qr", "x": 164, "y": 29, "size_mm": 30, "field": "qr_payload", "pages": "first" },
+
+    { "type": "text", "x": 14, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "ORDER NO.", "pages": "first" },
+    { "type": "text", "x": 14, "y": 32.5, "size_mm": 5, "bold": true, "field": "order_number", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 64, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "SUPPLIER", "pages": "first" },
+    { "type": "text", "x": 64, "y": 32.5, "size_mm": 5, "bold": true, "field": "supplier", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 114, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "STATUS", "pages": "first" },
+    { "type": "text", "x": 114, "y": 32.5, "size_mm": 5, "bold": true, "field": "status", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+    { "type": "text", "x": 14, "y": 41, "size_mm": 2.6, "bold": true, "text": "ORDER DATE", "pages": "first" },
+    { "type": "text", "x": 14, "y": 45, "size_mm": 5, "bold": true, "field": "ordered_date", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 64, "y": 41, "size_mm": 2.6, "bold": true, "text": "DELIVERY DATE", "pages": "first" },
+    { "type": "text", "x": 64, "y": 45, "size_mm": 5, "bold": true, "field": "delivery_date", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 114, "y": 41, "size_mm": 2.6, "bold": true, "text": "POSITIONS", "pages": "first" },
+    { "type": "text", "x": 114, "y": 45, "size_mm": 5, "bold": true, "field": "positions", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+    { "type": "text", "x": 14, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "TOTAL QTY", "pages": "first" },
+    { "type": "text", "x": 14, "y": 57.5, "size_mm": 5, "bold": true, "field": "total_items", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 64, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "ORDERED BY", "pages": "first" },
+    { "type": "text", "x": 64, "y": 57.5, "size_mm": 5, "bold": true, "field": "orderer", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+    { "type": "text", "x": 114, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "DELIVERED BY", "pages": "first" },
+    { "type": "text", "x": 114, "y": 57.5, "size_mm": 5, "bold": true, "field": "delivered_by", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+    { "type": "line", "x": 8, "y": 66, "x2": 202, "y2": 66, "stroke_mm": 0.3, "pages": "first" },
+
+    { "type": "line", "x": 8, "y": 284, "x2": 202, "y2": 284, "stroke_mm": 0.3, "pages": "all" },
+    { "type": "text", "x": 14, "y": 285.5, "size_mm": 3, "field": "printed_at", "pages": "all" },
+    {
+      "type": "text",
+      "x": 14,
+      "y": 285.5,
+      "size_mm": 3,
+      "field": "@page_label",
+      "max_width_mm": 182,
+      "max_lines": 1,
+      "align": "right",
+      "pages": "all"
+    }
+  ],
+  "table": {
+    "x_mm": 14,
+    "row_height_mm": 22,
+    "first_page_top_mm": 66,
+    "next_page_top_mm": 30,
+    "bottom_mm": 280,
+    "header_height_mm": 8,
+    "separator_stroke_mm": 0.15,
+    "columns": [
+      { "header": "POS.", "fields": ["position"], "width_mm": 8 },
+      { "header": "QTY", "fields": ["quantity", "unit"], "width_mm": 16, "align": "right" },
+      { "header": "PROJECT / PRODUCT", "fields": ["project", "product"], "width_mm": 34 },
+      { "header": "IMAGE", "fields": ["row_image"], "width_mm": 26, "kind": "image" },
+      { "header": "ARTICLE / PART NO. / DIMENSION", "fields": ["article", "part_no", "dimension"], "width_mm": 102 }
+    ]
+  }
+}

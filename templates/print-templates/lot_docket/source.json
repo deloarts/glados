@@ -1,0 +1,117 @@
+{
+  "page": { "width_mm": 148.0, "height_mm": 210.0 },
+  "blocks": [
+    { "type": "rect", "x": 8, "y": 8, "w": 132, "h": 194, "stroke_mm": 0.5 },
+    { "type": "text", "x": 14, "y": 12.5, "size_mm": 6, "bold": true, "text": "PRODUCTION LOT" },
+    {
+      "type": "image",
+      "x": 102,
+      "y": 11.5,
+      "w": 32,
+      "h": 9,
+      "field": "company_logo",
+      "fallback_text": null,
+      "align": "right"
+    },
+    { "type": "line", "x": 8, "y": 24, "x2": 140, "y2": 24, "stroke_mm": 0.5 },
+
+    { "type": "text", "x": 14, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "PROJECT NO." },
+    {
+      "type": "text",
+      "x": 14,
+      "y": 32.5,
+      "size_mm": 5,
+      "bold": true,
+      "field": "project_number",
+      "max_width_mm": 46,
+      "max_lines": 1
+    },
+    { "type": "text", "x": 62, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "PRODUCT NO." },
+    {
+      "type": "text",
+      "x": 62,
+      "y": 32.5,
+      "size_mm": 5,
+      "bold": true,
+      "field": "product_number",
+      "max_width_mm": 36,
+      "max_lines": 1
+    },
+
+    { "type": "text", "x": 14, "y": 41, "size_mm": 2.6, "bold": true, "text": "PART NO." },
+    {
+      "type": "text",
+      "x": 14,
+      "y": 45,
+      "size_mm": 5,
+      "bold": true,
+      "field": "part_number",
+      "max_width_mm": 46,
+      "max_lines": 1
+    },
+    { "type": "text", "x": 62, "y": 41, "size_mm": 2.6, "bold": true, "text": "REV." },
+    {
+      "type": "text",
+      "x": 62,
+      "y": 45,
+      "size_mm": 5,
+      "bold": true,
+      "field": "revision",
+      "max_width_mm": 36,
+      "max_lines": 1
+    },
+
+    { "type": "qr", "x": 102, "y": 29, "size_mm": 30, "field": "qr_payload" },
+
+    { "type": "text", "x": 14, "y": 55, "size_mm": 2.6, "bold": true, "text": "ARTICLE" },
+    {
+      "type": "text",
+      "x": 14,
+      "y": 59,
+      "size_mm": 5,
+      "bold": true,
+      "field": "article_name",
+      "max_width_mm": 80,
+      "max_lines": 2
+    },
+
+    { "type": "text", "x": 14, "y": 75, "size_mm": 2.6, "bold": true, "text": "LOT" },
+    { "type": "text", "x": 14, "y": 79, "size_mm": 5, "bold": true, "field": "lot_number" },
+
+    { "type": "text", "x": 102, "y": 75, "size_mm": 2.6, "bold": true, "text": "TOTAL QTY" },
+    {
+      "type": "text",
+      "x": 102,
+      "y": 79,
+      "size_mm": 5,
+      "bold": true,
+      "field": "total_quantity",
+      "max_width_mm": 26,
+      "max_lines": 1
+    },
+
+    { "type": "line", "x": 8, "y": 90, "x2": 140, "y2": 90, "stroke_mm": 0.3 },
+    {
+      "type": "image",
+      "x": 14,
+      "y": 94,
+      "w": 120,
+      "h": 96,
+      "field": "part_image",
+      "fallback_text": "No article image available"
+    },
+
+    { "type": "line", "x": 8, "y": 194, "x2": 140, "y2": 194, "stroke_mm": 0.3 },
+    { "type": "text", "x": 14, "y": 196, "size_mm": 3, "field": "printed_at" },
+    {
+      "type": "text",
+      "x": 54,
+      "y": 196,
+      "size_mm": 3,
+      "field": "footer_company_name",
+      "max_width_mm": 80,
+      "max_lines": 1,
+      "align": "right"
+    }
+  ]
+}

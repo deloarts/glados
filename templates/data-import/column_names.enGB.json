@@ -1,0 +1,140 @@
+{
+  "glados_template": "data_import_column_names",
+  "version": 1,
+  "column_names": {
+    "bought_item_create": {
+      "article_name": [
+        "Article name",
+        "Designation",
+        "Description"
+      ],
+      "order_code_1": [
+        "Order number",
+        "Order code",
+        "Order no."
+      ],
+      "manufacturer_name": [
+        "Manufacturer"
+      ],
+      "edp_part_number": [
+        "EPLAN part number"
+      ],
+      "order_code_2": [
+        "Type number",
+        "Order code 2"
+      ],
+      "gtin": [
+        "GTIN"
+      ],
+      "ean": [
+        "EAN"
+      ],
+      "tariff_number": [
+        "Tariff number",
+        "Customs tariff number"
+      ],
+      "mass": [
+        "Mass",
+        "Weight"
+      ],
+      "note": [
+        "Note"
+      ],
+      "weblink": [
+        "Weblink",
+        "Link"
+      ],
+      "article_group_names": [
+        "Article group",
+        "Article groups"
+      ],
+      "product_family_name": [
+        "Product family"
+      ],
+      "part_number": [
+        "Part number"
+      ]
+    },
+    "bought_item_demand": {
+      "project_number": [
+        "Project",
+        "Project number"
+      ],
+      "quantity": [
+        "Quantity",
+        "Qty"
+      ],
+      "unit": [
+        "Unit"
+      ],
+      "part_number": [
+        "Part number",
+        "Partnumber",
+        "Part no",
+        "Part no.",
+        "Part-number"
+      ],
+      "article_name": [
+        "Article name",
+        "Articlename",
+        "Product",
+        "Description"
+      ],
+      "order_code": [
+        "Order number",
+        "Order code",
+        "Ordernumber"
+      ],
+      "manufacturer_name": [
+        "Manufacturer",
+        "Vendor",
+        "Supplier"
+      ],
+      "desired_delivery_date": [
+        "Desired delivery date",
+        "Delivery date"
+      ],
+      "note": [
+        "Note general",
+        "Note"
+      ]
+    },
+    "made_item_demand": {
+      "project_number": [
+        "Project",
+        "Project number"
+      ],
+      "quantity": [
+        "Quantity",
+        "Qty"
+      ],
+      "part_number": [
+        "Part number",
+        "Partnumber",
+        "Part no",
+        "Part no.",
+        "Part-number"
+      ],
+      "revision": [
+        "Revision",
+        "Rev",
+        "Rev.",
+        "Index"
+      ],
+      "article_name": [
+        "Article name",
+        "Articlename",
+        "Product",
+        "Description"
+      ],
+      "desired_delivery_date": [
+        "Desired delivery date",
+        "Delivery date"
+      ],
+      "note": [
+        "Note general",
+        "Note"
+      ]
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "glados_template": "plc_environment",
+  "version": 1,
+  "name": "Siemens TIA Portal",
+  "prefixes": {
+    "di": "di_",
+    "do": "dq_",
+    "ai": "ai_",
+    "ao": "aq_",
+    "bus": "",
+    "safety_di": "fdi_",
+    "safety_do": "fdq_",
+    "safety_ai": "fai_",
+    "safety_ao": "faq_"
+  },
+  "max_tag_length": 128,
+  "conversions": [
+    {
+      "source": "ä",
+      "target": "ae"
+    },
+    {
+      "source": "ö",
+      "target": "oe"
+    },
+    {
+      "source": "ü",
+      "target": "ue"
+    },
+    {
+      "source": "Ä",
+      "target": "Ae"
+    },
+    {
+      "source": "Ö",
+      "target": "Oe"
+    },
+    {
+      "source": "Ü",
+      "target": "Ue"
+    },
+    {
+      "source": "ß",
+      "target": "ss"
+    },
+    {
+      "source": " ",
+      "target": "_"
+    },
+    {
+      "source": "-",
+      "target": "_"
+    },
+    {
+      "source": ".",
+      "target": "_"
+    },
+    {
+      "source": "+",
+      "target": "_"
+    },
+    {
+      "source": ",",
+      "target": "_"
+    },
+    {
+      "source": "/",
+      "target": "_"
+    },
+    {
+      "source": "\\",
+      "target": "_"
+    },
+    {
+      "source": "(",
+      "target": "_"
+    },
+    {
+      "source": ")",
+      "target": "_"
+    },
+    {
+      "source": "&",
+      "target": "_"
+    },
+    {
+      "source": "#",
+      "target": "_"
+    },
+    {
+      "source": "'",
+      "target": "_"
+    },
+    {
+      "source": ";",
+      "target": "_"
+    },
+    {
+      "source": ":",
+      "target": "_"
+    },
+    {
+      "source": "%",
+      "target": "_"
+    }
+  ],
+  "tag_table": "Standard-Variablentabelle",
+  "safety_tag_table": null,
+  "export_sheet": "PLC Tags",
+  "export_columns": [
+    {
+      "header": "Name",
+      "source": "tag_name",
+      "value": null
+    },
+    {
+      "header": "Path",
+      "source": "tag_table",
+      "value": null
+    },
+    {
+      "header": "Data Type",
+      "source": "data_type",
+      "value": null
+    },
+    {
+      "header": "Logical Address",
+      "source": "address",
+      "value": null
+    },
+    {
+      "header": "Comment",
+      "source": "comment",
+      "value": null
+    },
+    {
+      "header": "Hmi Visible",
+      "source": "constant",
+      "value": "True"
+    },
+    {
+      "header": "Hmi Accessible",
+      "source": "constant",
+      "value": "True"
+    },
+    {
+      "header": "Hmi Writeable",
+      "source": "constant",
+      "value": "True"
+    }
+  ]
+}

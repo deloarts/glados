@@ -1,0 +1,62 @@
+// Messages for productionWip, merged into the en-GB locale.
+export default {
+  title: 'Production WIP',
+  tabLabel: 'WIP',
+  filters: {
+    any: 'Any',
+    filterBy: 'Filter',
+  },
+  columns: {
+    lotNumber: 'Lot Number',
+    item: 'Item',
+    status: 'Status',
+    priority: 'Priority',
+    rawCount: 'Raw / Waiting',
+    finishedCount: 'Finished',
+  },
+  stages: {
+    columns: {
+      sequence: 'Pos.',
+      kind: 'Kind',
+      status: 'Status',
+      quantity: 'Qty',
+      machineOrSupplier: 'Machine / Supplier',
+    },
+    empty: 'No stages recorded for this lot.',
+  },
+  status: {
+    draft: 'Draft',
+    partially_planned: 'Partially Planned',
+    planned: 'Planned',
+    in_progress: 'In Progress',
+    on_hold: 'On Hold',
+    completed: 'Completed',
+    canceled: 'Canceled',
+  },
+  priority: {
+    low: 'Low',
+    normal: 'Normal',
+    high: 'High',
+    critical: 'Critical',
+  },
+  positionKind: {
+    unassigned: 'Unassigned',
+    external: 'External',
+    internal: 'Internal',
+    mixed: 'Mixed',
+  },
+  positionStatus: {
+    pending: 'Pending',
+    allocated: 'Allocated',
+    ordered_or_queued: 'Ordered / Queued',
+    ordered: 'Ordered',
+    queued: 'Queued',
+    in_progress: 'In Progress',
+    partially_completed: 'Partially Completed',
+    completed: 'Completed',
+    canceled: 'Canceled',
+  },
+  empty: 'No lots currently in production.',
+  lastUpdated: 'Last updated {time}',
+  autoRefreshing: 'Auto-refreshing',
+}

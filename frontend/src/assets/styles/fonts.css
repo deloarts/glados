@@ -1,0 +1,43 @@
+@font-face {
+  font-family: 'Audiowide';
+  src: url('@/assets/fonts/Audiowide/Audiowide-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lobster';
+  src: url('@/assets/fonts/Lobster/Lobster-Regular.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Play';
+  src: url('@/assets/fonts/Play/Play-Regular.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Play';
+  src: url('@/assets/fonts/Play/Play-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Variable dot-matrix face. Only ever rendered by the easter eggs (the
+   aperture-mode wordmark and the cake terminal), and a declared @font-face
+   downloads nothing until something actually paints text in it - so this
+   costs a normal page load zero bytes. */
+@font-face {
+  font-family: 'Doto';
+  src: url('@/assets/fonts/Doto/Doto-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
