@@ -31,7 +31,8 @@ What `ci.yml`, `nightly.yml` and `release.yml` check and publish on each trigger
 
 | Job | What it does |
 | --- | ------------ |
-| `backend-tests` | Runs pytest in four parallel shards. The first shard then runs the backup and restore drill (`tests/pg/test_backup_restore_drill.py`) against its Postgres service on every run, and the rest of `tests/pg`, the race tests and the Postgres-only queries, only for a `release/**` branch. |
+| `backend-tests` | Runs pytest in four parallel shards. The first shard then runs the backup and restore drill (`tests/pg/test_backup_restore_drill.py`) against its Postgres service on every run. |
+| `backend-pg-races` | Runs the rest of `tests/pg`, the race tests and the Postgres-only queries, in four parallel shards, each against its own empty Postgres service, only for a `release/**` branch. pytest-split gives each shard the same number of tests, since `backend/.test_durations` records none for them. |
 | `backend-verify` | Requires all shards to have passed and runs pip-audit, ruff, the format check, mypy, import-linter, the complexipy ceiling of 25 per function, a report-only function length listing, the combined coverage gate, the [pat snapshot check](#2-the-pat-snapshot-check) with `--strict` and a check for a single Alembic head. |
 | `frontend-tests` | Runs the frontend unit tests with coverage in three parallel shards. Vitest assigns whole spec files to a shard; each shard writes a blob report and leaves the coverage thresholds off, since it covers only part of `src`. |
 | `frontend-verify` | Requires all shards to have passed, runs npm audit and type-check, merges the shard reports with `npm run test:coverage:merge` so the coverage thresholds apply to the whole suite, and builds. Lint and the i18n parity check, which fails on a key missing in either locale, ran in `quick-checks`. |
@@ -42,7 +43,7 @@ What `ci.yml`, `nightly.yml` and `release.yml` check and publish on each trigger
 | `release-check` | Runs on release branches only and is skipped, which counts as passing, for every other branch. It runs `scripts/check_release_version.sh` (the version is `0.Y.Z`, both version files carry it, `CHANGELOG.md` has its section and the tag is still free) and verifies that the branch contains the current `main`. |
 | `publish-channel-image` | Publishes a channel image after a push to `staging` or `release/**` ([section 1.3](#13-channel-images)). |
 
-The race tests run only on release branches because, at over 20 minutes, they are the longest step. `nightly.yml` runs them on `main` every night ([section 1.4](#14-the-nightly-workflow)).
+The race tests run only on release branches because, at close to an hour in one process, they are the longest job even when sharded. `nightly.yml` runs them on `main` every night ([section 1.4](#14-the-nightly-workflow)).
 
 ### 1.3 channel images
 

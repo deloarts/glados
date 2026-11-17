@@ -47,9 +47,9 @@ poetry run pytest tests/pg -q                       # race tests, one process
 
 ### 1.3 in ci
 
-- CI runs the full suite on every pull request, split into four parallel shards by `scripts/ci_test_shard.py`, and enforces the coverage threshold on the combined result.
-- CI runs the race tests once, in the first backend test shard, against its Postgres service after the shard's own run. `scripts/ci_test_shard.py` keeps them out of the shard lists. Which branches run them is in [releasing-ci.md section 1](releasing-ci.md#1-the-ci-workflow), and `nightly.yml` runs all of `tests/pg` on `main` every night ([releasing-ci.md section 1.4](releasing-ci.md#14-the-nightly-workflow)).
-- The backup and restore drill ([section 5.5](#55-the-backup-and-restore-drill)) runs in the same shard on every run, in its own step, and the race test step leaves it out.
+- CI runs the full suite on every pull request, split into four parallel shards by pytest-split, and enforces the coverage threshold on the combined result.
+- CI runs the race tests in their own job, `backend-pg-races`, split into four parallel shards that each get an empty Postgres service. The backend test shards leave all of `tests/pg` out. Which branches run them is in [releasing-ci.md section 1](releasing-ci.md#1-the-ci-workflow), and `nightly.yml` runs all of `tests/pg` on `main` every night ([releasing-ci.md section 1.4](releasing-ci.md#14-the-nightly-workflow)).
+- The backup and restore drill ([section 5.5](#55-the-backup-and-restore-drill)) runs in the first backend test shard on every run, in its own step, and the race test shards leave it out.
 - CI passes `--hypothesis-profile ci` ([section 4](#4-property-tests-and-hypothesis-profiles)).
 
 ## 2 isolation
