@@ -177,9 +177,9 @@ jobs:
     services:
       # Backs tests/integration/test_migrations_postgres.py, the opt-in
       # real-Postgres migration chain + autogenerate drift check (see that
-      # module's docstring), and the backup and restore drill and the race
-      # tests of tests/pg in their own steps below; every other test in the
-      # suite runs on SQLite and never touches this service. A fresh, empty
+      # module's docstring), and the backup and restore drill in its own step
+      # below; every other test in the suite runs on SQLite and never touches
+      # this service. The race tests run in backend-pg-races. A fresh, empty
       # `glados_ci` database on every job run, exactly what that test's own
       # safety guard requires.
       postgres:
@@ -243,23 +243,6 @@ jobs:
           psql --version
           poetry run pytest tests/pg/test_backup_restore_drill.py -q
 
-      # The Postgres race tests (tests/pg, see its conftest). They need the
-      # database empty, which the shard run leaves it, and run once, in the
-      # first shard; the shard run above leaves them out. At
-      # over 20 minutes they are the longest step, so they run only for a
-      # release branch, on its pushes and its pull request, as release-check
-      # does, and every night on main (nightly.yml); run them locally before
-      # a change that touches locking.
-      - name: pytest tests/pg (Postgres race tests)
-        if: >-
-          matrix.shard == 1 && (
-            (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) ||
-            (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/'))
-          )
-        env:
-          GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
-        run: poetry run pytest tests/pg -q --ignore=tests/pg/test_backup_restore_drill.py
-
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-shard${{ matrix.shard }}
@@ -267,6 +250,74 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+  # The Postgres race tests (tests/pg, see its conftest). In one process they
+  # take close to an hour, so they run only for a release branch, on its
+  # pushes and its pull request, as release-check does, and every night on
+  # main (nightly.yml); run them locally before a change that touches
+  # locking. Four shards run in parallel, each on its own empty Postgres
+  # service. backend/.test_durations holds no durations for them, so
+  # pytest-split gives every shard the same number of tests, in file order.
+  # They collect no coverage, so backend-verify does not wait for them, but
+  # publish-channel-image does.
+  backend-pg-races:
+    needs: quick-checks
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) ||
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # A fresh, empty database per shard, which the race tests' own safety
+      # check requires.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: glados_ci
+          POSTGRES_PASSWORD: glados_ci
+          POSTGRES_DB: glados_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U glados_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      - name: Set up Poetry cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: pytest tests/pg (race tests, shard ${{ matrix.shard }} of 4)
+        env:
+          GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
+        run: |
+          poetry run pytest tests/pg --ignore=tests/pg/test_backup_restore_drill.py \
+            --splits 4 --group ${{ matrix.shard }} --splitting-algorithm duration_based_chunks -q
 
   backend-verify:
     needs: [changes, quick-checks, backend-tests]
@@ -637,11 +688,12 @@ jobs:
   # only runs for release branches, so it may be skipped on `staging` but
   # must succeed on `release/**`.
   publish-channel-image:
-    needs: [backend-verify, frontend-verify, api-types, version-parity, gitleaks, release-check]
+    needs: [backend-verify, backend-pg-races, frontend-verify, api-types, version-parity, gitleaks, release-check]
     if: >-
       !cancelled() &&
       github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/heads/release/')) &&
       needs.backend-verify.result == 'success' &&
+      (needs.backend-pg-races.result == 'success' || (needs.backend-pg-races.result == 'skipped' && github.ref == 'refs/heads/staging')) &&
       needs.frontend-verify.result == 'success' &&
       needs.api-types.result == 'success' &&
       needs.version-parity.result == 'success' &&
