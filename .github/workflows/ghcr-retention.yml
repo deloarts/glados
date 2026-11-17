@@ -1,0 +1,62 @@
+# GHCR retention: delete old release candidate images once a week.
+#
+# Every push to a release branch publishes the backend and frontend images
+# with an immutable sha-<commit> tag (ci.yml), and nothing else removes
+# them. This workflow runs scripts/ghcr_retention.sh, which
+# keeps the newest 30 versions per package whose tags all start with sha-
+# and deletes the older ones together with their platform and attestation
+# manifests. A version that also carries a release tag (vX.Y.Z, vX.Y,
+# latest) or a channel tag (staging, release-candidate) is never deleted,
+# so every image a release promoted stays. GitHub keeps a deleted version
+# restorable for 30 days.
+#
+# workflow_dispatch runs it on demand, as a dry run unless that box is
+# cleared. GitHub mails a failed scheduled run to whoever last changed the
+# schedule below.
+name: GHCR retention
+
+on:
+  schedule:
+    # Mondays at 03:43 UTC, off the full hour that most scheduled workflows start on.
+    - cron: "43 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list what would be deleted"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghcr-retention
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # deleting package versions
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # The script reads each image index from the registry to find the
+      # manifests that go with it.
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old sha- versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The owner is lowercase already, which GHCR requires.
+          OWNER: ${{ github.repository_owner }}
+          GHCR_KEEP: "30"
+          GHCR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: scripts/ghcr_retention.sh "$OWNER"

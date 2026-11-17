@@ -1,0 +1,85 @@
+// Messages for the document control every controlled document shares,
+// merged into the en-GB locale.
+export default {
+  permissionMissing: 'This needs the permission {permission}.',
+  reference: '{number} rev. {revision}',
+  status: {
+    draft: 'Draft',
+    released: 'Released',
+    invalid: 'Invalid',
+    editing: 'Editing',
+  },
+  revision: {
+    draft: '{revision} (draft)',
+    tag: 'Rev. {revision}',
+  },
+  lock: {
+    edit: 'Edit',
+    discard: 'Discard',
+    editedBy: '{name} is editing this right now.',
+    editedBySince: '{name} has been editing this since {since}.',
+    end: 'End editing',
+    endConfirm:
+      '{name} is editing this right now. If you end the editing, nobody holds the draft and their unsaved changes stay only on their device.',
+    takeOver: 'Take over',
+    takeOverConfirm: '{name} is editing this right now. If you take over, their unsaved changes stay only on their device.',
+    lost: '{name} took over editing. Your unsaved changes are kept on this device.',
+    lostUnknown: 'You are no longer editing this. Your unsaved changes are kept on this device.',
+    idle: 'Editing ended after a while without activity. Your unsaved changes are kept on this device.',
+    discardConfirm: 'Discard your unsaved changes?',
+  },
+  table: {
+    revision: 'Revision',
+    released: 'Released',
+    editing: '{name} is editing this right now.',
+  },
+  menu: {
+    open: 'Open',
+    openInNewTab: 'Open in New Tab',
+    edit: 'Edit',
+    history: 'History',
+    print: 'Print',
+    copyLink: 'Copy Link',
+    linkCopied: 'Link copied.',
+    revise: 'New Revision',
+    release: 'Release',
+    invalidate: 'Mark as Invalid',
+    delete: 'Delete',
+    unavailable: 'That is not possible for this document right now.',
+  },
+  leave: {
+    header: 'Unsaved changes',
+    message:
+      'Your changes are not saved. If you leave, they stay on this device and are offered again when you open this document.',
+    accept: 'Leave',
+  },
+  draft: {
+    header: 'Restore unsaved changes?',
+    message: 'You changed this on this device on {date} without saving.',
+    stale: 'It was saved again since then. Restoring puts your changes over the newer version.',
+    staleSince: 'It was saved again on {date}. Restoring puts your changes over that version.',
+    blocked: 'It can no longer be changed, for example because it was released. Your changes can only be discarded.',
+    lockedBy: '{name} is editing it right now. Restore your changes once they are done; until then they stay on this device.',
+    restore: 'Restore',
+    discard: 'Discard',
+    restored: 'Unsaved changes restored. Save to keep them.',
+  },
+  invalid: {
+    action: 'Mark as Invalid',
+    title: 'Mark Revision {revision} as Invalid',
+    intro:
+      'The revision stays released and on record, marked invalid with your reason. Reports of it carry a warning. Correct it in a new revision.',
+    submit: 'Mark as Invalid',
+    done: 'Marked as invalid.',
+    notice: 'Marked invalid by {name} on {date}: {reason}. Correct it in a new revision.',
+  },
+  report: {
+    invalid: 'This revision was marked invalid by {name} on {date}: {reason}. Do not use it; it is corrected in a new revision.',
+    superseded: 'This revision was superseded on {date} by a newer one. Check the QR code for the current revision.',
+    notLatest: 'A newer revision of this document is in progress. This one is still the valid revision.',
+  },
+  reason: {
+    label: 'Reason',
+    required: 'Enter a reason.',
+  },
+}

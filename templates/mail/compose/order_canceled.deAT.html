@@ -1,0 +1,8 @@
+<title>Bestellung storniert</title>
+<p>Hallo {{ supplier }}-Team,</p>
+<p>hiermit stornieren wir unsere Bestellung <strong>{{ order_number }}</strong> vom {{ ordered_date }} mit den folgenden Positionen:</p>
+{{ table: row_no, project, quantity, unit, part_number, article_name, order_code_1, order_code_2 }}
+<p>{{ note }}</p>
+<p>Bitte bestätigt uns die Stornierung.</p>
+<p>Diese Mail wurde automatisch erstellt, bitte antwortet an <strong>{{ user_email }}</strong>.</p>
+<p>Viele Grüße<br><strong>{{ user_full_name }}</strong><br>{{ user_email }}</p>

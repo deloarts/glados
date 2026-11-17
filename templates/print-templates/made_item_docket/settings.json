@@ -1,0 +1,24 @@
+{
+  "glados_template": "print_template",
+  "version": 1,
+  "classifier": "made_item_docket",
+  "paper": "a4_aligned",
+  "copies_rule": "fixed",
+  "copies_fixed": 1,
+  "max_copies": 50,
+  "field_map": {
+    "article_name": "article_name",
+    "base_size": "base_size",
+    "company_logo": "@company_logo",
+    "footer_company_name": "@company_name",
+    "mass": "mass",
+    "material": "material",
+    "part_image": "@part_image",
+    "part_number": "part_number",
+    "printed_at": "@today",
+    "qr_payload": "public_id",
+    "revision": "revision",
+    "revision_date": "revision_date",
+    "status": "status"
+  }
+}

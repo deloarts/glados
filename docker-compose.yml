@@ -1,0 +1,327 @@
+# ─────────────────────────────────────────────────────────────
+# GLADOS - release compose
+#
+# Runs prebuilt images from GHCR (ghcr.io/deloarts/glados/backend
+# and ghcr.io/deloarts/glados/frontend). No source checkout and no
+# local build step required, just this file plus an env file.
+#
+#   GLADOS_VERSION    image tag pulled for both backend and frontend when
+#                     the per-component overrides below are unset, e.g.
+#                     v0.2 (pin a minor) or v0.2.0 (pin exact). Required:
+#                     there is no default, so nothing ever pulls latest
+#   BACKEND_VERSION   overrides GLADOS_VERSION for the backend image only
+#                     (default: unset, falls back to GLADOS_VERSION)
+#   FRONTEND_VERSION  overrides GLADOS_VERSION for the frontend image only
+#                     (default: unset, falls back to GLADOS_VERSION)
+#   FRONTEND_BIND     interface the frontend port binds to (default:
+#                     127.0.0.1, reached through the host's reverse proxy)
+#   FRONTEND_PORT     host port the frontend is published on (default: 8080)
+#   ENV_FILE          env file to load, e.g. stack.env for Portainer
+#                     (default: .env)
+#   GLADOS_INTERNAL_SUBNET, GLADOS_EXTERNAL_SUBNET
+#                     subnets of the two compose networks below (defaults:
+#                     192.168.240.0/24 and 192.168.241.0/24). Change them
+#                     only when they overlap a network the host must reach
+#   GLADOS_TRUSTED_PROXIES
+#                     comma-separated addresses or CIDR networks whose
+#                     X-Forwarded-For the frontend's nginx believes, or
+#                     none (default: GLADOS_EXTERNAL_SUBNET, which covers a
+#                     reverse proxy on the host and the cloudflared tunnel)
+#
+# Maintenance (--profile maintenance): an opt-in do-nothing sidecar for
+# running recovery commands (restore/admin) without a host shell -- see
+# docs/OPERATIONS.md sections 4.2, 5 and 6.
+#
+# pgAdmin (--profile pgadmin): an opt-in database console for one-off
+# inspection and data fixes no admin command covers. See the service below
+# and PGADMIN_* in .env.example; docs/OPERATIONS.md section 5.7.
+#
+# SeaweedFS (--profile seaweedfs): bundled S3-compatible object storage for
+# the seaweedfs storage provider. See SEAWEEDFS_* in .env.example and
+# docs/OPERATIONS.md section 2.1.
+# ─────────────────────────────────────────────────────────────
+name: glados
+
+services:
+
+  # ─── Backend ────────────────────────────────────────────────
+  backend:
+    image: ghcr.io/deloarts/glados/backend:${BACKEND_VERSION:-${GLADOS_VERSION:?GLADOS_VERSION is not set. Set it in the env file to the release to run, e.g. v0.1 (docs/INSTALLATION.md section 5)}}
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env}
+    environment:
+      # Prometheus multiprocess mode: must be set before Python starts.
+      # prometheus_client picks single- vs multi-process value storage at
+      # import time from this
+      # var (see src/read/adapters/inbound/api/metrics.py's module docstring).
+      # entrypoint.sh wipes and recreates this directory before exec'ing
+      # the command below, so stale files from a previous container never
+      # double-count. Container-local scratch space (prod runs as uid
+      # 1000, /tmp is writable) -- not a volume, nothing outside this
+      # container's own gunicorn workers ever needs to read it.
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+      # Gunicorn honours X-Forwarded-For and X-Forwarded-Proto only from
+      # these peers (gunicorn_conf.py). The frontend's nginx reaches the
+      # backend over the external network and is the only proxy in front
+      # of it. Set here rather than in the env file, so a stray value there
+      # cannot widen the trust.
+      NETWORK__TRUSTED_PROXIES: ${GLADOS_EXTERNAL_SUBNET:-192.168.241.0/24}
+      # The stack's own networks, which outbound calls a user can aim at
+      # must never reach.
+      NETWORK__INTERNAL_SUBNETS: ${GLADOS_INTERNAL_SUBNET:-192.168.240.0/24},${GLADOS_EXTERNAL_SUBNET:-192.168.241.0/24}
+    command: >
+      gunicorn src.bootstrap.main:app -k src.modules.platform.infrastructure.gunicorn_worker.TimeoutUvicornWorker -c python:src.modules.platform.infrastructure.gunicorn_conf --bind 0.0.0.0:3000 --error-logfile -
+    # Longer than gunicorn's 30s graceful_timeout (gunicorn_conf.py), so a
+    # restart lets in-flight requests finish instead of Docker killing the
+    # container after its default 10s.
+    stop_grace_period: 35s
+    volumes:
+      - media:/app/media
+      - logs:/app/logs
+      # The entrypoint's pre-migration dumps (docs/OPERATIONS.md section
+      # 3.1). A volume, so a dump outlives the container that took it.
+      - pre_migration_dumps:/app/pre-migration-dumps
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+      - external
+    # Harmless when the host's Docker daemon already sets json-file
+    # defaults (daemon.json); needed on a default install, where json-file
+    # has no size cap at all and stdout (see docs/OPERATIONS.md section 7)
+    # grows the volume unbounded over the life of a long-running deploy.
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── Maintenance sidecar (optional, --profile maintenance) ──
+  # A do-nothing container on the same network/volumes/env as backend, for
+  # running `restore`/`admin` out-of-process without a host shell -- see
+  # docs/OPERATIONS.md sections 4.2, 5 and 6. Deliberately does not migrate and
+  # does not start the app (docker/entrypoint.sh's "maintenance" case is
+  # `exec sleep infinity`, dispatched before the `alembic upgrade head`
+  # line): `restore` needs the backend stopped, and this container might be
+  # started while the backend is still up (e.g. to run an `admin` command).
+  maintenance:
+    image: ghcr.io/deloarts/glados/backend:${BACKEND_VERSION:-${GLADOS_VERSION:?GLADOS_VERSION is not set. Set it in the env file to the release to run, e.g. v0.1 (docs/INSTALLATION.md section 5)}}
+    profiles: [ maintenance ]
+    restart: "no"
+    env_file: ${ENV_FILE:-.env}
+    command: maintenance
+    volumes:
+      - media:/app/media
+      - logs:/app/logs
+      - pre_migration_dumps:/app/pre-migration-dumps
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ─── Postgres ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    restart: unless-stopped
+    # Set explicitly so the connection budget is documented: backend workers x
+    # (DATABASE__POOL_SIZE + DATABASE__MAX_OVERFLOW) must stay well below it.
+    command: ["postgres", "-c", "max_connections=100", "-c", "log_min_duration_statement=500"]
+    env_file: ${ENV_FILE:-.env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── pgAdmin (optional, --profile pgadmin) ──────────────────
+  # A database console for one-off inspection and data fixes. Opt-in and
+  # meant to be stopped again afterwards: it is a second login in front of
+  # the production database. Bound to loopback by default, reach it through
+  # an SSH tunnel; set PGADMIN_BIND=0.0.0.0 only on a host without shell
+  # access that sits on a trusted network. Register the database inside
+  # pgAdmin once (host `postgres`, port 5432, database POSTGRES_DB, user
+  # POSTGRES_USER); the `pgadmin` volume keeps that registration and the
+  # saved password across restarts. Credentials come in via interpolation,
+  # same as cloudflared's TUNNEL_TOKEN, so the app's env file is not handed
+  # to this container.
+  pgadmin:
+    image: dpage/pgadmin4:9.17@sha256:2f4ce946ddf8360680d7eff4eaba1d91859eb6b4003e6623bad5c63a322c2f4d
+    restart: unless-stopped
+    profiles: [ pgadmin ]
+    ports:
+      - "${PGADMIN_BIND:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-}
+      # No password-reset mail daemon inside the container.
+      PGADMIN_DISABLE_POSTFIX: "true"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── SeaweedFS (optional) ───────────────────────────────────
+  # `mini` runs master, volume server, filer and S3 gateway in one process,
+  # which suits a single host. The key pair becomes the S3 admin identity and
+  # the bucket is created on first start. Uploads to any other bucket fail
+  # instead of creating it, because the frontend reaches SeaweedFS on the
+  # external network only to serve presigned file URLs under /objects/.
+  # Refuses the profile without a strong S3 secret. Without one SeaweedFS
+  # serves its S3 API without authentication, and nginx forwards /objects/
+  # to it on the public hostname, so every stored file would be readable by
+  # anyone. Compose interpolates every service, including those of inactive
+  # profiles, so a required variable on the seaweedfs service itself would
+  # break every deploy without the profile; this one-shot check fails only
+  # the profile. The backend's boot guard refuses the same
+  # values.
+  seaweedfs-check:
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    profiles: [ seaweedfs ]
+    restart: "no"
+    network_mode: none
+    environment:
+      SEAWEEDFS_ACCESS_KEY: ${SEAWEEDFS_ACCESS_KEY:-}
+      SEAWEEDFS_SECRET_KEY: ${SEAWEEDFS_SECRET_KEY:-}
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - >-
+        if [ -z "$$SEAWEEDFS_ACCESS_KEY" ] || [ "$$SEAWEEDFS_SECRET_KEY" = "change_me" ]
+        || [ "$${#SEAWEEDFS_SECRET_KEY}" -lt 24 ]; then
+        echo "The seaweedfs profile needs SEAWEEDFS_ACCESS_KEY and a SEAWEEDFS_SECRET_KEY of at least 24 characters that is not the sample value (docs/OPERATIONS.md section 2.1)." >&2;
+        exit 1; fi
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    restart: unless-stopped
+    profiles: [ seaweedfs ]
+    depends_on:
+      seaweedfs-check:
+        condition: service_completed_successfully
+    command: mini -dir=/data -bucket=objects -s3.autoCreateBucket=false -admin.ui=false
+    environment:
+      AWS_ACCESS_KEY_ID: ${SEAWEEDFS_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${SEAWEEDFS_SECRET_KEY:-}
+    volumes:
+      - seaweedfs:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8333/healthz" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - internal
+      - external
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── Frontend ───────────────────────────────────────────────
+  frontend:
+    image: ghcr.io/deloarts/glados/frontend:${FRONTEND_VERSION:-${GLADOS_VERSION:?GLADOS_VERSION is not set. Set it in the env file to the release to run, e.g. v0.1 (docs/INSTALLATION.md section 5)}}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
+    environment:
+      # Peers whose X-Forwarded-For nginx resolves the client address from
+      # (frontend/docker/trusted-proxies.sh). A reverse proxy on the host
+      # reaches the published port from the external network's gateway and
+      # cloudflared runs on that network, so its subnet covers both. Every
+      # other peer counts as the client itself.
+      GLADOS_TRUSTED_PROXIES: ${GLADOS_TRUSTED_PROXIES:-${GLADOS_EXTERNAL_SUBNET:-192.168.241.0/24}}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - external
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── Cloudflare Tunnel (optional) ───────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.2@sha256:0aa26e284f05e6c77ae375b8c9c11d9eb6a448fb7bcd8d40f31cb6176189eb38
+    restart: unless-stopped
+    profiles: [ cloudflare ]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - frontend
+    networks:
+      - external
+
+# Pinned subnets, so the backend and the frontend's nginx can name the
+# networks they trust forwarded headers from, and the backend knows which
+# addresses belong to the stack itself. The defaults sit at the top of
+# 192.168/16, which LANs rarely use and Docker's default address pools
+# reach only after some thirty other networks.
+networks:
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${GLADOS_INTERNAL_SUBNET:-192.168.240.0/24}
+  external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${GLADOS_EXTERNAL_SUBNET:-192.168.241.0/24}
+
+volumes:
+  postgres:
+  redis:
+  seaweedfs:
+  media:
+  logs:
+  pre_migration_dumps:
+  pgadmin:

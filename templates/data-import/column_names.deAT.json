@@ -1,0 +1,126 @@
+{
+  "glados_template": "data_import_column_names",
+  "version": 1,
+  "column_names": {
+    "bought_item_create": {
+      "article_name": [
+        "Bezeichnung",
+        "Artikelbezeichnung",
+        "Artikelname"
+      ],
+      "order_code_1": [
+        "Bestellnummer",
+        "Bestellnr.",
+        "Bestell-Nr."
+      ],
+      "manufacturer_name": [
+        "Hersteller"
+      ],
+      "edp_part_number": [
+        "Artikelnummer"
+      ],
+      "order_code_2": [
+        "Typnummer"
+      ],
+      "ean": [
+        "EAN-Code"
+      ],
+      "tariff_number": [
+        "Zolltarifnummer",
+        "Warennummer"
+      ],
+      "mass": [
+        "Gewicht",
+        "Masse"
+      ],
+      "note": [
+        "Notiz",
+        "Bemerkung"
+      ],
+      "article_group_names": [
+        "Artikelgruppe",
+        "Artikelgruppen"
+      ],
+      "product_family_name": [
+        "Produktfamilie"
+      ],
+      "part_number": [
+        "Teilenummer",
+        "Sachnummer"
+      ]
+    },
+    "bought_item_demand": {
+      "project_number": [
+        "Projekt",
+        "Projektnummer"
+      ],
+      "quantity": [
+        "Menge",
+        "Anzahl"
+      ],
+      "unit": [
+        "Einheit"
+      ],
+      "part_number": [
+        "Teilenummer",
+        "Sachnummer",
+        "Artikelnummer"
+      ],
+      "article_name": [
+        "Artikel",
+        "Artikelname",
+        "Bezeichnung",
+        "Artikelbezeichnung"
+      ],
+      "order_code": [
+        "Bestellnummer",
+        "Bestellnr"
+      ],
+      "manufacturer_name": [
+        "Hersteller",
+        "Lieferant"
+      ],
+      "desired_delivery_date": [
+        "Lieferdatum"
+      ],
+      "note": [
+        "Notiz",
+        "Bemerkung"
+      ]
+    },
+    "made_item_demand": {
+      "project_number": [
+        "Projekt",
+        "Projektnummer"
+      ],
+      "quantity": [
+        "Menge",
+        "Anzahl"
+      ],
+      "part_number": [
+        "Teilenummer",
+        "Sachnummer",
+        "Artikelnummer"
+      ],
+      "revision": [
+        "Änderungsindex",
+        "Aenderungsindex",
+        "Zeichnungsindex",
+        "Revisionsindex"
+      ],
+      "article_name": [
+        "Artikel",
+        "Artikelname",
+        "Bezeichnung",
+        "Artikelbezeichnung"
+      ],
+      "desired_delivery_date": [
+        "Lieferdatum"
+      ],
+      "note": [
+        "Notiz",
+        "Bemerkung"
+      ]
+    }
+  }
+}

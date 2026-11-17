@@ -1,0 +1,16 @@
+// Breakpoints for media queries, injected into every style block by
+// vite.config.ts. Media queries measure in the browser's own rem (16px by
+// default), not the app's 14px root, so the px equivalents are at 16px.
+// The scale emits no CSS of its own.
+
+$bp-sm: 48rem; // 768px
+$bp-md: 56.25rem; // 900px
+$bp-lg: 70rem; // 1120px
+$bp-xl: 80rem; // 1280px
+$bp-2xl: 87.5rem; // 1400px
+$bp-3xl: 125rem; // 2000px
+
+// Height breakpoints: the sidebar compacts below the first, the dashboard
+// widens into a grid only above the second.
+$bp-height-compact: 51.25rem; // 820px
+$bp-height-grid: 46rem; // 736px

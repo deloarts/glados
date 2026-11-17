@@ -1,0 +1,27 @@
+{
+  "folders": [
+    { "name": "backend",  "path": "backend" },
+    { "name": "frontend", "path": "frontend" },
+    { "name": "glados",   "path": "." }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/__pycache__": true, "**/.pytest_cache": true, "**/.mypy_cache": true,
+      "**/.ruff_cache": true, "**/node_modules": true, "**/.volumes": true
+    },
+    "search.exclude": {
+      "**/node_modules": true, "**/.venv": true, "**/dist": true,
+      "backend/openapi/*.json": true,
+      "frontend/src/core/api/generated/**": true
+    },
+    "files.associations": { "*.Dockerfile": "dockerfile" }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff",
+      "Vue.volar", "vitest.explorer", "dbaeumer.vscode-eslint",
+      "EditorConfig.EditorConfig", "oxc.oxc-vscode",
+      "ms-azuretools.vscode-docker", "redhat.vscode-yaml"
+    ]
+  }
+}

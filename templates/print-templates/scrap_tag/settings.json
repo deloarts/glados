@@ -1,0 +1,21 @@
+{
+  "glados_template": "print_template",
+  "version": 1,
+  "classifier": "scrap_tag",
+  "trigger": "pieces_scrapped",
+  "design_dpi": 203,
+  "label_width_mm": 100,
+  "label_height_mm": 150,
+  "copies_rule": "fixed",
+  "copies_fixed": 1,
+  "max_copies": 50,
+  "field_map": {
+    "lot_number": "lot_number",
+    "made_item": "made_item_label",
+    "quantity_scrapped": "quantity",
+    "reason_label": "reason_label",
+    "date": "scrap_date",
+    "operator": "operator_full_name",
+    "replacement_lot_number": "replacement_lot_number"
+  }
+}

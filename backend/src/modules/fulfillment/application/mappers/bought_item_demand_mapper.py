@@ -1,0 +1,45 @@
+"""
+Maps the demand items of bought items to result DTOs.
+"""
+
+from src.modules.catalogue.application.mappers.bought_item_mapper import BoughtItemMapper
+from src.modules.fulfillment.application.dto.bought_item_demand_dto import DemandItemResult
+from src.modules.fulfillment.domain.entities.bought_item_demand_item import BoughtItemDemandItem
+from src.modules.platform.application.mappers.user_mapper import UserMapper
+
+
+class BoughtItemDemandItemMapper:
+    @staticmethod
+    def to_result(entity: BoughtItemDemandItem) -> DemandItemResult:
+        return DemandItemResult(
+            id=entity.id,
+            public_id=entity.public_id,
+            status=entity.status,
+            created=entity.created,
+            changed=entity.changed,
+            quantity=entity.quantity,
+            unit=entity.unit,
+            items_per_unit=entity.items_per_unit,
+            high_priority=entity.high_priority,
+            notify_on_delivery=entity.notify_on_delivery,
+            note=entity.note,
+            desired_delivery_date=entity.desired_delivery_date,
+            creator_id=entity.creator_id,
+            creator=UserMapper.to_public_result(entity.creator) if entity.creator else None,
+            changed_by_id=entity.changed_by_id,
+            changed_by=UserMapper.to_public_result(entity.changed_by)
+            if entity.changed_by
+            else None,
+            item_id=entity.item_id,
+            item_order_code_1=entity.item_order_code_1,
+            item_article_name=entity.item_article_name,
+            item=BoughtItemMapper.to_result(entity.item) if entity.item else None,
+            project_id=entity.project_id,
+            project_number=entity.project_number,
+            project_customer=entity.project_customer,
+            project_description=entity.project_description,
+            project_status=entity.project_status,
+            bucket_id=entity.bucket_id,
+            canceled_at=entity.canceled_at,
+            fulfilled_manually_at=entity.fulfilled_manually_at,
+        )

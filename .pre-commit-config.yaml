@@ -1,0 +1,88 @@
+repos:
+  # Blocks staged secrets before they reach a commit. CI's gitleaks job is
+  # the backstop for clones without the hooks installed.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      # ruff runs from the Poetry environment, like mypy below, so the hook
+      # and CI always use the version in poetry.lock. It checks the same
+      # scope as CI; ruff is fast enough that the whole scope costs no more
+      # than the staged files.
+      - id: ruff
+        name: ruff check --fix
+        entry: bash -c 'cd backend && poetry run ruff check --fix src tests scripts alembic'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: bash -c 'cd backend && poetry run ruff format src tests scripts alembic'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy
+        entry: bash -c 'cd backend && poetry run mypy src scripts'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      - id: import-linter
+        name: import-linter (hexagonal layering)
+        entry: bash -c 'cd backend && poetry run lint-imports'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      # Regenerates the frontend's API types from the fresh web snapshot in
+      # the same step, so a backend change never leaves them behind; CI only
+      # checks for drift (check:api-types).
+      - id: export-openapi
+        name: export OpenAPI snapshots (web + pat) and frontend API types
+        entry: bash -c 'cd backend && poetry run python scripts/export_openapi.py && cd ../frontend && npm run --silent generate:api-types'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      # Verifies catalogue.py still matches operations.json (see
+      # backend/scripts/pdm_catalogue/README.md); only runs when one of them is staged.
+      - id: pdm-catalogue
+        name: PDM Web API catalogue matches operations.json
+        entry: bash -c 'cd backend && poetry run python scripts/pdm_catalogue/generate.py --check'
+        language: system
+        files: ^backend/(src/modules/external_data/adapters/outbound/external/pdm/catalogue\.py|scripts/pdm_catalogue/(operations\.json|generate\.py))$
+        pass_filenames: false
+
+      # The test suite runs in CI (.github/workflows/ci.yml), not as a
+      # pre-commit hook, it is too slow for a commit-time gate.
+
+      # Comments and docstrings must stand alone, without labels that
+      # point into local planning documents. Genuine hits go into
+      # scripts/plan_refs_allowlist.txt.
+      - id: plan-refs
+        name: no planning labels in comments
+        entry: python3 scripts/check_plan_refs.py
+        language: system
+        files: ^(backend/(src|tests|scripts|alembic)/|frontend/(src|scripts)/|scripts/|docs/|\.github/|backend/pyproject\.toml$|frontend/(eslint|vite|vitest)\.config\.ts$|docker-compose(\.dev)?\.yml$|README\.md$|\.pre-commit-config\.yaml$)
+
+      # ── Frontend ────────────────────────────────────────────────
+      # Mirrors the backend pattern: runs from frontend/ via the package
+      # scripts (oxlint + eslint, both with --fix), only when frontend
+      # sources are staged.
+      - id: frontend-lint
+        name: frontend lint (oxlint + eslint)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|vue)$
+        pass_filenames: false

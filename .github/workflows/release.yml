@@ -1,0 +1,324 @@
+# Release: tag and publish a version when its release PR is merged.
+#
+# Merging a pull request from `release/X.Y.Z` into main is the release
+# action. This workflow then verifies the merge, finds the images ci.yml
+# built and checked for the release branch's head (the release candidate),
+# starts them once on an empty database, tags the squash commit vX.Y.Z,
+# retags the candidate's digests with the release tags and creates the
+# GitHub Release from the matching CHANGELOG.md section. Nothing is rebuilt:
+# the published images are byte for byte the ones CI tested. Tagging and
+# publishing happen in one run on purpose: a tag pushed with GITHUB_TOKEN
+# does not trigger other workflows, and a tag pushed by hand publishes
+# nothing.
+#
+# workflow_dispatch (on main only) is the recovery path when the automatic
+# run failed after the merge: it tags the current main head if that head is
+# the squash commit of the release PR for the given version, its version
+# files carry the version and the tag is still free, and promotes that PR's
+# candidate the same way.
+#
+# Tags produced on ghcr.io/<owner>/glados/{backend,frontend}:
+#   - the exact tag (e.g. v0.2.3)
+#   - the major.minor tag (e.g. v0.2)
+#   - latest
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag on the current main head (X.Y.Z), only to recover a failed release run"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # Only merged PRs from a release branch of this repository, never from a
+    # fork, and never a PR that was closed without merging.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'release/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read # the recovery dispatch looks up the merged release PR
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      minor: ${{ steps.info.outputs.minor }}
+      sha: ${{ steps.info.outputs.sha }}
+      candidate: ${{ steps.info.outputs.candidate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0
+
+      # The candidate is the release branch's head commit, the one ci.yml
+      # built the release-candidate images from. The recovery dispatch reads
+      # it from the release PR that main's head commit was merged from.
+      - name: Derive version and candidate
+        id: info
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          INPUT_VERSION: ${{ inputs.version }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha="$(git rev-parse HEAD)"
+          if [[ "$EVENT" == "workflow_dispatch" ]]; then
+            if [[ "$REF" != "refs/heads/main" ]]; then
+              echo "::error::Run the recovery dispatch on main, not $REF" >&2
+              exit 1
+            fi
+            version="$INPUT_VERSION"
+            candidate="$(gh api "repos/$REPOSITORY/commits/$sha/pulls" --jq \
+              "[.[] | select(.merged_at != null and .merge_commit_sha == \"$sha\" and .head.ref == \"release/$version\")][0].head.sha // empty")"
+            if [[ -z "$candidate" ]]; then
+              echo "::error::main's head $sha is not the merge of a release/$version pull request, so no tested candidate exists for it. Cut the next patch instead." >&2
+              exit 1
+            fi
+          else
+            version="${HEAD_REF#release/}"
+            candidate="$HEAD_SHA"
+          fi
+
+          if [[ ! "$version" =~ ^0\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$version' is not a 0.Y.Z version" >&2
+            exit 1
+          fi
+
+          {
+            echo "version=$version"
+            echo "minor=v${version%.*}"
+            echo "sha=$sha"
+            echo "candidate=$candidate"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check version files, CHANGELOG and tag
+        run: scripts/check_release_version.sh "${{ steps.info.outputs.version }}"
+
+      # A squash commit's only parent is main as it was right before the
+      # merge. If the release branch did not contain it, main had moved on
+      # and the merge would tag code the release candidate never ran. With
+      # it contained, the squash commit's tree is the candidate's tree, which
+      # the second check confirms, so the candidate's images are exactly the
+      # tagged code.
+      - name: Check the tagged commit is the candidate's code
+        env:
+          SHA: ${{ steps.info.outputs.sha }}
+          CANDIDATE: ${{ steps.info.outputs.candidate }}
+        run: |
+          # A merged release branch may be deleted already; GitHub still
+          # serves its head commit by hash.
+          if ! git cat-file -e "${CANDIDATE}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$CANDIDATE"
+          fi
+          if ! git merge-base --is-ancestor "${SHA}^" "$CANDIDATE"; then
+            echo "::error::The release branch was behind main when it was merged. Nothing was tagged. Cut the next patch from main." >&2
+            exit 1
+          fi
+          if [[ "$(git rev-parse "${SHA}^{tree}")" != "$(git rev-parse "${CANDIDATE}^{tree}")" ]]; then
+            echo "::error::$SHA does not hold the same tree as the release candidate $CANDIDATE. Nothing was tagged." >&2
+            exit 1
+          fi
+
+  # The images ci.yml built and checked for the candidate commit, by digest.
+  # A release PR can be merged as soon as its pull request checks pass, while
+  # the release branch's own push run may still be building the candidate,
+  # so this waits for its sha-<commit> tag to appear. When that run failed,
+  # no tag appears: re-run it, then re-run this workflow's failed jobs.
+  resolve:
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      backend: ${{ steps.digests.outputs.backend }}
+      frontend: ${{ steps.digests.outputs.frontend }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find the candidate's digests
+        id: digests
+        env:
+          OWNER: ${{ github.repository_owner }}
+          CANDIDATE: ${{ needs.guard.outputs.candidate }}
+          WAIT_MINUTES: "50"
+        run: |
+          deadline=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+          for component in backend frontend; do
+            # The owner is lowercase already, which GHCR requires.
+            repository="ghcr.io/$OWNER/glados/$component"
+            until digest="$(docker buildx imagetools inspect "$repository:sha-$CANDIDATE" \
+                --format '{{.Manifest.Digest}}' 2>/dev/null)" && [[ -n "$digest" ]]; do
+              if (( $(date +%s) > deadline )); then
+                echo "::error::$repository:sha-$CANDIDATE did not appear within $WAIT_MINUTES minutes. Check that ci.yml's run for the release branch's last push passed and published the release candidate, then re-run this workflow's failed jobs." >&2
+                exit 1
+              fi
+              echo "Waiting for $repository:sha-$CANDIDATE ..."
+              sleep 30
+            done
+            echo "$component: $repository@$digest"
+            echo "$component=$repository@$digest" >> "$GITHUB_OUTPUT"
+          done
+
+  # Starts the candidate's images with the release docker-compose.yml on an
+  # empty Postgres and Redis before anything is tagged or published: the
+  # entrypoint must migrate the database, the backend must report this
+  # version and be ready, and the frontend must serve the app and reach the
+  # backend. See scripts/smoke_release_images.sh.
+  smoke:
+    needs: [guard, resolve]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start the images on an empty database
+        env:
+          BACKEND: ${{ needs.resolve.outputs.backend }}
+          FRONTEND: ${{ needs.resolve.outputs.frontend }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: scripts/smoke_release_images.sh "$BACKEND" "$FRONTEND" "$VERSION"
+
+  tag:
+    needs: [guard, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+          SHA: ${{ needs.guard.outputs.sha }}
+        run: |
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              tag -a "v$VERSION" -m "Release v$VERSION" "$SHA"
+          git push origin "v$VERSION"
+
+  # Retags the smoke-tested digests; --prefer-index=false copies each
+  # manifest as it is, so every release tag names the very digest the
+  # candidate had, which the last step confirms.
+  publish:
+    needs: [guard, resolve, tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Retag the candidate's digests
+        env:
+          BACKEND: ${{ needs.resolve.outputs.backend }}
+          FRONTEND: ${{ needs.resolve.outputs.frontend }}
+          VERSION: ${{ needs.guard.outputs.version }}
+          MINOR: ${{ needs.guard.outputs.minor }}
+        run: |
+          for source in "$BACKEND" "$FRONTEND"; do
+            repository="${source%@*}"
+            digest="${source#*@}"
+            docker buildx imagetools create --prefer-index=false \
+              --tag "$repository:v$VERSION" \
+              --tag "$repository:$MINOR" \
+              --tag "$repository:latest" \
+              "$source"
+            for tag in "v$VERSION" "$MINOR" latest; do
+              published="$(docker buildx imagetools inspect "$repository:$tag" --format '{{.Manifest.Digest}}')"
+              if [[ "$published" != "$digest" ]]; then
+                echo "::error::$repository:$tag is $published, not the tested $digest." >&2
+                exit 1
+              fi
+              echo "$repository:$tag -> $digest"
+            done
+          done
+
+  github-release:
+    needs: [guard, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: v${{ needs.guard.outputs.version }}
+
+      - name: Extract CHANGELOG section
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]") > 0) { found=1 }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "(No CHANGELOG.md section found for $VERSION.)" > release_notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: v${{ needs.guard.outputs.version }}
+          name: v${{ needs.guard.outputs.version }}
+          body_path: release_notes.md

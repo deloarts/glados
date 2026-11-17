@@ -1,0 +1,212 @@
+{
+  "description": "Cases of the Markdown subset of meeting cards. The backend normalises every 'input' to 'expected', and 'expected' to itself; the card editor loads 'expected' and writes it back unchanged. 'users' are the user ids a mention may name and 'files' the meeting file ids an image may show. The rules are in backend/src/modules/workspace/domain/services/meeting_markdown.py.",
+  "users": [
+    2,
+    3
+  ],
+  "files": [
+    5
+  ],
+  "cases": [
+    {
+      "name": "heading, paragraph and list stay as they are",
+      "input": "### Decisions\n\n- Cycle time target **9.5 s** stays.\n- Delivery stays in week 6/2027.",
+      "expected": "### Decisions\n\n- Cycle time target **9.5 s** stays.\n- Delivery stays in week 6/2027.",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "a blank line goes between a heading and the block after it",
+      "input": "### Decisions\n- Cycle time target stays.",
+      "expected": "### Decisions\n\n- Cycle time target stays.",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "other heading levels become text",
+      "input": "# Title\n## Sub\n#### Deep",
+      "expected": "\\# Title\n\\## Sub\n\\#### Deep",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "underscores read as asterisks, inside words they stay",
+      "input": "Hello __bold__ and _italic_ and snake_case_name",
+      "expected": "Hello **bold** and *italic* and snake_case_name",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "bold inside italic and italic inside bold",
+      "input": "***both*** and *a **b** c*",
+      "expected": "***both*** and *a **b** c*",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "an unmatched delimiter becomes text",
+      "input": "** spaced** and a single * star",
+      "expected": "\\*\\* spaced\\*\\* and a single \\* star",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "bullet markers become dashes, deeper levels join the second",
+      "input": "* a\n* b\n    * c\n        * d\n+ e",
+      "expected": "- a\n- b\n  - c\n  - d\n- e",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "numbers run on from the first item and a blank line between items goes",
+      "input": "1) one\n2) two\n\n3) three",
+      "expected": "1. one\n2. two\n3. three",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "numbers start at the first item's number",
+      "input": "3. three\n4. four",
+      "expected": "3. three\n4. four",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "numbers are right-aligned from ten items on",
+      "input": "1. a\n2. b\n3. c\n4. d\n5. e\n6. f\n7. g\n8. h\n9. i\n10. j",
+      "expected": " 1. a\n 2. b\n 3. c\n 4. d\n 5. e\n 6. f\n 7. g\n 8. h\n 9. i\n10. j",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "a bullet list nested in a numbered list is indented by the number's width",
+      "input": "1. first\n   - nested bullet\n2. second",
+      "expected": "1. first\n   - nested bullet\n2. second",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "a list item takes the lines after it",
+      "input": "- item\ncontinued lazily\n  indented continuation\n\nAfter",
+      "expected": "- item\n  continued lazily\n  indented continuation\n\nAfter",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "a bullet list and a numbered list are two blocks",
+      "input": "- a\n1. b",
+      "expected": "- a\n\n1. b",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "empty list items stay",
+      "input": "-\n- \n1.",
+      "expected": "-\n-\n\n1.",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "line breaks inside a paragraph stay, trailing spaces go",
+      "input": "Line one\nLine two  \nLine three",
+      "expected": "Line one\nLine two\nLine three",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "quote, code block, rule and table become text",
+      "input": "> quote\n\n```\ncode\n```\n\n---\n\n| a | b |\n|---|---|\n| 1 | 2 |",
+      "expected": "\\> quote\n\n\\`\\`\\`\ncode\n\\`\\`\\`\n\n\\---\n\n| a | b |\n\\|---\\|---\\|\n| 1 | 2 |",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "strike-through becomes text, raw HTML stays as typed",
+      "input": "Use ~~strike~~ and <b>html</b>",
+      "expected": "Use \\~\\~strike\\~\\~ and <b>html</b>",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "inline code keeps its content and its fence",
+      "input": "Use `a * b` and ``x ` y`` and `  padded  `",
+      "expected": "Use `a * b` and ``x ` y`` and `  padded  `",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "a number or plus at a line start starts a list, other line starts are escaped",
+      "input": "2026. was a year\n\n-5 degrees\n\n+ plus\n\nText\n===",
+      "expected": "2026. was a year\n\n\\-5 degrees\n\n- plus\n\nText\n\\===",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "backslashes are doubled unless they escape punctuation",
+      "input": "C:\\path\\to and \\*literal\\*",
+      "expected": "C:\\\\path\\\\to and \\*literal\\*",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "brackets in text are escaped",
+      "input": "See [1] and item [a]",
+      "expected": "See \\[1\\] and item \\[a\\]",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "mentions of known users stay, others keep their name",
+      "input": "@[Anna Generic](user:2) and @[Ghost](user:99)",
+      "expected": "@[Anna Generic](user:2) and @Ghost",
+      "mentions": [
+        2
+      ],
+      "images": []
+    },
+    {
+      "name": "images of the meeting's files stay, others keep their alt text",
+      "input": "![rig](file:5) ![other](file:9) ![web](https://example.com/y.png)",
+      "expected": "![rig](file:5) other web",
+      "mentions": [],
+      "images": [
+        5
+      ]
+    },
+    {
+      "name": "links to http, https and mailto stay, others keep their text",
+      "input": "[Glados](https://glados.example) [bad](javascript:alert) [mail](mailto:a@example.com)",
+      "expected": "[Glados](https://glados.example) bad [mail](mailto:a@example.com)",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "marks inside a link stay",
+      "input": "[**bold** link](https://example.com)",
+      "expected": "[**bold** link](https://example.com)",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "indentation of a paragraph goes",
+      "input": "    indented text",
+      "expected": "indented text",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "blank lines at the start and end go",
+      "input": "\n\nText\n\n\n",
+      "expected": "Text",
+      "mentions": [],
+      "images": []
+    },
+    {
+      "name": "Windows line endings become line feeds",
+      "input": "a\r\nb\r\n\r\nc",
+      "expected": "a\nb\n\nc",
+      "mentions": [],
+      "images": []
+    }
+  ]
+}

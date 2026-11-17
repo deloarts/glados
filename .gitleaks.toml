@@ -1,0 +1,48 @@
+# Repository config for gitleaks, read by CI's gitleaks job and the
+# pre-commit hook. It keeps the default rule set and only adds allowlists
+# for known false positives.
+
+[extend]
+useDefault = true
+
+# The drive-sizing form describes its fields as `{ key: 'axisInertiaKgCm2', ... }`.
+# The generic API key rule reads the camelCase field name after `key:` as a
+# secret. A finding is allowed only in that file and only when the matched
+# value is a plain camelCase identifier.
+[[allowlists]]
+description = "Drive-sizing field keys are identifiers, not API keys"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^frontend/src/features/tools/utils/driveSizing/model\.ts$''']
+regexes = ['''^[a-z]+(?:[A-Z0-9][a-z0-9]*)+$''']
+
+# The session timeout tests call `_me(client, token, idle_seconds=20 * 60)`.
+# The generic API key rule reads the keyword argument after `token,` as a
+# secret. Allowed only in that file and only for that argument.
+[[allowlists]]
+description = "Idle-time keyword arguments in the session timeout tests are not API keys"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^backend/tests/integration/test_api_session_timeout\.py$''']
+regexes = ['''^idle_seconds=\d+$''']
+
+# The product device image tests build devices with `"name_ascii_key": "b01_hubzylinder_p1"`
+# and `"group_key": "b01_hubzylinder_p"`. The generic API key rule reads the
+# snake_case device key after `_key` as a secret. Allowed only in that file and
+# only when the matched value is a lowercase snake_case identifier.
+[[allowlists]]
+description = "Product device name keys in the image tests are identifiers, not API keys"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^backend/tests/unit/test_product_device_images\.py$''']
+regexes = ['''^[a-z0-9]+(?:_[a-z0-9]+)+$''']
+
+# The meeting notes draft tests call `_draft_new(client, token, idempotency_key="notebook-1")`.
+# The generic API key rule reads the keyword argument after `token,` as a
+# secret. Allowed only in that file and only for that argument name.
+[[allowlists]]
+description = "Idempotency keyword arguments in the meeting notes draft tests are not API keys"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^backend/tests/integration/test_api_meeting_notes_drafts\.py$''']
+regexes = ['''^idempotency_key=$''']

@@ -1,0 +1,16 @@
+{
+  "glados_template": "print_template",
+  "version": 1,
+  "classifier": "bought_item_label",
+  "copies_rule": "fixed",
+  "copies_fixed": 1,
+  "max_copies": 50,
+  "field_map": {
+    "article_name": "article_name",
+    "bought_item_uuid": "public_id",
+    "company_name": "@company_name",
+    "manufacturer": "manufacturer_name",
+    "order_code": "order_code_1",
+    "part_number": "part_number"
+  }
+}

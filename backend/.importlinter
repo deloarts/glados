@@ -1,0 +1,680 @@
+# Module boundaries, checked by `poetry run lint-imports` (docs/reference/module-boundaries.md section 4,
+# ADR 0012). Each module under src/modules/ keeps its layers inside, imports only the modules
+# it declares (tests/unit/test_context_boundaries.py DEPENDS_ON, which a test keeps in step
+# with the contracts below), and reaches another module only through its public API: its
+# api.py and its named interfaces, the domain events, value objects and errors, the DTOs and
+# the ports it owns. The ignore lists hold the imports that break a rule today, each group
+# with its reason. They only shrink: an entry that matches no import fails the run.
+
+[importlinter]
+root_package = src
+include_external_packages = True
+
+[importlinter:contract:layers]
+name = Inside every module: adapters, then application, then ports, then domain
+type = layers
+containers =
+    src.modules.platform
+    src.modules.catalogue
+    src.modules.workspace
+    src.modules.external_data
+    src.modules.fulfillment
+    src.modules.quality
+    src.modules.operations
+layers =
+    adapters
+    application
+    ports
+    domain
+
+[importlinter:contract:domain]
+name = Domain code imports no outer layer and no framework
+type = forbidden
+source_modules =
+    src.modules.*.domain
+    src.shared_kernel
+forbidden_modules =
+    src.modules.*.application
+    src.modules.*.adapters
+    src.modules.*.infrastructure
+    src.modules.*.ports
+    src.read
+    src.bootstrap
+    fastapi
+    starlette
+    sqlalchemy
+    pydantic
+    pydantic_settings
+    boto3
+    botocore
+    azure
+    redis
+    ldap3
+
+[importlinter:contract:ports]
+name = Ports import no application code and no adapters of any module
+type = forbidden
+source_modules =
+    src.modules.*.ports
+    src.read.ports
+forbidden_modules =
+    src.modules.*.application
+    src.modules.*.adapters
+    src.read.application
+    src.read.adapters
+    src.bootstrap
+
+[importlinter:contract:application]
+name = Application code imports no adapters of any module
+type = forbidden
+source_modules =
+    src.modules.*.application
+    src.read.application
+forbidden_modules =
+    src.modules.*.adapters
+    src.read.adapters
+    src.bootstrap
+
+[importlinter:contract:infrastructure]
+name = Infrastructure has no application or adapter dependencies
+type = forbidden
+source_modules =
+    src.modules.*.infrastructure
+forbidden_modules =
+    src.modules.*.application
+    src.modules.*.adapters
+
+[importlinter:contract:frameworks]
+name = Application and ports have no web or ORM framework dependencies
+type = forbidden
+source_modules =
+    src.modules.*.application
+    src.modules.*.ports
+    src.read.application
+    src.read.ports
+forbidden_modules =
+    fastapi
+    starlette
+    sqlalchemy
+
+[importlinter:contract:services]
+name = Application services do not depend on use cases
+type = forbidden
+source_modules =
+    src.modules.*.application.services
+forbidden_modules =
+    src.modules.*.application.use_cases
+
+# Planning & fulfillment is one module because the lifecycle reconciler is one transaction
+# boundary, so its use-case groups are layered inside it instead (docs/reference/module-boundaries.md
+# section 4.6). From the top: the dashboard and todo readers compose what the groups below
+# list; awarding a quote request creates an order and assigns lot positions, and the
+# source item allocations reuse the source item demand family; the order, demand, bucket,
+# production order, machine and settings groups are independent of each other; orders,
+# demands and production orders create or cancel lots; every write that changes the plan runs
+# the machine schedule recompute; the demand family holds the use cases the three demand kinds
+# share; application services sit below every group.
+[importlinter:contract:fulfillment-use-case-layers]
+name = Planning & fulfillment use-case groups depend only downwards
+type = layers
+containers =
+    src.modules.fulfillment.application
+layers =
+    use_cases.dashboard | use_cases.todo
+    use_cases.quote_request | use_cases.source_item_allocation
+    use_cases.order | use_cases.bought_item_demand | use_cases.made_item_demand | use_cases.source_item_demand | use_cases.bought_item_demand_bucket | use_cases.made_item_demand_bucket | use_cases.source_item_demand_bucket | use_cases.production_order | use_cases.production_machine | use_cases.machine_pool | use_cases.admin_settings
+    use_cases.production_lot
+    use_cases.production_schedule | use_cases._demand_family
+    services
+
+[importlinter:contract:kernel]
+name = The shared kernel imports no module
+type = forbidden
+source_modules =
+    src.shared_kernel
+forbidden_modules =
+    src.modules
+    src.read
+    src.bootstrap
+
+[importlinter:contract:read-tier]
+name = Nothing imports the read tier but the composition root
+type = forbidden
+source_modules =
+    src.modules
+    src.shared_kernel
+forbidden_modules =
+    src.read
+allow_indirect_imports = True
+
+[importlinter:contract:read-tier-public-api]
+name = The read tier reaches the modules only through their public API
+type = forbidden
+source_modules =
+    src.read
+forbidden_modules =
+    src.modules.*.application.use_cases
+    src.modules.*.adapters.inbound.api.v1
+    src.modules.*.adapters.inbound.mcp.catalog
+    src.modules.*.adapters.outbound.external
+    src.modules.*.adapters.outbound.persistence.repositories
+    src.modules.*.ports.outbound.repositories
+    src.modules.catalogue.application.services
+    src.modules.catalogue.domain.services
+    src.modules.workspace.application.services
+    src.modules.workspace.domain.services
+    src.modules.external_data.application.services
+    src.modules.external_data.domain.services
+    src.modules.fulfillment.application.services
+    src.modules.fulfillment.domain.services
+    src.modules.fulfillment.infrastructure
+    src.modules.quality.application.services
+    src.modules.quality.domain.services
+    src.modules.operations.application.services
+    src.modules.operations.domain.services
+    src.modules.operations.infrastructure
+allow_indirect_imports = True
+
+[importlinter:contract:composition-root]
+name = Nothing imports the composition root
+type = forbidden
+source_modules =
+    src.modules
+    src.read
+    src.shared_kernel
+forbidden_modules =
+    src.bootstrap
+
+[importlinter:contract:platform-dependencies]
+name = Platform imports only the shared kernel
+type = forbidden
+source_modules =
+    src.modules.platform
+forbidden_modules =
+    src.modules.catalogue
+    src.modules.workspace
+    src.modules.external_data
+    src.modules.fulfillment
+    src.modules.quality
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:catalogue-dependencies]
+name = Catalogue imports only Platform
+type = forbidden
+source_modules =
+    src.modules.catalogue
+forbidden_modules =
+    src.modules.workspace
+    src.modules.external_data
+    src.modules.fulfillment
+    src.modules.quality
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:workspace-dependencies]
+name = Workspace imports only Platform, Catalogue
+type = forbidden
+source_modules =
+    src.modules.workspace
+forbidden_modules =
+    src.modules.external_data
+    src.modules.fulfillment
+    src.modules.quality
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:external-data-dependencies]
+name = CAD & external data imports only Platform, Catalogue
+type = forbidden
+source_modules =
+    src.modules.external_data
+forbidden_modules =
+    src.modules.workspace
+    src.modules.fulfillment
+    src.modules.quality
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:fulfillment-dependencies]
+name = Planning & fulfillment imports only Platform, Catalogue, Workspace
+type = forbidden
+source_modules =
+    src.modules.fulfillment
+forbidden_modules =
+    src.modules.external_data
+    src.modules.quality
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:quality-dependencies]
+name = Quality & documents imports only Platform, Catalogue, Workspace, Planning & fulfillment
+type = forbidden
+source_modules =
+    src.modules.quality
+forbidden_modules =
+    src.modules.external_data
+    src.modules.operations
+allow_indirect_imports = True
+
+[importlinter:contract:operations-dependencies]
+name = Operations imports only Platform, Catalogue, Planning & fulfillment
+type = forbidden
+source_modules =
+    src.modules.operations
+forbidden_modules =
+    src.modules.workspace
+    src.modules.external_data
+    src.modules.quality
+allow_indirect_imports = True
+
+[importlinter:contract:platform-privacy]
+name = Other modules use only the public API of Platform
+type = protected
+protected_modules =
+    src.modules.platform.application.use_cases
+    src.modules.platform.adapters.inbound.api.v1
+    src.modules.platform.adapters.outbound.persistence.repositories._admin_settings_mappers
+    src.modules.platform.adapters.outbound.persistence.repositories.acknowledgement_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.agent_call_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.agent_consent_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.api_key_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.api_key_usage_log_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.backup_run_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.email_notification_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.idempotency_key_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.log_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.notification_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.passkey_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.pat_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.pat_usage_log_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.security_event_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.trusted_device_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.user_group_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.user_pdm_link_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.user_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.user_session_repository
+    src.modules.platform.adapters.outbound.persistence.repositories.webhook_repository
+    src.modules.platform.adapters.inbound.mcp.catalog
+    src.modules.platform.adapters.inbound.mcp.server
+allowed_importers =
+    src.modules.platform
+    src.bootstrap
+
+[importlinter:contract:catalogue-privacy]
+name = Other modules use only the public API of Catalogue
+type = protected
+protected_modules =
+    src.modules.catalogue.domain.services
+    src.modules.catalogue.application.use_cases
+    src.modules.catalogue.application.services
+    src.modules.catalogue.adapters.inbound.api.v1
+    src.modules.catalogue.adapters.outbound.persistence.product_family_mappers
+    src.modules.catalogue.adapters.outbound.persistence.repositories._admin_settings_mappers
+    src.modules.catalogue.adapters.outbound.persistence.repositories.article_group_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.bought_item_file_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.bought_item_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.contact_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.customer_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.fabrication_method_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.inspection_method_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.item_picture_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.labeled_catalogue_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.made_item_file_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.made_item_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.part_number_registry_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.product_family_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.source_item_file_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.source_item_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.source_item_type_repository
+    src.modules.catalogue.adapters.outbound.persistence.repositories.supplier_repository
+    src.modules.catalogue.ports.outbound.repositories
+    src.modules.catalogue.adapters.inbound.mcp
+allowed_importers =
+    src.modules.catalogue
+    src.bootstrap
+
+[importlinter:contract:catalogue-models]
+name = Only persistence adapters use the ORM models and row mappers of Catalogue
+type = protected
+protected_modules =
+    src.modules.catalogue.adapters.outbound.persistence.models
+    src.modules.catalogue.adapters.outbound.persistence.mappers
+allowed_importers =
+    src.modules.catalogue
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:catalogue-deps]
+name = Only dependency factories use the dependency factories of Catalogue
+type = protected
+protected_modules =
+    src.modules.catalogue.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.catalogue
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:catalogue-schemas]
+name = Only inbound adapters use the API schemas of Catalogue
+type = protected
+protected_modules =
+    src.modules.catalogue.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.catalogue
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap
+
+[importlinter:contract:workspace-privacy]
+name = Other modules use only the public API of Workspace
+type = protected
+protected_modules =
+    src.modules.workspace.domain.services
+    src.modules.workspace.application.use_cases
+    src.modules.workspace.application.services
+    src.modules.workspace.adapters.inbound.api.v1
+    src.modules.workspace.adapters.outbound.persistence.repositories.contact_link_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_card_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_file_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_notes_draft_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_notification_queue
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.meeting_snapshot_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.plc_environment_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.plc_manual_tag_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_device_check_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_device_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_device_resource_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_file_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.product_variant_repository
+    src.modules.workspace.adapters.outbound.persistence.repositories.project_repository
+    src.modules.workspace.ports.outbound.repositories
+    src.modules.workspace.adapters.inbound.mcp
+    src.modules.workspace.adapters.outbound.live
+    src.modules.workspace.adapters.outbound.locale
+allowed_importers =
+    src.modules.workspace
+    src.bootstrap
+
+[importlinter:contract:workspace-models]
+name = Only persistence adapters use the ORM models and row mappers of Workspace
+type = protected
+protected_modules =
+    src.modules.workspace.adapters.outbound.persistence.models
+    src.modules.workspace.adapters.outbound.persistence.mappers
+allowed_importers =
+    src.modules.workspace
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:workspace-deps]
+name = Only dependency factories use the dependency factories of Workspace
+type = protected
+protected_modules =
+    src.modules.workspace.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.workspace
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:workspace-schemas]
+name = Only inbound adapters use the API schemas of Workspace
+type = protected
+protected_modules =
+    src.modules.workspace.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.workspace
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap
+
+[importlinter:contract:external-data-privacy]
+name = Other modules use only the public API of CAD & external data
+type = protected
+protected_modules =
+    src.modules.external_data.domain.services
+    src.modules.external_data.application.use_cases
+    src.modules.external_data.application.services
+    src.modules.external_data.adapters.inbound.api.v1
+    src.modules.external_data.adapters.outbound.external
+    src.modules.external_data.adapters.outbound.persistence.pdm_file_lock
+    src.modules.external_data.adapters.outbound.persistence.pdm_poll_lock
+    src.modules.external_data.adapters.outbound.persistence.repositories._admin_settings_mappers
+    src.modules.external_data.adapters.outbound.persistence.repositories.pdm_document_link_repository
+    src.modules.external_data.adapters.outbound.persistence.repositories.pdm_file_snapshot_repository
+    src.modules.external_data.adapters.outbound.persistence.repositories.pdm_folder_poll_state_repository
+    src.modules.external_data.adapters.outbound.persistence.repositories.pdm_reconciliation_finding_repository
+    src.modules.external_data.adapters.outbound.persistence.repositories.pdm_sync_run_repository
+    src.modules.external_data.ports.outbound.repositories
+    src.modules.external_data.adapters.inbound.mcp
+allowed_importers =
+    src.modules.external_data
+    src.bootstrap
+
+[importlinter:contract:external-data-models]
+name = Only persistence adapters use the ORM models and row mappers of CAD & external data
+type = protected
+protected_modules =
+    src.modules.external_data.adapters.outbound.persistence.models
+allowed_importers =
+    src.modules.external_data
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:external-data-deps]
+name = Only dependency factories use the dependency factories of CAD & external data
+type = protected
+protected_modules =
+    src.modules.external_data.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.external_data
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:external-data-schemas]
+name = Only inbound adapters use the API schemas of CAD & external data
+type = protected
+protected_modules =
+    src.modules.external_data.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.external_data
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap
+
+[importlinter:contract:fulfillment-privacy]
+name = Other modules use only the public API of Planning & fulfillment
+type = protected
+protected_modules =
+    src.modules.fulfillment.domain.services
+    src.modules.fulfillment.application.use_cases
+    src.modules.fulfillment.application.services
+    src.modules.fulfillment.adapters.inbound.api.idempotent_replays
+    src.modules.fulfillment.adapters.inbound.api.v1
+    src.modules.fulfillment.adapters.outbound.external
+    src.modules.fulfillment.adapters.outbound.persistence.allocation_filters
+    src.modules.fulfillment.adapters.outbound.persistence.lifecycle_store
+    src.modules.fulfillment.adapters.outbound.persistence.repositories._admin_settings_mappers
+    src.modules.fulfillment.adapters.outbound.persistence.repositories._calendar_hours
+    src.modules.fulfillment.adapters.outbound.persistence.repositories._lifecycle_rows
+    src.modules.fulfillment.adapters.outbound.persistence.repositories._order_item_allocations
+    src.modules.fulfillment.adapters.outbound.persistence.repositories._raw_material_coverage
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.bought_item_demand_bucket_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.bought_item_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.bought_item_usage_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.demand_bucket_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.machine_calendar_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.machine_downtime_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.machine_pool_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.made_item_demand_bucket_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.made_item_demand_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.made_item_usage_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.manufacturing_assessment_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.order_file_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.order_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.production_machine_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.production_order_file_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.production_order_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.project_work_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.quote_request_file_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.quote_request_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.source_item_allocation_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.source_item_demand_bucket_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.source_item_demand_repository
+    src.modules.fulfillment.adapters.outbound.persistence.schedule_recompute_lock
+    src.modules.fulfillment.ports.outbound.repositories
+    src.modules.fulfillment.infrastructure
+    src.modules.fulfillment.adapters.inbound.mcp
+allowed_importers =
+    src.modules.fulfillment
+    src.bootstrap
+
+[importlinter:contract:fulfillment-models]
+name = Only persistence adapters use the ORM models and row mappers of Planning & fulfillment
+type = protected
+protected_modules =
+    src.modules.fulfillment.adapters.outbound.persistence.models
+allowed_importers =
+    src.modules.fulfillment
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:fulfillment-deps]
+name = Only dependency factories use the dependency factories of Planning & fulfillment
+type = protected
+protected_modules =
+    src.modules.fulfillment.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.fulfillment
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:fulfillment-schemas]
+name = Only inbound adapters use the API schemas of Planning & fulfillment
+type = protected
+protected_modules =
+    src.modules.fulfillment.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.fulfillment
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap
+
+[importlinter:contract:quality-privacy]
+name = Other modules use only the public API of Quality & documents
+type = protected
+protected_modules =
+    src.modules.quality.domain.services
+    src.modules.quality.application.use_cases
+    src.modules.quality.application.services
+    src.modules.quality.adapters.inbound.api.v1
+    src.modules.quality.adapters.outbound.external
+    src.modules.quality.adapters.outbound.persistence.repositories.calculation_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.checklist_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.controlled_document_mapping
+    src.modules.quality.adapters.outbound.persistence.repositories.controlled_document_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.print_job_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.print_template_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.printer_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.production_kpi_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.report_journal_repository
+    src.modules.quality.adapters.outbound.persistence.repositories.sequence_repository
+    src.modules.quality.adapters.outbound.rendering
+    src.modules.quality.ports.outbound.repositories
+    src.modules.quality.adapters.inbound.mcp
+allowed_importers =
+    src.modules.quality
+    src.bootstrap
+
+[importlinter:contract:quality-models]
+name = Only persistence adapters use the ORM models and row mappers of Quality & documents
+type = protected
+protected_modules =
+    src.modules.quality.adapters.outbound.persistence.models
+allowed_importers =
+    src.modules.quality
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:quality-deps]
+name = Only dependency factories use the dependency factories of Quality & documents
+type = protected
+protected_modules =
+    src.modules.quality.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.quality
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:quality-schemas]
+name = Only inbound adapters use the API schemas of Quality & documents
+type = protected
+protected_modules =
+    src.modules.quality.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.quality
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap
+
+[importlinter:contract:operations-privacy]
+name = Other modules use only the public API of Operations
+type = protected
+protected_modules =
+    src.modules.operations.domain.services
+    src.modules.operations.application.use_cases
+    src.modules.operations.application.services
+    src.modules.operations.adapters.inbound.api.terminal_auth_deps
+    src.modules.operations.adapters.inbound.api.v1
+    src.modules.operations.adapters.outbound.external
+    src.modules.operations.adapters.outbound.persistence.repositories._admin_settings_mappers
+    src.modules.operations.adapters.outbound.persistence.repositories.infoscreen_repository
+    src.modules.operations.adapters.outbound.persistence.repositories.terminal_broadcast_repository
+    src.modules.operations.adapters.outbound.persistence.repositories.terminal_repository
+    src.modules.operations.adapters.outbound.persistence.repositories.time_tracking_credentials_repository
+    src.modules.operations.adapters.outbound.persistence.time_tracking_fingerprints
+    src.modules.operations.ports.outbound.repositories
+    src.modules.operations.infrastructure
+allowed_importers =
+    src.modules.operations
+    src.bootstrap
+
+[importlinter:contract:operations-models]
+name = Only persistence adapters use the ORM models and row mappers of Operations
+type = protected
+protected_modules =
+    src.modules.operations.adapters.outbound.persistence.models
+allowed_importers =
+    src.modules.operations
+    src.modules.*.adapters.outbound.persistence
+    src.read.adapters.outbound.persistence
+    src.bootstrap
+
+[importlinter:contract:operations-deps]
+name = Only dependency factories use the dependency factories of Operations
+type = protected
+protected_modules =
+    src.modules.operations.adapters.inbound.api.deps
+allowed_importers =
+    src.modules.operations
+    src.modules.*.adapters.inbound.api.deps
+    src.bootstrap
+
+[importlinter:contract:operations-schemas]
+name = Only inbound adapters use the API schemas of Operations
+type = protected
+protected_modules =
+    src.modules.operations.adapters.inbound.api.schemas
+allowed_importers =
+    src.modules.operations
+    src.modules.*.adapters.inbound
+    src.read.adapters.inbound
+    src.bootstrap

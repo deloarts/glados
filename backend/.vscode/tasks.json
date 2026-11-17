@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start DB services",
+      "type": "shell",
+      "command": "docker compose -f ${workspaceFolder}/../docker-compose.dev.yml up postgres redis -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "release: start",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/../scripts/release_start.sh ${input:releaseVersion}",
+      "problemMatcher": []
+    },
+    {
+      "label": "deploy: staging",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/../scripts/deploy_staging.sh",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Release version (X.Y.Z)"
+    }
+  ]
+}

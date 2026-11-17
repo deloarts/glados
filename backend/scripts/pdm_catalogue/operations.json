@@ -1,0 +1,3771 @@
+[
+ {
+  "id": "delete_api_uri",
+  "method": "DELETE",
+  "path": "api/{uri}",
+  "group": "Default",
+  "description": "Uses the specified URI to delete information.",
+  "params": [
+   {
+    "name": "uri",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Uniform resource identifier (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_uri_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_uri",
+  "method": "GET",
+  "path": "api/{uri}",
+  "group": "Default",
+  "description": "Uses the specified URI to get information.",
+  "params": [
+   {
+    "name": "uri",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Uniform resource identifier (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_uri_o-HttpGet.txt"
+ },
+ {
+  "id": "patch_api_uri",
+  "method": "PATCH",
+  "path": "api/{uri}",
+  "group": "Default",
+  "description": "Uses the specified URI to patch information.",
+  "params": [
+   {
+    "name": "uri",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Uniform resource identifier (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_uri_o-HttpPatch.txt"
+ },
+ {
+  "id": "post_api_uri",
+  "method": "POST",
+  "path": "api/{uri}",
+  "group": "Default",
+  "description": "Uses the specified URI to post information.",
+  "params": [
+   {
+    "name": "uri",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Uniform resource identifier (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_uri_o-HttpPost.txt"
+ },
+ {
+  "id": "put_api_uri",
+  "method": "PUT",
+  "path": "api/{uri}",
+  "group": "Default",
+  "description": "Uses the specified URI to save information.",
+  "params": [
+   {
+    "name": "uri",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Uniform resource identifier (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_uri_o-HttpPut.txt"
+ },
+ {
+  "id": "post_api_vaultname_authenticate",
+  "method": "POST",
+  "path": "api/{vaultName}/authenticate",
+  "group": "Authentication",
+  "description": "Use for the authenticate to get authentication token Authenticates the specified login for the specified vault and returns the authentication token and status.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Name of the vault (required)"
+   },
+   {
+    "name": "Username",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body) Login name"
+   },
+   {
+    "name": "Password",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body) Password"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"Username\": \"sample string 1\",\n  \"Password\": \"sample string 2\"\n}",
+  "mutating": false,
+  "source": "api-_vaultName_-authenticate_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_bom_bomdocumentid_version_folderid_named",
+  "method": "GET",
+  "path": "api/{vaultName}/bom/{bomDocumentId}/{version}/{folderId}/named",
+  "group": "BOM",
+  "description": "Get named bom Gets the specified BOM.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required in URI)"
+   },
+   {
+    "name": "bomDocumentId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) BOM ID (required in URI)"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Version (required in URI)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required in URI)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-bom-_bomDocumentId_-_version_-_folderId_-named_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_bom_bomtypeid_fileid_version_folderid_computed_configid_configid_latest_latest",
+  "method": "GET",
+  "path": "api/{vaultName}/bom/{bomTypeId}/{fileId}/{version}/{folderId}/computed?configId={configId}&latest={latest}",
+  "group": "BOM",
+  "description": "or api/{VaultName}/bom/{BomTypeId}/{FileID}/{Version}/{FolderID}/computed Get computed BOM Gets the computed BOM.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required in URI)"
+   },
+   {
+    "name": "bomTypeId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) BOM type ID (required in URI)"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID (required in URI)"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Version (required in URI)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required in URI)"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Configuration ID (default is -1)"
+   },
+   {
+    "name": "latest",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether the latest version (default is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-bom-_bomTypeId_-_fileId_-_version_-_folderId_-computed-configId=_configId_-latest=_latest_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_bom_bomtypeid_fileid_version_folderid_weldmentcutlist_configid_configid_latest_latest",
+  "method": "GET",
+  "path": "api/{vaultName}/bom/{bomTypeId}/{fileId}/{version}/{folderId}/weldmentcutlist?configId={configId}&latest={latest}",
+  "group": "BOM",
+  "description": "or api/{VaultName}/bom/{BomTypeId}/{FileID}/{Version}/{FolderID}/computed Get computed BOM Gets the weldment cut list BOM.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required in URI)"
+   },
+   {
+    "name": "bomTypeId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) BOM type ID (required in URI)"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID (required in URI)"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Version (required in URI)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required in URI)"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Configuration ID (default is -1)"
+   },
+   {
+    "name": "latest",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether the latest version (default is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-bom-_bomTypeId_-_fileId_-_version_-_folderId_-weldmentcutlist-configId=_configId_-latest=_latest_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_changeset_create",
+  "method": "GET",
+  "path": "api/{vaultName}/changeset/create",
+  "group": "Stage",
+  "description": "Generate changesetId Gets a changeset ID for the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-changeset-create_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_vaultname_checkin_changesetid_overrideversion",
+  "method": "PUT",
+  "path": "api/{vaultName}/checkin/{changesetId}/{overrideVersion}",
+  "group": "Stage",
+  "description": "Check in files from the changeset Checks in the specified changeset.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "changesetId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Changeset ID (required)"
+   },
+   {
+    "name": "overrideVersion",
+    "in": "path",
+    "type": "boolean",
+    "required": true,
+    "description": "(URI parameter) Whether to override the current versions of files (required)"
+   },
+   {
+    "name": "DocumentIds",
+    "in": "body",
+    "type": "Collection of integer",
+    "required": false,
+    "description": "(Body parameter) Array of document IDs Member of CheckInModel model"
+   },
+   {
+    "name": "Comments",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Checkin comment Member of CheckInModel model"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"DocumentIds\": [\n    1,\n    2\n  ],\n  \"Comments\": \"sample string 1\"\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-checkin-_changesetId_-_overrideVersion_o-HttpPut.txt"
+ },
+ {
+  "id": "put_api_vaultname_checkin_addfiles_changesetid",
+  "method": "PUT",
+  "path": "api/{vaultName}/checkin/addfiles/{changesetId}",
+  "group": "Stage",
+  "description": "Upload files or document ids to changeset to the check in operation Adds files to a changeset for checkin. (See Remarks)",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "changesetId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI and Response parameter) Changeset ID = 0 (URI required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-checkin-addfiles-_changesetId_o-HttpPut.txt"
+ },
+ {
+  "id": "get_api_vaultname_checkin_buildtree_changesetid",
+  "method": "GET",
+  "path": "api/{vaultName}/checkin/buildtree/{changesetId}",
+  "group": "Stage",
+  "description": "Get references tree Builds a reference tree of files that are uploaded to the specified changeset.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "changesetId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Changeset ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-checkin-buildtree-_changesetId_o-HttpGet.txt"
+ },
+ {
+  "id": "delete_api_vaultname_configuration_hooks_dll",
+  "method": "DELETE",
+  "path": "api/{vaultName}/configuration/hooks/dll",
+  "group": "Configuration",
+  "description": "Deletes add-in hook DLLs from the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "Name of vault to get, put, and delete add-in hook DLLs"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-configuration-hooks-dll_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_vaultname_configuration_hooks_dll",
+  "method": "GET",
+  "path": "api/{vaultName}/configuration/hooks/dll",
+  "group": "Configuration",
+  "description": "Retrieves the list of add-in hooks from the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "Name of vault to get, put, and delete add-in hook DLLs"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-configuration-hooks-dll_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_vaultname_configuration_hooks_dll",
+  "method": "PUT",
+  "path": "api/{vaultName}/configuration/hooks/dll",
+  "group": "Configuration",
+  "description": "Puts add-in hook DLLs\u00a0in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "Name of vault to get, put, and delete add-in hook DLLs"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-configuration-hooks-dll_o-HttpPut.txt"
+ },
+ {
+  "id": "get_api_vaultname_configuration_hooks_url",
+  "method": "GET",
+  "path": "api/{vaultName}/configuration/hooks/url",
+  "group": "Configuration",
+  "description": "Retrieves the list of webhooks configured in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "Name of vault to get and set webhooks"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-configuration-hooks-url_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_configuration_hooks_url",
+  "method": "POST",
+  "path": "api/{vaultName}/configuration/hooks/url",
+  "group": "Configuration",
+  "description": "Sets the webhooks for the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "Name of vault to get and set webhooks"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"sample string 1\": [\n    \"sample string 1\",\n    \"sample string 2\"\n  ],\n  \"sample string 2\": [\n    \"sample string 1\",\n    \"sample string 2\"\n  ]\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-configuration-hooks-url_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_delete_computetree",
+  "method": "POST",
+  "path": "api/{vaultName}/delete/computetree",
+  "group": "Vault",
+  "description": "Delete compute tree Deletes the specified items in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "FolderIDs",
+    "in": "body",
+    "type": "Collection of integer",
+    "required": false,
+    "description": "(Body parameter) Array of folder IDs Member of DeleteComputeTree model"
+   },
+   {
+    "name": "FileIDs",
+    "in": "body",
+    "type": "Collection of integer",
+    "required": false,
+    "description": "(Body parameter) Array of file IDs Member of DeleteComputeTree model"
+   },
+   {
+    "name": "Destroy",
+    "in": "body",
+    "type": "boolean",
+    "required": false,
+    "description": "(Body parameter) Whether to destroy Member of DeleteComputeTree model"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"FolderIDs\": [\n    1,\n    2\n  ],\n  \"FileIDs\": [\n    1,\n    2\n  ],\n  \"Destroy\": true\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-delete-computetree_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_checkout",
+  "method": "POST",
+  "path": "api/{vaultName}/files/CheckOut",
+  "group": "File",
+  "description": "Lock file Checks out the specified file(s).",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "FileId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body and response parameter) File ID Member of CheckOutResultModel model"
+   },
+   {
+    "name": "FolderId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Folder ID"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  },\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  }\n]",
+  "mutating": true,
+  "source": "api-_vaultName_-files-CheckOut_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_undocheckout",
+  "method": "POST",
+  "path": "api/{vaultName}/files/UndoCheckOut",
+  "group": "File",
+  "description": "Undo lock file Unlocks the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "FileId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body and response parameter) File ID Member of CheckOutItem and UnLockResultModel models"
+   },
+   {
+    "name": "FolderId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Folder ID Member of CheckOutItem model"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  },\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  }\n]",
+  "mutating": true,
+  "source": "api-_vaultName_-files-UndoCheckOut_o-HttpPost.txt"
+ },
+ {
+  "id": "put_api_vaultname_files_changesetid_finishadd",
+  "method": "PUT",
+  "path": "api/{vaultName}/files/{changesetId}/finishadd",
+  "group": "Stage",
+  "description": "Finish of add file operation. This method adds files from changeset to the vault. Adds files in the specified changeset to the vault. (See Remarks)",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "changesetId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Changeset ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-files-_changesetId_-finishadd_o-HttpPut.txt"
+ },
+ {
+  "id": "put_api_vaultname_files_changesetid_upload",
+  "method": "PUT",
+  "path": "api/{vaultName}/files/{changesetId}/upload",
+  "group": "Stage",
+  "description": "Upload file to changeset to add files operations Uploads files to\u00a0the specified\u00a0changeset. (See Remarks)",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "changesetId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Changeset ID (required) (See Remarks)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-files-_changesetId_-upload_o-HttpPut.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_folderid_bominfo",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}/bominfo",
+  "group": "File",
+  "description": "Get file BOM infoGets the BOM information for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-bominfo_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_fileid_folderid_datacard",
+  "method": "POST",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}/datacard",
+  "group": "Data Card",
+  "description": "Saves the data card for the specified file",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Name of vault"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID"
+   },
+   {
+    "name": "Models",
+    "in": "body",
+    "type": "Collection of VariableInfo_DataCard",
+    "required": false,
+    "description": "(Body parameter) (VariableInfo_DataCard: ReadOnly: boolean Multiline: boolean VarId: integer VarName: string VarValue: string VarType: VarTypeNone = 0 VarTypeText = 1 VarTypeInt = 2 VarTypeFloat = 3 VarTypeBool = 4 VarTypeDate = 5 Mandatory: boolean VersionFree: boolean ) (Member of ConfigInfo_DataCard)"
+   },
+   {
+    "name": "ConfigurationName",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Name of configuration (Member of ConfigInfo_DataCard)"
+   },
+   {
+    "name": "ConfigurationId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Configuration ID (Member of ConfigInfo_DataCard)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"Models\": [\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      },\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      }\n    ],\n    \"ConfigurationName\": \"sample string 1\",\n    \"ConfigurationId\": 2\n  },\n  {\n    \"Models\": [\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      },\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      }\n    ],\n    \"ConfigurationName\": \"sample string 1\",\n    \"ConfigurationId\": 2\n  }\n]",
+  "mutating": true,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-datacard_o-HttpPost.txt"
+ },
+ {
+  "id": "delete_api_vaultname_files_fileid_folderid_destroy_destroy",
+  "method": "DELETE",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}?destroy={destroy}",
+  "group": "File",
+  "description": "Deletes the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID; default is 0"
+   },
+   {
+    "name": "destroy",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) True to destroy, false to not"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-destroy=_destroy_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_folderid_history",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}/history",
+  "group": "File",
+  "description": "Gets a specified file's history.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-history_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_folderid_moves",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}/moves",
+  "group": "File",
+  "description": "Gets the history of moves for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-moves_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_folderid_versions",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{folderId}/versions",
+  "group": "File",
+  "description": "Get file version info Gets the specified file's version information.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_folderId_-versions_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_activeconfig_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/ActiveConfig?folderId={folderId}",
+  "group": "File",
+  "description": "Gets the active configuration\u00a0for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-ActiveConfig-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_configid_folderid_whereused_anyversion_anyversion",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{configId}/{folderId}/whereused?anyVersion={anyVersion}",
+  "group": "File",
+  "description": "Get file where usedGets the parent files where the specified file is used.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "configId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Config ID, default value is -1"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   },
+   {
+    "name": "anyVersion",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI Parameter) Whether any version, default value is false"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_configId_-_folderId_-whereused-anyVersion=_anyVersion_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_configid_whereused_folderid_folderid_anyversion_anyversion",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{configId}/whereused?folderId={folderId}&anyVersion={anyVersion}",
+  "group": "File",
+  "description": "Get file where usedGets the parent files where the specified file is used.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "configId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Config ID, default value is -1"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   },
+   {
+    "name": "anyVersion",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI Parameter) Whether any version, default value is false"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_configId_-whereused-folderId=_folderId_-anyVersion=_anyVersion_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_activeconfig",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/ActiveConfig",
+  "group": "File",
+  "description": "Gets the active configuration\u00a0for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-ActiveConfig_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_allreferences_configid_configid_includesubparents_includesubparents",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/allreferences?configId={configId}&includeSubParents={includeSubParents}",
+  "group": "File",
+  "description": "Get all file references Gets the reference tree\u00a0of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) Version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Config ID (default value is -1)"
+   },
+   {
+    "name": "includeSubParents",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to include sub parents (default value is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-allreferences-configId=_configId_-includeSubParents=_includeSubParents_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_configurations",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/configurations",
+  "group": "File",
+  "description": "Gets the configurations for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-configurations_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_download",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/download",
+  "group": "File",
+  "description": "Gets the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-download_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_info_extended",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/info/extended",
+  "group": "File",
+  "description": "Gets extended version information for a specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-info-extended_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_info",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/info",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-info_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_references_configid_configid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/references?configId={configId}",
+  "group": "File",
+  "description": "Get file references Gets the top level file references of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Configuration ID (default value is -1)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-references-configId=_configId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_thumbnails",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/thumbnails",
+  "group": "File",
+  "description": "Gets a specified file's thumbnail.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-thumbnails_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_transitions",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/transitions",
+  "group": "File",
+  "description": "Gets the file transitions for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default is -1"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-transitions_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_variables",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}/variables",
+  "group": "File",
+  "description": "Gets configuration variable information for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_-variables_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/{folderId}",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_allreferences_configid_configid_folderid_folderid_includesubparents_includesubparents",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/allreferences?configId={configId}&folderId={folderId}&includeSubParents={includeSubParents}",
+  "group": "File",
+  "description": "Get all file references Gets the reference tree\u00a0of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) Version"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Config ID (default value is -1)"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   },
+   {
+    "name": "includeSubParents",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to include sub parents (default value is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-allreferences-configId=_configId_-folderId=_folderId_-includeSubParents=_includeSubParents_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_configurations_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/configurations?folderId={folderId}",
+  "group": "File",
+  "description": "Gets the configurations for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-configurations-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_datacard_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/datacard?folderId={folderId}",
+  "group": "Data Card",
+  "description": "Get file data card Gets the data card for the specified file, file version, and\u00a0vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID (required)"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File version (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-datacard-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_download_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/download?folderId={folderId}",
+  "group": "File",
+  "description": "Gets the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-download-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}?folderId={folderId}",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_info_extended_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/info/extended?folderId={folderId}",
+  "group": "File",
+  "description": "Gets extended version information for a specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-info-extended-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_info_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/info?folderId={folderId}",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-info-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_references_configid_configid_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/references?configId={configId}&folderId={folderId}",
+  "group": "File",
+  "description": "Get file references Gets the top level file references of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File version"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Configuration ID (default value is -1)"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-references-configId=_configId_-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_thumbnails_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/thumbnails?folderId={folderId}",
+  "group": "File",
+  "description": "Gets a specified file's thumbnail.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-thumbnails-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_transitions_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/transitions?folderId={folderId}",
+  "group": "File",
+  "description": "Gets the file transitions for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI Parameter) File version, default is -1"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-transitions-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_variables_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/variables?folderId={folderId}",
+  "group": "File",
+  "description": "Gets configuration variable information for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File version"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-variables-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_whereused_configid_configid_folderid_folderid_anyversion_anyversion",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/{version}/whereused?configId={configId}&folderId={folderId}&anyVersion={anyVersion}",
+  "group": "File",
+  "description": "Get file where used Gets the parents of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID (required)"
+   },
+   {
+    "name": "version",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Version (required)"
+   },
+   {
+    "name": "configId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Configuration ID (default value is -1)"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   },
+   {
+    "name": "anyVersion",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to get any parent version (default value is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-_version_-whereused-configId=_configId_-folderId=_folderId_-anyVersion=_anyVersion_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_bominfo_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/bominfo?folderId={folderId}",
+  "group": "File",
+  "description": "Get file BOM info Gets the BOM information for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-bominfo-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_fileid_datacard_folderid_folderid",
+  "method": "POST",
+  "path": "api/{vaultName}/files/{fileId}/datacard?folderId={folderId}",
+  "group": "Data Card",
+  "description": "Saves the specified data card variables to the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Name of vault"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID"
+   },
+   {
+    "name": "Models",
+    "in": "body",
+    "type": "Collection of VariableInfo_DataCard",
+    "required": false,
+    "description": "(Body parameter) (VariableInfo_DataCard: ReadOnly: boolean Multiline: boolean VarId: integer VarName: string VarValue: string VarType: VarTypeNone = 0 VarTypeText = 1 VarTypeInt = 2 VarTypeFloat = 3 VarTypeBool = 4 VarTypeDate = 5 Mandatory: boolean VersionFree: boolean ) (Member of ConfigInfo_DataCard)"
+   },
+   {
+    "name": "ConfigurationName",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Name of configuration (Member of ConfigInfo_DataCard)"
+   },
+   {
+    "name": "ConfigurationId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Configuration ID (Member of ConfigInfo_DataCard)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"Models\": [\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      },\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      }\n    ],\n    \"ConfigurationName\": \"sample string 1\",\n    \"ConfigurationId\": 2\n  },\n  {\n    \"Models\": [\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      },\n      {\n        \"ReadOnly\": true,\n        \"Multiline\": true,\n        \"VarId\": 3,\n        \"VarName\": \"sample string 4\",\n        \"VarValue\": \"sample string 5\",\n        \"VarType\": 0,\n        \"Mandatory\": true,\n        \"VersionFree\": true\n      }\n    ],\n    \"ConfigurationName\": \"sample string 1\",\n    \"ConfigurationId\": 2\n  }\n]",
+  "mutating": true,
+  "source": "api-_vaultName_-files-_fileId_-datacard-folderId=_folderId_o-HttpPost.txt"
+ },
+ {
+  "id": "delete_api_vaultname_files_fileid_folderid_folderid_destroy_destroy",
+  "method": "DELETE",
+  "path": "api/{vaultName}/files/{fileId}?folderId={folderId}&destroy={destroy}",
+  "group": "File",
+  "description": "Deletes the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID; default is 0"
+   },
+   {
+    "name": "destroy",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) True to destroy, false to not"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-files-_fileId_-folderId=_folderId_-destroy=_destroy_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_history_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/history?folderId={folderId}",
+  "group": "File",
+  "description": "Gets a specified file's history.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-history-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_info_version_version_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/info?version={version}&folderId={folderId}",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-info-version=_version_-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_moves_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/moves?folderId={folderId}",
+  "group": "File",
+  "description": "Gets the history of moves for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-moves-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_transitions_version_version_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/transitions?version={version}&folderId={folderId}",
+  "group": "File",
+  "description": "Gets the file transitions for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) File version, default is -1"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-transitions-version=_version_-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_version_version_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}?version={version}&folderId={folderId}",
+  "group": "File",
+  "description": "Gets information about the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI Parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI Parameter) File ID"
+   },
+   {
+    "name": "version",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) File version, default value is 0"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI Parameter) Folder ID, default value is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-version=_version_-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_files_fileid_versions_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/files/{fileId}/versions?folderId={folderId}",
+  "group": "File",
+  "description": "Get file version info Gets the specified file's version information.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   },
+   {
+    "name": "fileId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-files-_fileId_-versions-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_buildtree_checkout",
+  "method": "POST",
+  "path": "api/{vaultName}/files/buildtree/checkout",
+  "group": "File",
+  "description": "Build checkout references tree Gets the tree of references in the specified file's checkout.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Valut name (required)"
+   },
+   {
+    "name": "FileId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) File ID Member of CheckOutItem; see Remarks"
+   },
+   {
+    "name": "FolderId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Folder ID Member of CheckOutItem; see Remarks"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  },\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  }\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-files-buildtree-checkout_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_buildtree_undo",
+  "method": "POST",
+  "path": "api/{vaultName}/files/buildtree/undo",
+  "group": "File",
+  "description": "Build undo checkout references tree Builds the reference tree to undo the checkout of the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "FileId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) File ID Member of CheckOutItem; see Remarks"
+   },
+   {
+    "name": "FolderId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Folder ID Member of CheckOutItem; see Remarks"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  },\n  {\n    \"FileId\": 1,\n    \"FolderId\": 2\n  }\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-files-buildtree-undo_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_info",
+  "method": "POST",
+  "path": "api/{vaultName}/files/info",
+  "group": "File",
+  "description": "Gets information about\u00a0the specified files.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-files-info_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_files_infofrompath",
+  "method": "POST",
+  "path": "api/{vaultName}/files/infofrompath",
+  "group": "File",
+  "description": "Gets\u00a0information about a file in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "\"sample string 1\"",
+  "mutating": false,
+  "source": "api-_vaultName_-files-infofrompath_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_folders_folderid_browse",
+  "method": "GET",
+  "path": "api/{vaultName}/folders/{folderId}/browse",
+  "group": "Folder",
+  "description": "Get browse folder Gets the files and folders in the specified folder.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) ID of folder in which to browse (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-folders-_folderId_-browse_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_folders_folderid_datacard",
+  "method": "GET",
+  "path": "api/{vaultName}/folders/{folderId}/datacard",
+  "group": "Data Card",
+  "description": "Get folder data card Gets the data card for the specified folder and\u00a0vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-folders-_folderId_-datacard_o-HttpGet.txt"
+ },
+ {
+  "id": "delete_api_vaultname_folders_folderid_destroy_destroy",
+  "method": "DELETE",
+  "path": "api/{vaultName}/folders/{folderId}?destroy={destroy}",
+  "group": "Folder",
+  "description": "Delete folder Deletes the specified folder.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required)"
+   },
+   {
+    "name": "destroy",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to delete the folder (default value is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-folders-_folderId_-destroy=_destroy_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_vaultname_folders_folderid_info",
+  "method": "GET",
+  "path": "api/{vaultName}/folders/{folderId}/info",
+  "group": "Folder",
+  "description": "or api/{VaultName}/folders/{FolderID}/info Get folder info Gets information for the specified folder.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-folders-_folderId_-info_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_folders_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/folders/{folderId}",
+  "group": "Folder",
+  "description": "or api/{VaultName}/folders/{FolderID}/info Get folder info Gets information for the specified folder.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-folders-_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_vaultname_folders_parentfolderid",
+  "method": "PUT",
+  "path": "api/{vaultName}/folders/{parentFolderId}",
+  "group": "Folder",
+  "description": "Add folder Adds a folder to the specified folder.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "parentFolderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Parent folder ID (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "\"sample string 1\"",
+  "mutating": true,
+  "source": "api-_vaultName_-folders-_parentFolderId_o-HttpPut.txt"
+ },
+ {
+  "id": "post_api_vaultname_folders_info",
+  "method": "POST",
+  "path": "api/{vaultName}/folders/info",
+  "group": "Folder",
+  "description": "Get folder info Gets information about specified folders in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Name of vault"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-folders-info_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_groups_groupid_info",
+  "method": "GET",
+  "path": "api/{vaultName}/groups/{groupId}/info",
+  "group": "Group",
+  "description": "or api/{VaultName}/groups/{GroupID}/info Get group info Gets information about the specified group.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "groupId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI and response parameter) Group ID (URI required) Member of GroupInfo model"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-groups-_groupId_-info_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_groups_groupid",
+  "method": "GET",
+  "path": "api/{vaultName}/groups/{groupId}",
+  "group": "Group",
+  "description": "or api/{VaultName}/groups/{GroupID}/info Get group info Gets information about the specified group.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "groupId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI and response parameter) Group ID (URI required) Member of GroupInfo model"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-groups-_groupId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_groups_all",
+  "method": "GET",
+  "path": "api/{vaultName}/groups/all",
+  "group": "Group",
+  "description": "or api/{VaultName}/groups/all Get groups Gets the groups in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-groups-all_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_groups",
+  "method": "GET",
+  "path": "api/{vaultName}/groups",
+  "group": "Group",
+  "description": "or api/{VaultName}/groups/all Get groups Gets the groups in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-groups_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_info",
+  "method": "GET",
+  "path": "api/{vaultName}/info",
+  "group": "Vault",
+  "description": "or api/{VaultName}/info Get vault properties Gets the properties of the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-info_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_notifications_all_all_pageno_pageno_pagesize_pagesize",
+  "method": "GET",
+  "path": "api/{vaultName}/notifications?all={all}&pageNo={pageNo}&pageSize={pageSize}",
+  "group": "Notification",
+  "description": "Get user notifications Gets the user notifications.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "all",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to retrieve all notifications (default value is true)"
+   },
+   {
+    "name": "pageNo",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Page number (default value is 0)"
+   },
+   {
+    "name": "pageSize",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Page size (default value is 0)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-notifications-all=_all_-pageNo=_pageNo_-pageSize=_pageSize_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_notifications_markread",
+  "method": "POST",
+  "path": "api/{vaultName}/notifications/markRead",
+  "group": "Notification",
+  "description": "Mark message as read Marks a notification as read.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": true,
+  "source": "api-_vaultName_-notifications-markRead_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_notifications",
+  "method": "POST",
+  "path": "api/{vaultName}/notifications",
+  "group": "Notification",
+  "description": "Send message Sends the specified message.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "RecipientId",
+    "in": "body",
+    "type": "integer",
+    "required": false,
+    "description": "(Body parameter) Recipient user ID Member of MsgInfo model"
+   },
+   {
+    "name": "Subject",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Subject text Member of MsgInfo model"
+   },
+   {
+    "name": "Message",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Message text Member of MsgInfo model"
+   },
+   {
+    "name": "Password",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Password Member of MsgInfo model"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"RecipientId\": 1,\n  \"Subject\": \"sample string 2\",\n  \"Message\": \"sample string 3\",\n  \"Password\": \"sample string 4\"\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-notifications_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_progress_guid_result",
+  "method": "GET",
+  "path": "api/{vaultName}/progress/{guid}/result",
+  "group": "Progress",
+  "description": "Gets the result of the specified operation.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "guid",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Operation GUID (required) (see Remarks)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-progress-_guid_-result_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_progress_guid_status",
+  "method": "GET",
+  "path": "api/{vaultName}/progress/{guid}/status",
+  "group": "Progress",
+  "description": "Get operation status Gets the status of the specified operation.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "guid",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Operation GUID (required) (See Remarks)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-progress-_guid_-status_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_search",
+  "method": "GET",
+  "path": "api/{vaultName}/search",
+  "group": "Search",
+  "description": "Gets objects in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-search_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_search",
+  "method": "POST",
+  "path": "api/{vaultName}/search",
+  "group": "Search",
+  "description": "Gets objects in the vault that contain the specified string.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Vault name"
+   }
+  ],
+  "has_body": true,
+  "body_example": "\"sample string 1\"",
+  "mutating": false,
+  "source": "api-_vaultName_-search_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_searchvariables",
+  "method": "POST",
+  "path": "api/{vaultName}/searchvariables",
+  "group": "Search",
+  "description": "Specifies parameters and variables for a search.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Name of vault"
+   },
+   {
+    "name": "Name",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body and Response parameter) File name or folder name or empty; supports \"%\" wildcard search (Member of SearchVariables Model) (See Remarks)"
+   },
+   {
+    "name": "ObjectTypeCriteria",
+    "in": "body",
+    "type": "SearchObjectTypeCriteria",
+    "required": false,
+    "description": "(Body parameter) Files = 1, Folders = 2, or Files and folders = 3 (Member of SearchVariables Model)"
+   },
+   {
+    "name": "StartPath",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Relative folder path where the search begins; if empty, search starts at vault root (Member of SearchVariables Model)"
+   },
+   {
+    "name": "PathCriteria",
+    "in": "body",
+    "type": "SearchPathCriteria",
+    "required": false,
+    "description": "(Body parameter) Current folder = 1, Current folder and subfolders = 2, All folders = 3 (Member of SearchVariables Model)"
+   },
+   {
+    "name": "VersionCriteria",
+    "in": "body",
+    "type": "SearchVersionCriteria",
+    "required": false,
+    "description": "(Body parameter) Search in latest version of files = 1 Search in all versions of files = 2 (Member of SearchVariables Model)"
+   },
+   {
+    "name": "SearchOperand",
+    "in": "body",
+    "type": "SearchOperand",
+    "required": false,
+    "description": "(Body parameter) None = 0 AND = 1 OR = 2 (Member of SearchVariables Model)"
+   },
+   {
+    "name": "Variables",
+    "in": "body",
+    "type": "Collection of SearchVariable",
+    "required": false,
+    "description": "(Body parameter) List of variables to search for; can be empty (Member of SearchVariables Model) (See Remarks)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"Name\": \"sample string 1\",\n  \"ObjectTypeCriteria\": 1,\n  \"StartPath\": \"sample string 2\",\n  \"PathCriteria\": 1,\n  \"VersionCriteria\": 1,\n  \"SearchOperand\": 0,\n  \"Variables\": [\n    {\n      \"VariableName\": \"sample string 1\",\n      \"SearchValue\": \"sample string 2\"\n    },\n    {\n      \"VariableName\": \"sample string 1\",\n      \"SearchValue\": \"sample string 2\"\n    }\n  ]\n}",
+  "mutating": false,
+  "source": "api-_vaultName_-searchvariables_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_state_documentid_folderid_transitionid_references",
+  "method": "GET",
+  "path": "api/{vaultName}/state/{documentId}/{folderId}/{transitionId}/references",
+  "group": "State Transition",
+  "description": "Get all references Gets all references for the specified file and transition.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "documentId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Document ID (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID (required)"
+   },
+   {
+    "name": "transitionId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Transition ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-state-_documentId_-_folderId_-_transitionId_-references_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_state_documentid_folderid_transitions",
+  "method": "GET",
+  "path": "api/{vaultName}/state/{documentId}/{folderId}/transitions",
+  "group": "State Transition",
+  "description": "Gets the transitions available for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Name of vault"
+   },
+   {
+    "name": "documentId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-state-_documentId_-_folderId_-transitions_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_state_documentid_transitions_folderid_folderid",
+  "method": "GET",
+  "path": "api/{vaultName}/state/{documentId}/transitions?folderId={folderId}",
+  "group": "State Transition",
+  "description": "Gets the transitions available for the specified file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(Required URI parameter) Name of vault"
+   },
+   {
+    "name": "documentId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(Required URI parameter) File ID"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID, default is 0"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-state-_documentId_-transitions-folderId=_folderId_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_state_transitionid_dynamicnotificationusers",
+  "method": "POST",
+  "path": "api/{vaultName}/state/{transitionId}/DynamicNotificationUsers",
+  "group": "State Transition",
+  "description": "Get dynamic notification users Gets the users to notify when the specified items undergo the specified transition.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "transitionId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Transition ID (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-state-_transitionId_-DynamicNotificationUsers_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_state_transitionid_historycomments",
+  "method": "POST",
+  "path": "api/{vaultName}/state/{transitionId}/HistoryComments",
+  "group": "State Transition",
+  "description": "Get transition comment history for multiple files Gets the comment histories for specified files that undergo the specified transition.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "transitionId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Transition ID (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-state-_transitionId_-HistoryComments_o-HttpPost.txt"
+ },
+ {
+  "id": "post_api_vaultname_state_transitionid_changestate_revoke_revoke",
+  "method": "POST",
+  "path": "api/{vaultName}/state/{transitionId}/changestate?revoke={revoke}",
+  "group": "State Transition",
+  "description": "Change state Changes the state of the specified documents.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "transitionId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Transition ID (required)"
+   },
+   {
+    "name": "revoke",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether a revoke (default value is false)"
+   },
+   {
+    "name": "Comment",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Comment"
+   },
+   {
+    "name": "NotificationComment",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Notification comment"
+   },
+   {
+    "name": "Documents",
+    "in": "body",
+    "type": "Collection of integer",
+    "required": false,
+    "description": "(Body parameter) Array of file IDs"
+   },
+   {
+    "name": "NotifyUsers",
+    "in": "body",
+    "type": "Collection of integer",
+    "required": false,
+    "description": "(Body parameter) Array of user IDs"
+   },
+   {
+    "name": "Password",
+    "in": "body",
+    "type": "string",
+    "required": false,
+    "description": "(Body parameter) Password"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"Comment\": \"sample string 1\",\n  \"NotificationComment\": \"sample string 2\",\n  \"Documents\": [\n    1,\n    2\n  ],\n  \"NotifyUsers\": [\n    1,\n    2\n  ],\n  \"Password\": \"sample string 3\"\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-state-_transitionId_-changestate-revoke=_revoke_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_state_transitionid",
+  "method": "GET",
+  "path": "api/{vaultName}/state/{transitionId}",
+  "group": "State Transition",
+  "description": "Get transition info Gets information about the specified transition.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "transitionId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI and response parameter) Transition ID (URI required) Member of TransitionInfo model"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-state-_transitionId_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_vaultname_state_transitions",
+  "method": "POST",
+  "path": "api/{vaultName}/state/transitions",
+  "group": "State Transition",
+  "description": "Get available transitions for multiple files Gets the transitions available for multiple files.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "[\n  1,\n  2\n]",
+  "mutating": false,
+  "source": "api-_vaultName_-state-transitions_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_vaultname_users_userid_extended",
+  "method": "GET",
+  "path": "api/{vaultName}/users/{userId}/Extended",
+  "group": "User",
+  "description": "Get user info extended Gets extended information about the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users-_userId_-Extended_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_vaultname_users_userid_extended",
+  "method": "PUT",
+  "path": "api/{vaultName}/users/{userId}/Extended",
+  "group": "User",
+  "description": "Set user info extended Saves information about the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": true,
+  "body_example": "{\n  \"UserInfo\": {\n    \"UserName\": \"sample string 1\",\n    \"UserId\": 2\n  },\n  \"Email\": \"sample string 1\",\n  \"FullName\": \"sample string 2\",\n  \"Initials\": \"sample string 3\",\n  \"Phone\": \"sample string 4\",\n  \"Cellphone\": \"sample string 5\"\n}",
+  "mutating": true,
+  "source": "api-_vaultName_-users-_userId_-Extended_o-HttpPut.txt"
+ },
+ {
+  "id": "delete_api_vaultname_users_userid_picture",
+  "method": "DELETE",
+  "path": "api/{vaultName}/users/{userId}/Picture",
+  "group": "User",
+  "description": "Delete user picture Deletes the picture of the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-users-_userId_-Picture_o-HttpDelete.txt"
+ },
+ {
+  "id": "get_api_vaultname_users_userid_picture",
+  "method": "GET",
+  "path": "api/{vaultName}/users/{userId}/Picture",
+  "group": "User",
+  "description": "Get user picture Gets the picture of the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users-_userId_-Picture_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_vaultname_users_userid_picture",
+  "method": "PUT",
+  "path": "api/{vaultName}/users/{userId}/Picture",
+  "group": "User",
+  "description": "Put user picture Saves the picture of the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-_vaultName_-users-_userId_-Picture_o-HttpPut.txt"
+ },
+ {
+  "id": "get_api_vaultname_users_userid_info",
+  "method": "GET",
+  "path": "api/{vaultName}/users/{userId}/info",
+  "group": "User",
+  "description": "or api/{VaultName}/users/{UserID}/info Get user info Gets information about the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users-_userId_-info_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_users_userid",
+  "method": "GET",
+  "path": "api/{vaultName}/users/{userId}",
+  "group": "User",
+  "description": "or api/{VaultName}/users/{UserID}/info Get user info Gets information about the specified user.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "userId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) User ID (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users-_userId_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_users_all",
+  "method": "GET",
+  "path": "api/{vaultName}/users/all",
+  "group": "User",
+  "description": "or api/{VaultName}/users/all Get users Gets the users of the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users-all_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_users",
+  "method": "GET",
+  "path": "api/{vaultName}/users",
+  "group": "User",
+  "description": "or api/{VaultName}/users/all Get users Gets the users of the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-users_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_workflows_icons",
+  "method": "GET",
+  "path": "api/{vaultName}/workflows/icons",
+  "group": "Workflow",
+  "description": "Get state icons Gets the workflow state\u00a0icons in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-workflows-icons_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname_workflows",
+  "method": "GET",
+  "path": "api/{vaultName}/workflows",
+  "group": "Workflow",
+  "description": "Get workflows Gets the workflows in the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_-workflows_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_vaultname",
+  "method": "GET",
+  "path": "api/{vaultName}",
+  "group": "Vault",
+  "description": "or api/{VaultName}/info Get vault properties Gets the properties of the specified vault.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-_vaultName_o-HttpGet.txt"
+ },
+ {
+  "id": "get_api_configuration_fileserverroot",
+  "method": "GET",
+  "path": "api/configuration/fileserverroot",
+  "group": "Configuration",
+  "description": "",
+  "params": [],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-configuration-fileserverroot_o-HttpGet.txt"
+ },
+ {
+  "id": "post_api_configuration_fileserverroot",
+  "method": "POST",
+  "path": "api/configuration/fileserverroot",
+  "group": "Configuration",
+  "description": "",
+  "params": [],
+  "has_body": true,
+  "body_example": "\"sample string 1\"",
+  "mutating": true,
+  "source": "api-configuration-fileserverroot_o-HttpPost.txt"
+ },
+ {
+  "id": "get_api_configuration_vaults_vaultname_vaultname",
+  "method": "GET",
+  "path": "api/configuration/vaults?vaultName={vaultName}",
+  "group": "Configuration",
+  "description": "Get all vaults from the config file Gets all vaults from the vault configuration file.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "query",
+    "type": "string",
+    "required": false,
+    "description": "(URI parameter) Vault name (default is empty string)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-configuration-vaults-vaultName=_vaultName_o-HttpGet.txt"
+ },
+ {
+  "id": "put_api_stage_vaultname_documentid_folderid_folderid_overrideversion_overrideversion",
+  "method": "PUT",
+  "path": "api/stage/{vaultName}/{documentId}?folderId={folderId}&overrideVersion={overrideVersion}",
+  "group": "Stage",
+  "description": "Checks in the specified document.",
+  "params": [
+   {
+    "name": "vaultName",
+    "in": "path",
+    "type": "string",
+    "required": true,
+    "description": "(URI parameter) Vault name (required)"
+   },
+   {
+    "name": "documentId",
+    "in": "path",
+    "type": "integer",
+    "required": true,
+    "description": "(URI parameter) Document ID (required)"
+   },
+   {
+    "name": "folderId",
+    "in": "query",
+    "type": "integer",
+    "required": false,
+    "description": "(URI parameter) Folder ID (default is 0)"
+   },
+   {
+    "name": "overrideVersion",
+    "in": "query",
+    "type": "boolean",
+    "required": false,
+    "description": "(URI parameter) Whether to override the current versions of files (default value is false)"
+   }
+  ],
+  "has_body": false,
+  "body_example": null,
+  "mutating": true,
+  "source": "api-stage-_vaultName_-_documentId_-folderId=_folderId_-overrideVersion=_overrideVersion_o-HttpPut.txt"
+ },
+ {
+  "id": "get_api_version_webapi",
+  "method": "GET",
+  "path": "api/version/webapi",
+  "group": "Version",
+  "description": "Get version Gets the version of this web application.",
+  "params": [],
+  "has_body": false,
+  "body_example": null,
+  "mutating": false,
+  "source": "api-version-webapi_o-HttpGet.txt"
+ }
+]

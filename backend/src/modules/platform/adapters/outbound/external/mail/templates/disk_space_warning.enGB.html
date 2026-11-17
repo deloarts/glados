@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glados – Disk space warning</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f4f4f4; font-family: Arial, sans-serif; }
+    .wrapper { max-width: 560px; margin: 40px auto; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .header { background: #1a1a2e; padding: 32px 40px; }
+    .header h1 { margin: 0; color: #ffffff; font-size: 22px; letter-spacing: .5px; }
+    .body { padding: 32px 40px; color: #333333; line-height: 1.6; }
+    .body p { margin: 0 0 16px; }
+    .alert { border-left: 4px solid #b3261e; border-radius: 3px; padding: 12px 16px; margin: 8px 0; background: #fdecea; font-size: 14px; font-weight: bold; color: #1a1a2e; }
+    .footer { background: #f4f4f4; padding: 16px 40px; font-size: 12px; color: #999; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>Glados – Disk Space Warning</h1>
+    </div>
+    <div class="body">
+      <p>Disk usage on {{ domain }} has reached a warning threshold:</p>
+      <div class="alert">{{ used_gb }} GB used of {{ total_gb }} GB total</div>
+      <p style="margin-top:24px;">Please free up space or expand storage soon to avoid service disruption.</p>
+    </div>
+    <div class="footer">
+      This message was generated automatically. Please do not reply.
+    </div>
+  </div>
+</body>
+</html>

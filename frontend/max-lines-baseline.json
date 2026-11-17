@@ -1,0 +1,14 @@
+{
+  "src/features/admin-settings/components/AdminSettingsTabNumbering.vue": 736,
+  "src/features/admin-settings/components/AdminSettingsTabSolidworksPdm.vue": 810,
+  "src/features/admin-settings/components/pdm/PdmSyncSection.vue": 752,
+  "src/features/bought-items/components/BoughtItemCreateForm.vue": 662,
+  "src/features/made-items/components/MadeItemDetailDialog.vue": 831,
+  "src/features/print-labels/components/PrintTemplateEditorDialog.vue": 679,
+  "src/features/production/lots/components/LotManageProductionPanel.vue": 680,
+  "src/features/production/lots/components/lots-table/LotsTable.vue": 820,
+  "src/features/production/machines/components/MachineCurrentOrderCard.vue": 674,
+  "src/features/production/made-item-demands/components/MadeItemDemandDetailDialog.vue": 632,
+  "src/features/production/made-item-demands/components/MadeItemsDemandsTable.vue": 835,
+  "src/features/production/source-item-demands/components/SourceItemDemandDetailDialog.vue": 644
+}

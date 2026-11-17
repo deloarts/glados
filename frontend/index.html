@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <!-- The backend builds the manifest from the branding settings, so an installed Glados carries the installation's own name. iOS takes its home screen icon from apple-touch-icon instead. -->
+    <link rel="manifest" href="/api/v1/public/branding/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/glados-192.png">
+    <!-- viewport-fit=cover lets the bottom navigation pad itself above the home indicator of an installed app. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Glados, manufacturing and production planning.">
+    <!-- #007acc is the 500 shade of the "glados" primary palette (src/core/config/colorPalettes.ts), the default primary colour layoutStore.initDefaultTheme() applies and the value AppHeader.vue's header background (--p-primary-500) resolves to. -->
+    <meta name="theme-color" content="#007acc">
+    <title>Glados</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>This application requires JavaScript to run. Please enable JavaScript in your browser.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

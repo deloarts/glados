@@ -1,0 +1,91 @@
+# Nightly: every Postgres test in backend/tests/pg, on main.
+#
+# The race tests take over 20 minutes, so ci.yml runs them only for a
+# release branch. This workflow runs them every night on main, together with
+# the backup and restore drill and the tests of Postgres-only queries such
+# as the global search's trigram tier, so a change that breaks a lock or a
+# Postgres-only query shows up the next morning instead of when the next
+# release is cut. GitHub mails a failed scheduled run to whoever last
+# changed the schedule below. workflow_dispatch runs it on demand, on any
+# branch.
+name: Nightly
+
+on:
+  schedule:
+    # 02:17 UTC, off the full hour that most scheduled workflows start on.
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The Poetry that wrote backend/poetry.lock, the same as ci.yml's.
+env:
+  POETRY_VERSION: "2.4.1"
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backend-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # A fresh, empty database on every run, which the race tests' own
+      # safety check requires.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: glados_ci
+          POSTGRES_PASSWORD: glados_ci
+          POSTGRES_DB: glados_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U glados_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      GLADOS_TEST_PG_URL: postgresql+psycopg://glados_ci:glados_ci@localhost:5432/glados_ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        id: setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pipx install "poetry==${POETRY_VERSION}"
+
+      # The virtualenv links to the interpreter it was built with, so the key
+      # carries the full Python version and a new patch release builds afresh.
+      - name: Set up Poetry cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      # The drill makes and drops its own scratch databases and needs the
+      # runner's pg_dump and psql, printed first so a missing tool fails the
+      # step instead of skipping the drill.
+      - name: pytest backup and restore drill
+        run: |
+          pg_dump --version
+          psql --version
+          poetry run pytest tests/pg/test_backup_restore_drill.py -q
+
+      # Every other test in tests/pg, which share the empty database the
+      # drill leaves behind and run in one process.
+      - name: pytest tests/pg (race tests and Postgres-only queries)
+        run: poetry run pytest tests/pg -q --ignore=tests/pg/test_backup_restore_drill.py

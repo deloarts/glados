@@ -1,0 +1,418 @@
+// Vite injects the breakpoints only into the files it compiles itself, not
+// into a partial that main.scss pulls in, so this one loads them on its own.
+@use 'breakpoints' as *;
+
+// ─── OpenVue internals ──────────────────────────────────────────────────────
+//
+// The one place that styles OpenVue's internal elements by their .p-* class
+// names. Those names are not a public interface and an OpenVue upgrade may
+// rename or restructure them without an error, so after an upgrade this file
+// is the one to check. Components put one of the named classes below on the
+// OpenVue component instead of reaching into it, and Stylelint rejects .p-*
+// selectors in a component's own styles. Spacing and colours that the theme
+// exposes as tokens belong in the Glados preset in main.ts, not here.
+
+// ─── Interaction chrome ─────────────────────────────────────────────────────
+
+// Content text stays selectable so a part number or an order ID can be
+// copied. Controls that are only ever clicked are not, so a quick double
+// click on them paints no selection. A row click that ends a text selection
+// is swallowed by installSelectionClickGuard.
+.p-button,
+.p-tablist,
+.p-datatable-thead,
+.p-paginator,
+.p-menu,
+.p-tieredmenu,
+.p-contextmenu,
+.p-menubar {
+  user-select: none;
+}
+
+// A tab strip that overflows (Settings carries 18) scrolls its trailing tab
+// underneath OpenVue's next/prev chevron, which is transparent by default. The
+// half-covered tab read as greyed-out, as if disabled, rather than as "there is
+// more this way". An opaque button with a matching halo cuts the strip cleanly
+// and lets the chevron read as the control it is.
+.p-tablist-nav-button {
+  background: var(--p-content-background);
+  box-shadow: 0 0 10px 6px var(--p-content-background);
+  z-index: 1;
+}
+
+.p-toolbar-start,
+.p-toolbar-center,
+.p-toolbar-end {
+  gap: var(--space-1);
+}
+
+// A dialog takes a --dialog-width-* token as its width; on a narrow screen it
+// never grows past the viewport, whatever the token says.
+.p-dialog {
+  max-width: 95vw;
+}
+
+// On a phone a dialog takes the whole screen, the way a mobile app shows a
+// form, since a floating card leaves no room for its content. A confirmation
+// stays a card: it holds one question and two buttons. The height beats the
+// inline heights the large dialogs set for the desktop.
+@media (max-width: $bp-sm) {
+  .p-dialog:not(.p-confirmdialog) {
+    max-width: 100vw;
+    height: 100% !important;
+    max-height: 100%;
+    border-radius: 0;
+  }
+}
+
+// ─── DataTable rows ─────────────────────────────────────────────────────────
+
+// A list a phone offers marks its DataTable `phone-columns` and the two or
+// three columns that identify a row `phone-col`, its row number column
+// `phone-row-number` and its picture column `phone-thumbnail`. In phone mode
+// (AppLayout puts `phone-mode` on the page area) every other column, the
+// filter row (the header's second row) and the bulk selection column
+// disappear, the phone columns share the width left beside the narrow row
+// number and picture, and the paginator keeps only its arrows and page
+// numbers. Group headers, expansions and the empty message span the row and
+// stay.
+.phone-mode .phone-columns {
+  .p-datatable-thead > tr > th:not(.phone-col, .phone-row-number, .phone-thumbnail),
+  .p-datatable-tbody
+    > tr:not(.p-datatable-row-group-header, .p-datatable-row-expansion, .p-datatable-empty-message)
+    > td:not(.phone-col, .phone-row-number, .phone-thumbnail),
+  .p-datatable-tfoot > tr > td:not(.phone-col, .phone-row-number, .phone-thumbnail),
+  .p-datatable-thead > tr:not(:first-child) {
+    display: none;
+  }
+
+  // The width beats the inline one a table with resizable columns sets. The
+  // layout is automatic: a fixed layout keeps room for the hidden columns
+  // whenever a full-width row, such as the empty message, counts them.
+  .p-datatable-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto !important;
+  }
+
+  .p-datatable-table-container {
+    overflow-x: hidden;
+  }
+
+  // Beats the desktop widths the columns set inline.
+  .phone-col {
+    width: auto !important;
+    white-space: normal !important;
+    // break-word, not anywhere: a column never shrinks below its longest
+    // word, so a status tag or a part number stays in one piece.
+    overflow-wrap: break-word;
+  }
+
+  .phone-row-number {
+    width: 2.5rem !important;
+  }
+
+  .phone-thumbnail {
+    width: 3.25rem !important;
+  }
+
+  .p-paginator-first,
+  .p-paginator-last,
+  .p-paginator-rpp-dropdown,
+  .p-paginator-jtp-dropdown {
+    display: none;
+  }
+}
+
+// Expansion rows are excluded: one is a single full-width <td> wrapping a
+// whole sub-view (a nested table, an attachments section), so tinting it on
+// hover lights up the entire block as though it were one selectable row.
+// `:hover` matches ancestors too, so a row of a nested table still gets its
+// own tint; this only stops the outer wrapper from lighting up with it.
+.p-datatable-tbody > tr:not(.p-datatable-row-expansion):hover > td {
+  background: color-mix(in srgb, var(--p-primary-color) 10%, transparent) !important;
+}
+
+// Selectable rows (selectionMode="single"/"multiple") become natively
+// focusable via OpenVue's own tabindex handling; this makes that focus
+// visible for keyboard users, matching AppSidebar's nav-item focus ring.
+.p-datatable-tbody > tr[data-p-selectable-row='true']:focus-visible {
+  outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
+  outline-offset: -2px;
+}
+
+// A table whose rows open something on click shows the pointer over them.
+// Put it on the DataTable. Expansion rows hold a sub-view, not a row, so
+// their hover stays clear of the row tint.
+.clickable-rows .p-datatable-tbody > tr {
+  cursor: pointer;
+}
+
+.clickable-rows .p-datatable-tbody > tr.p-datatable-row-expansion:not(.p-datatable-row-selected):hover {
+  background: transparent;
+}
+
+// A fixed table layout, so every column keeps its declared width, and the
+// container scrolls sideways when those widths add up to more than the room
+// there is. Put it on the DataTable; a table that should never squeeze below
+// the sum of its column widths sets --table-min-width.
+.fixed-layout-table {
+  .p-datatable-table {
+    table-layout: fixed;
+    min-width: var(--table-min-width, auto);
+  }
+
+  .p-datatable-table-container {
+    overflow-x: auto;
+  }
+}
+
+// A table inside an expansion row of a clickable table. The theme's hover
+// rule for the outer table is a descendant selector that also greys these
+// rows, so they keep their own background and only the shared row tint
+// shows on hover. Put it on the inner DataTable or its wrapper.
+.nested-table {
+  .p-datatable .p-datatable-tbody > tr:not(.p-datatable-row-selected):hover {
+    background: var(--p-datatable-row-background);
+  }
+
+  .p-datatable-striped .p-datatable-tbody > tr.p-row-odd:not(.p-datatable-row-selected):hover {
+    background: var(--p-datatable-row-striped-background);
+  }
+}
+
+// Cells keep to one line and clip with an ellipsis instead of wrapping.
+// Put it on the DataTable, usually next to .fixed-layout-table.
+.ellipsis-cells {
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ─── Panels ─────────────────────────────────────────────────────────────────
+// OpenVue Panel DOM:
+//   .p-panel > .p-panel-header + .p-panel-content-container > .p-panel-content-wrapper > .p-panel-content
+
+// A Panel that fills the height its parent gives it. The content area takes
+// what the header leaves, and the content body is a flex column so a child
+// with flex: 1 and its own overflow can scroll. The component sizes the
+// Panel itself and can set --fill-panel-gap (space between the body's
+// children) and --fill-panel-overflow-y (auto by default). Written as
+// `.p-panel.fill-panel` because OpenVue injects `.p-panel { display: block }`
+// at runtime after this sheet, which would win at equal specificity.
+.p-panel.fill-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  > .p-panel-content-container {
+    flex: 1;
+    min-height: 0;
+  }
+
+  > .p-panel-content-container > .p-panel-content-wrapper > .p-panel-content {
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--fill-panel-gap, 0);
+    overflow-x: hidden;
+    overflow-y: var(--fill-panel-overflow-y, auto);
+  }
+}
+
+// A grid cell that holds a Panel rendered by a slotted component, which the
+// grid cannot put a class on. The Panel's content fills the cell, and the
+// body is a flex column so a footer can push itself down with margin-top:
+// auto. Used by the record grids of the item, lot and machine detail pages.
+// The lot and machine grids put the class on the Panel itself, where
+// OpenVue's `.p-panel { display: block }` is injected at runtime after this
+// sheet and would win at equal specificity, collapsing the card to its
+// header. `.p-panel.record-card` outranks it.
+.record-card,
+.p-panel.record-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .p-panel-content-container {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .p-panel-content {
+    height: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// The Panel itself stretches to the cell, for grids whose rows set the
+// height. Only the content container gives up height.
+.record-card--stretch {
+  > .p-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .p-panel-header {
+    flex-shrink: 0;
+  }
+}
+
+// Out of flow, so a long card never grows the grid row; it fills whatever
+// height the row settled on, and only the card's own .card-scroll-body
+// scrolls.
+.record-card--scroll {
+  .p-panel-content-container {
+    position: relative;
+  }
+
+  .p-panel-content {
+    position: absolute;
+    inset: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .card-scroll-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+// OpenVue Tabs DOM: .p-tabs > .p-tablist + .p-tabpanels > .p-tabpanel
+
+// Tabs that fill the height their parent gives them: the strip keeps its
+// height and the active panel takes the rest and scrolls. Put it on Tabs.
+// The panel padding and background come from the preset in main.ts; a
+// component that needs a different padding sets --p-tabs-tabpanel-padding.
+.fill-tabs {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  > .p-tablist {
+    flex-shrink: 0;
+  }
+
+  > .p-tabpanels {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  > .p-tabpanels > .p-tabpanel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+// The tab's own content scrolls (a page layout, a table), so the panel
+// clips instead.
+.fill-tabs--contained > .p-tabpanels > .p-tabpanel {
+  overflow: hidden;
+}
+
+// The tab's content is one block that fills the panel.
+.fill-tabs--column > .p-tabpanels > .p-tabpanel {
+  display: flex;
+  flex-direction: column;
+}
+
+// ─── Drawers ────────────────────────────────────────────────────────────────
+
+// A Drawer wider than the theme's default that never grows past the screen.
+// Put it on the Drawer and set --drawer-width in the component's unscoped
+// styles, since the Drawer is teleported to the body.
+.p-drawer.sized-drawer {
+  width: var(--drawer-width);
+  max-width: 100vw;
+}
+
+// ─── Buttons ────────────────────────────────────────────────────────────────
+
+// A wrapping row of buttons in a narrow panel: each button keeps the width
+// of its label instead of stretching. Put it on the row.
+.compact-buttons .p-button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+// ─── Page menu ──────────────────────────────────────────────────────────────
+
+// PageLayout's wrapMenu: toolbar buttons wrap onto a new line as a whole
+// instead of breaking their labels.
+.view-menu--wrap {
+  .p-button-label {
+    white-space: nowrap;
+  }
+
+  > .p-toolbar .p-toolbar-start {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+}
+
+// ControlsBar's Actions menu on a phone: one action per full-width row,
+// labels from the left, and no vertical dividers between the rows. A button
+// wrapped in a tooltip span or a SplitButton fills its row the same way.
+.phone-actions-menu {
+  .p-divider-vertical {
+    display: none;
+  }
+
+  > span,
+  .p-splitbutton {
+    display: flex;
+  }
+
+  .p-button,
+  .p-splitbutton-button {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+  }
+
+  .p-splitbutton-dropdown {
+    flex: 0 0 auto;
+  }
+}
+
+// ─── Form fields ────────────────────────────────────────────────────────────
+
+// A Select whose empty value means "all", shown as its placeholder. That
+// placeholder is a real choice, so it does not look greyed out.
+.select-placeholder-as-value .p-select-label.p-placeholder {
+  color: var(--p-select-color);
+}
+
+// Inside a narrow form (an edit side panel), a field's control never pushes
+// the panel wider, and a long select value ends in an ellipsis. Put it on
+// the form or the container of its fields.
+.fit-fields {
+  .field > .p-component {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .field .p-select-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

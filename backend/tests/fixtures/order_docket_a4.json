@@ -1,0 +1,111 @@
+{
+  "_note": "order_docket layout draft (ORDER-rooted, OrderResult + items[]), A4 portrait 210x297 -- the first docket with a repeating positions table, so unlike the other four files in this folder this is NOT yet parseable by docket_spec.py: 'table', the per-block 'pages' scope and the @-prefixed renderer-provided fields (@page_number/@page_count/@page_label/@row_count/@item_image) are the PLANNED spec extension. Layout agreed 2026-08-14..16 and verified live against dev order BN-26-00003 (#57, 5 positions, S3 part images + logo) via the scratchpad prototype script (order_docket_prototype.py), which generates these exact blocks in code; multi-page pagination verified with rows x4 -> 2 pages. Geometry: frame 8..202 x 8..289; header grid columns x 14/64/114 (widths 46/46/44), label 2.6mm over bold 5mm value; QR 30mm at 164,29 -> @resolve_url on the order's own public_id (frontend routeForResolved already lands on /procurement/orders/{id}); header closes with a rule at y=66 clear of the last value row (~63.5). Table band starts AT that rule on page 1 (first_page_top_mm 66) and at y=30 on continuation pages under a compact strap (title + order number); capacity (280-top-8)/22 -> 9 rows page 1, 11 per continuation. Stacked cells: first field bold 3.5mm at row_top+4 (article stack: +3.5), following fields regular 3.0mm at +9 and +13.5, empty lines stay blank without reflow; image box keeps ~3mm air each side (block 20mm inside the 26mm column). Column-header labels vertically centred in the 8mm band (top offset 2.2), underline at band_top+7.5, row separators 0.15mm. Footer: bare date left, '1 / 3'-style @page_label right, nothing centre. Pending backend work this file assumes: item.* row namespace, product_number/total_items/orderer_full_name/delivered_by_full_name denormalizations, and the paginator that expands 'table' into per-page blocks -- see field_map comments below. Not print-tested.",
+  "source": {
+    "page": { "width_mm": 210.0, "height_mm": 297.0 },
+    "blocks": [
+      { "type": "rect", "x": 8, "y": 8, "w": 194, "h": 281, "stroke_mm": 0.5, "pages": "all" },
+      { "type": "text", "x": 14, "y": 11.5, "size_mm": 6, "bold": true, "text": "ORDER", "pages": "all" },
+      {
+        "type": "text",
+        "x": 40,
+        "y": 13,
+        "size_mm": 5,
+        "bold": true,
+        "field": "order_number",
+        "max_width_mm": 60,
+        "max_lines": 1,
+        "pages": "continuation"
+      },
+      {
+        "type": "image",
+        "x": 150,
+        "y": 10.5,
+        "w": 46,
+        "h": 11,
+        "field": "company_logo",
+        "fallback_text": null,
+        "align": "right",
+        "pages": "all"
+      },
+      { "type": "line", "x": 8, "y": 24, "x2": 202, "y2": 24, "stroke_mm": 0.5, "pages": "all" },
+
+      { "type": "qr", "x": 164, "y": 29, "size_mm": 30, "field": "qr_payload", "pages": "first" },
+
+      { "type": "text", "x": 14, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "ORDER NO.", "pages": "first" },
+      { "type": "text", "x": 14, "y": 32.5, "size_mm": 5, "bold": true, "field": "order_number", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 64, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "SUPPLIER", "pages": "first" },
+      { "type": "text", "x": 64, "y": 32.5, "size_mm": 5, "bold": true, "field": "supplier", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 114, "y": 28.5, "size_mm": 2.6, "bold": true, "text": "STATUS", "pages": "first" },
+      { "type": "text", "x": 114, "y": 32.5, "size_mm": 5, "bold": true, "field": "status", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+      { "type": "text", "x": 14, "y": 41, "size_mm": 2.6, "bold": true, "text": "ORDERED", "pages": "first" },
+      { "type": "text", "x": 14, "y": 45, "size_mm": 5, "bold": true, "field": "ordered_date", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 64, "y": 41, "size_mm": 2.6, "bold": true, "text": "DELIVERY DATE", "pages": "first" },
+      { "type": "text", "x": 64, "y": 45, "size_mm": 5, "bold": true, "field": "delivery_date", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 114, "y": 41, "size_mm": 2.6, "bold": true, "text": "POSITIONS", "pages": "first" },
+      { "type": "text", "x": 114, "y": 45, "size_mm": 5, "bold": true, "field": "positions", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+      { "type": "text", "x": 14, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "TOTAL ITEMS", "pages": "first" },
+      { "type": "text", "x": 14, "y": 57.5, "size_mm": 5, "bold": true, "field": "total_items", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 64, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "ORDERER", "pages": "first" },
+      { "type": "text", "x": 64, "y": 57.5, "size_mm": 5, "bold": true, "field": "orderer", "max_width_mm": 46, "max_lines": 1, "pages": "first" },
+      { "type": "text", "x": 114, "y": 53.5, "size_mm": 2.6, "bold": true, "text": "DELIVERED BY", "pages": "first" },
+      { "type": "text", "x": 114, "y": 57.5, "size_mm": 5, "bold": true, "field": "delivered_by", "max_width_mm": 44, "max_lines": 1, "pages": "first" },
+
+      { "type": "line", "x": 8, "y": 66, "x2": 202, "y2": 66, "stroke_mm": 0.3, "pages": "first" },
+
+      { "type": "line", "x": 8, "y": 284, "x2": 202, "y2": 284, "stroke_mm": 0.3, "pages": "all" },
+      { "type": "text", "x": 14, "y": 285.5, "size_mm": 3, "field": "printed_at", "pages": "all" },
+      {
+        "type": "text",
+        "x": 14,
+        "y": 285.5,
+        "size_mm": 3,
+        "field": "@page_label",
+        "max_width_mm": 182,
+        "max_lines": 1,
+        "align": "right",
+        "pages": "all"
+      }
+    ],
+    "table": {
+      "x_mm": 14,
+      "row_height_mm": 22,
+      "first_page_top_mm": 66,
+      "next_page_top_mm": 30,
+      "bottom_mm": 280,
+      "header_height_mm": 8,
+      "separator_stroke_mm": 0.15,
+      "columns": [
+        { "header": "POS", "fields": ["position"], "width_mm": 8 },
+        { "header": "QTY", "fields": ["quantity", "unit"], "width_mm": 16, "align": "right" },
+        { "header": "PROJECT / PRODUCT", "fields": ["project", "product"], "width_mm": 34 },
+        { "header": "IMAGE", "fields": ["row_image"], "width_mm": 26, "kind": "image" },
+        { "header": "ARTICLE / PART NO. / DIM.", "fields": ["article", "part_no", "dimension"], "width_mm": 102 }
+      ]
+    }
+  },
+  "field_map": {
+    "order_number": "order_number",
+    "supplier": "supplier_name",
+    "status": "status",
+    "ordered_date": "ordered_date",
+    "delivery_date": "delivery_date",
+    "positions": "@row_count",
+    "total_items": "total_items",
+    "orderer": "orderer_full_name",
+    "delivered_by": "delivered_by_full_name",
+    "qr_payload": "@resolve_url",
+    "company_logo": "@company_logo",
+    "printed_at": "@today",
+    "position": "item.position",
+    "quantity": "item.quantity",
+    "unit": "item.unit",
+    "project": "item.project_number",
+    "product": "item.product_number",
+    "row_image": "@item_image",
+    "article": "item.item_article_name",
+    "part_no": "item.item_part_number",
+    "dimension": "item.item_dimension"
+  }
+}

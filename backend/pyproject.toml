@@ -1,0 +1,221 @@
+[project]
+authors = [
+  {name = "Philip Delorenzo", email = "git@deloarts.com"},
+]
+description = "Glados Core"
+license = "LicenseRef-DAL-1.0.0"
+name = "glados-backend"
+readme = "README.md"
+requires-python = ">=3.13"
+version = "0.1.0"
+# The runtime dependencies stay in [tool.poetry.dependencies], where Poetry's
+# caret ranges live, so the [project] table declares them dynamic.
+dynamic = ["dependencies"]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+
+# Web framework. A caret on a 0.x version caps at the next minor, and 0.x
+# minors of fastapi, uvicorn and uvicorn-worker can break, so each bump reads
+# the changelog first. gunicorn follows semver and takes any 26.x.
+fastapi = "^0.162"
+uvicorn = {version = "^0.54", extras = ["standard"]}
+# The gunicorn worker class that replaced the deprecated uvicorn.workers.
+uvicorn-worker = "^0.4"
+gunicorn = ">=26.2,<27"
+
+# Database. SQLAlchemy's asyncio extension runs on greenlet. SQLAlchemy stays
+# below 2.1, which makes autoflush unconditional (text() statements too),
+# searches every FROM entity in filter_by() and changes which loader option
+# wins on overlapping paths; moving to it is a migration of its own.
+alembic = "^1.20.1"
+psycopg = {version = "^3.3", extras = ["binary"]}
+sqlalchemy = ">=2.0.55,<2.1"
+greenlet = "^3.1"
+
+# Validation & settings
+pydantic = {version = "^2.10", extras = ["email"]}
+pydantic-settings = "^2.7"
+
+# Auth, including the LDAP directory login. bcrypt 5 raises on input over 72
+# bytes where 4 truncated it; hashing.py cuts the input itself, so stored
+# hashes and long passwords keep working.
+bcrypt = "^5.0"
+pyjwt = "^2.10"
+ldap3 = "^2.9.1"
+# Form and file upload parsing for FastAPI. A caret on 0.0.x pins the exact
+# patch, so every release is a deliberate bump.
+python-multipart = "^0.0.32"
+pyotp = "^2.9"
+# WebAuthn passkeys (Windows Hello, Touch ID, security keys): option
+# generation and verification of registration and authentication responses.
+webauthn = "^3.0"
+# Fernet and HKDF for secrets encrypted at rest (secret_box.py); the floor
+# clears CVE-2026-69247 (fixed in 50.0).
+cryptography = "^50.0"
+
+# Cache, event streams and pub/sub. Each redis-py major has changed client
+# defaults (8 moved to RESP3, ten retries and a 5 second timeout), so a major
+# bump re-reads the changelog; redis_client.py sets every option it needs.
+redis = "^8.1"
+
+# Host statistics for the admin Host tab (CPU, memory, disk, uptime)
+psutil = "^7.2"
+
+# Mail: templates, SMTP delivery and the HTML sanitiser for template bodies.
+# nh3 is on 0.x, so its caret caps at the next minor.
+jinja2 = "^3.1"
+aiosmtplib = "^5.1"
+nh3 = "^0.3.6"
+
+# Object storage (S3 and Azure Blob)
+boto3 = "^1.43"
+azure-storage-blob = "^12.31"
+
+# Scheduling
+apscheduler = "^3.10"
+
+# HTTP client for PDM, the time tracking service, the EPLAN Data Portal and webhooks. The caret
+# on 0.28 caps at 0.29, since httpx minors have removed arguments before.
+httpx = "^0.28"
+
+# Live row-sync SSE endpoint
+sse-starlette = "^3.4"
+
+# Images, SVG and labels: Pillow for raster images and dockets, defusedxml for
+# the SVG sanitiser and optimiser, segno for QR codes on ZPL labels and dockets
+pillow = "^13.0.0"
+defusedxml = "^0.7.1"
+segno = "^1.6"
+
+# Metrics. prometheus-client is on 0.x, so its caret caps at the next minor.
+prometheus-client = "^0.26.0"
+prometheus-fastapi-instrumentator = "^8.1.0"
+mcp = "^2.3"
+
+[tool.poetry.group.dev.dependencies]
+mypy = ">=2.4,<3"
+pre-commit = ">=4.7,<5"
+pytest = "^9.0.3"
+pytest-asyncio = "^1.4"
+ruff = ">=0.17.2,<0.18"
+import-linter = "^2.13"
+pytest-cov = "^7.1.0"
+# complexipy 8.1 declares Python <3.16, and Poetry refuses a dependency that
+# does not cover the whole project range unless the marker narrows it.
+complexipy = {version = ">=8.1,<9", python = "<3.16"}
+aiosqlite = "^0.21"
+hypothesis = "^6.169.0"
+# Type stubs for runtime packages that ship without inline types, so mypy
+# checks their call sites instead of treating them as Any.
+types-psutil = "^7.2"
+types-defusedxml = "^0.7"
+types-boto3 = {version = "^1.43", extras = ["s3"]}
+types-ldap3 = "^2.9"
+pytest-xdist = "^3.8"
+pytest-split = "^0.11"
+
+[tool.poetry]
+packages = [{include = "src"}]
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint.pycodestyle]
+# The formatter wraps code at line-length. An import of a module inside
+# src/modules/ cannot be wrapped, since a dotted module path has no break
+# point, so the line length check allows that much more.
+max-line-length = 120
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+# ASYNC (flake8-async) flags known blocking calls (time.sleep, open,
+# subprocess, sync HTTP clients) inside `async def`. It cannot see a sync
+# database or Redis call there, so it guards against the common cases only.
+select = ["E", "F", "I", "B", "UP", "DTZ", "RET", "SIM", "PERF", "PTH", "RUF", "ASYNC"]
+# RUF001/002/003 (ambiguous unicode) fire on characters used on purpose
+# throughout the codebase (×, –, → in strings, docstrings and comments);
+# rewriting that text to plain ASCII would hurt readability for no benefit.
+#
+# UP042 (StrEnum), UP046 and UP047 (PEP 695 type parameters) became stable
+# after the selected families were chosen. UP042 changes what str() returns
+# for the str-mixin enums, and the PEP 695 rewrite touches every generic in
+# src, so each is a deliberate migration of its own rather than a lint fix.
+ignore = ["RUF001", "RUF002", "RUF003", "UP042", "UP046", "UP047"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+# ruff resolves first-party imports by looking up each module path on disk,
+# so an import it cannot resolve lands in the third-party block, and the
+# migration directory `alembic/` makes `from alembic import op` first-party
+# while `alembic.config` stays third-party. Naming the sections keeps the
+# order independent of that lookup; alembic stays in the first-party block,
+# where every existing import already has it.
+known-first-party = ["src", "tests", "alembic"]
+split-on-trailing-comma = true
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.Path",
+  "fastapi.Body",
+  "fastapi.Cookie",
+  "fastapi.Header",
+  "fastapi.Form",
+  "fastapi.File",
+  "fastapi.Security",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Fixture datetimes are numerous and their exact timezone is never the point
+# under test; rewriting every one to be tz-aware would be pure churn. src/
+# still enforces DTZ in full via now_utc()/today_utc() (src.shared_kernel.domain.services.clock).
+"tests/**" = ["DTZ"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+# scripts/ has no __init__.py and its modules import each other as
+# `scripts.<name>`, the way `python -m scripts.<name>` runs them. Without this
+# mypy names a file passed on the command line after its directory and finds
+# the same module twice.
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+
+# APScheduler 3 ships neither inline types nor a stub package.
+[[tool.mypy.overrides]]
+module = ["apscheduler.*"]
+ignore_missing_imports = true
+
+# uvicorn-worker ships without a py.typed marker, so its UvicornWorker is Any
+# to mypy, and the one module that subclasses it has to allow that.
+[[tool.mypy.overrides]]
+module = ["uvicorn_worker.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["src.modules.platform.infrastructure.gunicorn_worker"]
+disallow_subclassing_any = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "benchmark: wall-clock guard for the global schedule re-walk",
+  "smoke: fast, representative integration tests run by make test-fast",
+]
+
+[tool.coverage.report]
+# The gate sits a few points below the measured total, so it catches a real
+# regression without failing on ordinary churn. Ratchet it up when the
+# measured total moves.
+fail_under = 90
