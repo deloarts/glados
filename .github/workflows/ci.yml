@@ -513,13 +513,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Only what ships in the bundle can fail the build. Dev tooling (lint,
+      # Only the production dependencies can fail the build. Dev tooling (lint,
       # test, build) reads nothing but our own sources, and an advisory there
       # can have no fixed release at all, as GHSA-vfj7-8cjw-p6xm in braces
       # (pulled in by the lint config) shows. Those are still reported.
+      # check:audit fails on a high or critical production advisory unless
+      # frontend/audit-allowlist.json accepts it until a review date.
       - name: Audit dependencies
         run: |
-          npm audit --omit=dev --audit-level=high
+          npm run check:audit
           npm audit --audit-level=high || echo "::warning::npm audit reports high severity advisories in dev dependencies, see the log above."
 
       - name: Type-check

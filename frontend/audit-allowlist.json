@@ -1,0 +1,7 @@
+{
+  "GHSA-fc5q-39xc-vjpf": {
+    "package": "picomatch",
+    "reason": "No fixed release exists (vulnerable up to 4.0.7, the latest). It reaches the production tree only through vue-router's build plugin and vite, never the browser bundle, and it matches only our own glob patterns at build time.",
+    "reviewBy": "2026-12-18"
+  }
+}

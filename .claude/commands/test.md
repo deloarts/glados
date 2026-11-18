@@ -143,8 +143,8 @@ If Docker is not running, the setup cannot be done; report that and stop.
   (`fail_under` is in `pyproject.toml`); `poetry run python scripts/check_openapi.py`;
   `poetry run alembic heads` must list exactly one `(head)`.
 - **frontend-verify** (`frontend/`, through `NODE_RUN`): `npm ci`,
-  `npm audit --omit=dev --audit-level=high`, and `npm audit --audit-level=high`, which only
-  warns. Then with `--network none` added to `NODE_RUN`: `npm run type-check`,
+  `npm run check:audit` (the production audit with `audit-allowlist.json`), and
+  `npm audit --audit-level=high`, which only warns. Then with `--network none` added to `NODE_RUN`: `npm run type-check`,
   `npm run test:coverage`, `npm run build-only`.
   Vitest fails the run on unhandled errors even when every test passed; report them like
   failures.
