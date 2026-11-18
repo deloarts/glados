@@ -18,7 +18,8 @@ Arguments given: `$ARGUMENTS`
   `frontend/src/core/api/generated/webSchema.ts` or API type files under
   `frontend/src/features/*/types/` changed.
 - Image builds: after the checks pass, CI builds both Docker images, and a build can fail where
-  every gate passed (the frontend build type-checks cold under a fixed heap limit). Run the
+  every gate passed. CI's `frontend-verify` job also type-checks the whole app cold under a
+  fixed heap limit, which a warm local type-check cannot reproduce. Run the
   frontend image check (step 2) for `all` and `frontend`, and in the default scope when
   `frontend/package.json`, `frontend/package-lock.json`, a `frontend/tsconfig*.json`,
   `frontend/vite.config.ts` or anything under `frontend/docker/` changed. Run the Docker builds
@@ -53,9 +54,10 @@ Frontend (`cd frontend`):
 - `npm run check:api-types`, only if generated API types or matching feature types changed
 - Image check (see step 1 for when): `NODE_OPTIONS=--max-old-space-size=6144 npx vue-tsc --build --force`,
   then `npm run build-only`. The `--force` is the point: `npm run type-check` reuses the
-  incremental cache in `node_modules/.tmp` and needs far less memory than the cold run inside the
-  image, so it cannot catch a heap overflow. Keep the limit equal to the `NODE_OPTIONS` in
-  `frontend/docker/frontend.Dockerfile`.
+  incremental cache in `node_modules/.tmp` and needs far less memory than the cold run in CI,
+  so it cannot catch a heap overflow. Keep the limit equal to the `NODE_OPTIONS` of the
+  `frontend-verify` job in `.github/workflows/ci.yml`. The frontend Dockerfile runs only
+  `build-only`, since images are built from commits CI has already type-checked.
 
 Docker images (repo root, see step 1 for when), the same builds `ci.yml` and `release.yml` run:
 - `docker build --build-arg VITE_API_URL= -t glados-frontend:test-check -f frontend/docker/frontend.Dockerfile frontend`
