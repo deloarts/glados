@@ -124,8 +124,11 @@ def _step_b(*, strict: bool) -> bool:
     target = snapshot_path(_FROZEN_SURFACE)
     rel_path = target.relative_to(REPO_ROOT).as_posix()
 
+    # git resolves `tag:path` from the top of the repository, but rel_path is
+    # relative to the backend directory. The `./` prefix makes git resolve it
+    # from the working directory instead.
     show = subprocess.run(
-        ["git", "show", f"{lowest_tag}:{rel_path}"],
+        ["git", "show", f"{lowest_tag}:./{rel_path}"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

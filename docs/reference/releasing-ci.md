@@ -9,6 +9,7 @@ What `ci.yml`, `nightly.yml` and `release.yml` check and publish on each trigger
     - [1.3 channel images](#13-channel-images)
     - [1.4 the nightly workflow](#14-the-nightly-workflow)
     - [1.5 the ghcr retention workflow](#15-the-ghcr-retention-workflow)
+    - [1.6 the dependency audits](#16-the-dependency-audits)
   - [2 the pat snapshot check](#2-the-pat-snapshot-check)
     - [2.1 the snapshots](#21-the-snapshots)
     - [2.2 step a, snapshot against the live schema](#22-step-a-snapshot-against-the-live-schema)
@@ -35,7 +36,7 @@ What `ci.yml`, `nightly.yml` and `release.yml` check and publish on each trigger
 | `backend-pg-races` | Runs the rest of `tests/pg`, the race tests and the Postgres-only queries, in four parallel shards, each against its own empty Postgres service, only for a `release/**` branch. pytest-split gives each shard the same number of tests, since `backend/.test_durations` records none for them. |
 | `backend-verify` | Requires all shards to have passed and runs pip-audit, ruff, the format check, mypy, import-linter, the complexipy ceiling of 25 per function, a report-only function length listing, the combined coverage gate, the [pat snapshot check](#2-the-pat-snapshot-check) with `--strict` and a check for a single Alembic head. |
 | `frontend-tests` | Runs the frontend unit tests with coverage in three parallel shards. Vitest assigns whole spec files to a shard; each shard writes a blob report and leaves the coverage thresholds off, since it covers only part of `src`. |
-| `frontend-verify` | Requires all shards to have passed, runs npm audit and type-check, merges the shard reports with `npm run test:coverage:merge` so the coverage thresholds apply to the whole suite, and builds. Lint and the i18n parity check, which fails on a key missing in either locale, ran in `quick-checks`. |
+| `frontend-verify` | Requires all shards to have passed, runs the [dependency audits](#16-the-dependency-audits) and type-check, merges the shard reports with `npm run test:coverage:merge` so the coverage thresholds apply to the whole suite, and builds. Lint and the i18n parity check, which fails on a key missing in either locale, ran in `quick-checks`. |
 | `plan-refs` | Runs `scripts/check_plan_refs.py`, which rejects planning labels in comments and docs. |
 | `version-parity` | Checks that `backend/pyproject.toml` and `frontend/package.json` carry the same version. |
 | `api-types` | Checks that the frontend's generated types match the committed `web` snapshot. |
@@ -68,6 +69,15 @@ The race tests run only on release branches because, at close to an hour in one 
 - A release pull request whose candidate has fallen out of the newest 30 cannot be released, because `resolve` no longer finds its `sha-<candidate>` tags. Push the release branch again to publish a new candidate.
 - *Run workflow* starts it on demand on any branch, as a dry run that only lists the versions unless the box is cleared. The step summary counts what was deleted per package.
 - A deleted version can be restored from the package settings for 30 days. The token needs the Admin role on each package ([releasing-github-setup.md section 5](releasing-github-setup.md#5-packages)); without it the deletions fail and the run fails.
+
+### 1.6 the dependency audits
+
+- `backend-verify` runs `pip-audit`, which fails on any known vulnerability in the backend's dependencies.
+- `frontend-verify` runs `npm run check:audit` (`frontend/scripts/check-audit.ts`), which fails on a high or critical advisory in the production dependencies, the ones `npm audit --omit=dev` sees. It then runs `npm audit --audit-level=high` over every dependency, which only warns, since dev tooling reads nothing but our own sources.
+- An advisory with no fixed release would block every pull request, so `frontend/audit-allowlist.json` can accept one by its GHSA id. Each entry names the package, says why the advisory cannot be exploited in Glados and carries a `reviewBy` date. An entry without a reason or a valid date fails the check.
+- After its `reviewBy` date an entry no longer counts and the advisory fails the check again, so an accepted advisory is looked at again instead of being forgotten. Move the date only after checking that no fix has shipped and that the reason still holds.
+- An entry whose advisory npm no longer reports is listed for removal but does not fail the check. Remove it in the pull request that updates the package.
+- The check fails closed: a report npm could not produce, for example because the registry was unreachable, fails it.
 
 ## 2 the pat snapshot check
 

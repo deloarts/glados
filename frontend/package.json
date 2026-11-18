@@ -30,6 +30,7 @@
     "check:i18n": "jiti scripts/check-i18n-parity.ts",
     "generate:api-types": "jiti scripts/generate-api-types.ts",
     "check:api-types": "jiti scripts/generate-api-types.ts --check",
+    "check:audit": "jiti scripts/check-audit.ts",
     "ci": "run-s type-check lint:check test:unit:run check:i18n check:api-types"
   },
   "dependencies": {

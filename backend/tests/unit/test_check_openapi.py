@@ -15,11 +15,16 @@ import pytest
 from scripts import check_openapi
 
 _FROZEN = '{"paths": {}}\n'
+# Where the snapshot sits in the tagged tree. As in the real repository, the
+# backend is a subdirectory of the git repository, not its top level.
+_SNAPSHOT_IN_TREE = "backend/openapi/pat-v1.2.json"
 
 
 class _FakeGit:
     """Answers `git fetch --tags`, `git tag --list` and `git show` the way a
-    test configures it."""
+    test configures it. `git show` resolves `tag:path` as git does, from the
+    top of the repository, or from the working directory when the path starts
+    with `./`, so a path that git would not find is not found here either."""
 
     def __init__(
         self,
@@ -32,8 +37,11 @@ class _FakeGit:
         self.tags = tags
         self.snapshot_at_tag = snapshot_at_tag
         self.shown: list[str] = []
+        self.toplevel = Path("/")
 
-    def __call__(self, cmd: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+    def __call__(
+        self, cmd: list[str], *, cwd: Path | None = None, **_: Any
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:2] == ["git", "fetch"]:
             if self.fetch_ok:
                 return subprocess.CompletedProcess(cmd, 0, "", "")
@@ -42,27 +50,36 @@ class _FakeGit:
             return subprocess.CompletedProcess(cmd, 0, "\n".join(self.tags) + "\n", "")
         if cmd[:2] == ["git", "show"]:
             self.shown.append(cmd[2])
-            if self.snapshot_at_tag is None:
+            if self.snapshot_at_tag is None or not self._names_snapshot(cmd[2], cwd):
                 return subprocess.CompletedProcess(cmd, 128, "", "path does not exist")
             return subprocess.CompletedProcess(cmd, 0, self.snapshot_at_tag, "")
         raise AssertionError(f"unexpected command {cmd}")
 
+    def _names_snapshot(self, spec: str, cwd: Path | None) -> bool:
+        _, _, path = spec.partition(":")
+        if path.startswith("./"):
+            path = (Path(cwd or self.toplevel) / path).relative_to(self.toplevel).as_posix()
+        return path == _SNAPSHOT_IN_TREE
+
 
 @pytest.fixture
 def snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A `pat` snapshot for minor 1.2 under a throwaway repository root."""
-    monkeypatch.setattr(check_openapi, "REPO_ROOT", tmp_path)
+    """A `pat` snapshot for minor 1.2 under a throwaway backend directory,
+    which sits in `backend/` of a throwaway repository."""
+    backend = tmp_path / "backend"
+    monkeypatch.setattr(check_openapi, "REPO_ROOT", backend)
     monkeypatch.setattr(check_openapi, "current_minor", lambda: "1.2")
-    target = tmp_path / "openapi" / "pat-v1.2.json"
-    target.parent.mkdir()
+    target = backend / "openapi" / "pat-v1.2.json"
+    target.parent.mkdir(parents=True)
     target.write_text(_FROZEN)
     monkeypatch.setattr(check_openapi, "snapshot_path", lambda surface: target)
     return target
 
 
 @pytest.fixture
-def use_git(monkeypatch: pytest.MonkeyPatch) -> Callable[[_FakeGit], _FakeGit]:
+def use_git(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Callable[[_FakeGit], _FakeGit]:
     def _use(fake: _FakeGit) -> _FakeGit:
+        fake.toplevel = tmp_path
         monkeypatch.setattr(check_openapi.subprocess, "run", fake)
         return fake
 
@@ -77,7 +94,7 @@ def test_unchanged_snapshot_passes(
 
     assert check_openapi._step_b(strict=strict)
     # The lowest tag of the minor is the frozen one.
-    assert fake.shown == ["v1.2.0:openapi/pat-v1.2.json"]
+    assert fake.shown == ["v1.2.0:./openapi/pat-v1.2.json"]
 
 
 @pytest.mark.parametrize("strict", [True, False])
