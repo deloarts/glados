@@ -32,8 +32,10 @@ watch([visible, doc, () => props.anchor], async ([open, loaded, anchor]) => {
   if (!open || !loaded || !anchor) return
   await nextTick()
   // Attribute selector rather than `#id`, so an id needing escaping does not
-  // throw, and it avoids CSS.escape, which jsdom does not provide.
-  const target = body.value?.querySelector(`[id="${anchor.replace(/"/g, '\\"')}"]`)
+  // throw, and it avoids CSS.escape, which jsdom does not provide. Backslashes
+  // are escaped before quotes, or a trailing one would escape the closing quote.
+  const escaped = anchor.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const target = body.value?.querySelector(`[id="${escaped}"]`)
   target?.scrollIntoView({ block: 'start' })
 })
 </script>

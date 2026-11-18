@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The handbook drawer no longer fails to open a section whose anchor ends in a backslash.
+
+### Security
+
+- Updated Mako, virtualenv and minimatch to versions that fix their published advisories. None of them could be exploited on a Linux deployment.
+
 ## [0.1.0] - 2026-11-17
 
 The first release of Glados, a web app that plans the work of a manufacturing shop: the catalogue of made, bought and source items, the demands of every project, purchasing, production lots, the machine schedule and quality assurance, integrated with a SolidWorks PDM vault. Backend and frontend ship together under this one version.

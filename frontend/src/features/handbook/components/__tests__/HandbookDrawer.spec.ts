@@ -107,6 +107,13 @@ describe('HandbookDrawer', () => {
     expect(scrollIntoView.mock.instances[0]).toBe(document.querySelector('#planning-level'))
   })
 
+  it('ignores an anchor ending in a backslash instead of building an invalid selector', async () => {
+    await mountDrawer({ anchor: 'planning-level\\' })
+    await flushPromises()
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
   it('reports a page that has no doc yet instead of rendering empty', async () => {
     await mountDrawer({ slug: 'not-written-yet' })
 
