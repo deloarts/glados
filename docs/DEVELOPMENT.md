@@ -128,14 +128,17 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev stop            # s
 docker compose -f docker-compose.dev.yml --env-file .env.dev down            # stop and remove, keeps volumes/data
 ```
 
-To also remove the volumes, which resets the database, redis and uploads:
+The dev stack keeps its data in bind mounts under `.volumes/` at the repository root, not in named volumes, so `down -v` leaves it in place. To reset the database, redis and uploads, stop the stack and delete those folders. The containers own the files, so the delete may need `sudo`:
 
 > [!CAUTION]
-> This command erases all data.
+> This erases all local data.
 
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev down -v
+docker compose -f docker-compose.dev.yml --env-file .env.dev down
+sudo rm -rf .volumes/postgres .volumes/redis .volumes/seaweedfs .volumes/media
 ```
+
+The next start creates an empty database and migrates it to head.
 
 ### 4.4 cloning staging data into the dev stack
 
@@ -193,7 +196,7 @@ poetry run pytest tests/integration/test_alembic_migrations.py -q
 
 Do not apply a migration to a shared or production database as part of writing it; an authored but unapplied migration on disk is normal.
 
-Full rules: [reference/development-migrations.md section 3](reference/development-migrations.md#3-writing-a-migration).
+Full rules: [reference/development-migrations.md section 3](reference/development-migrations.md#3-writing-a-migration). A migration is only fixed once it reaches `main`; how a branch keeps a single migration and how a dev database leaves a branch that migrated it is in [section 5](reference/development-migrations.md#5-migrations-on-a-branch) of the same file.
 
 ## 7 release checks
 
