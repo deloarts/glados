@@ -808,7 +808,13 @@ class SqlAlchemyGlobalSearchRepository(IGlobalSearchRepository):
     async def _orders(self, term: str, limit: int) -> SearchGroup:
         t, contains, prefix = _patterns(term)
         idents: list[_TextColumn] = [OrderOrmModel.order_number]
-        secondaries: list[_TextColumn] = [OrderOrmModel.note, OrderOrmModel.storage_place]
+        # The supplier order numbers are a JSON list in a text column, so a
+        # substring of any entry matches like the other secondaries.
+        secondaries: list[_TextColumn] = [
+            OrderOrmModel.note,
+            OrderOrmModel.storage_place,
+            OrderOrmModel.supplier_order_numbers,
+        ]
         related = _order_related(contains)
         via_kind = _order_via_kind(contains)
         rank = _rank_with_related(idents, secondaries, t, prefix, contains, related)

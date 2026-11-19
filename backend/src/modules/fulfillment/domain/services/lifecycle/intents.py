@@ -374,6 +374,22 @@ ORDER_INTENTS = IntentTable[OrderSubject, None](
             effect="supplier, dates, notes and the order's other header fields",
         ),
         IntentRule(
+            action=LifecycleAction.EDIT_SUPPLIER_ORDER_NUMBERS,
+            # The numbers arrive with the supplier's confirmations, after the
+            # order went out, and recording them changes nothing the supplier
+            # holds, so they need no more than the base permission until the
+            # order is delivered or canceled.
+            allowed_from=_values(
+                OrderStatus.DRAFT,
+                OrderStatus.REQUESTED,
+                OrderStatus.PARTIALLY_ORDERED,
+                OrderStatus.ORDERED,
+                OrderStatus.PARTIALLY_DELIVERED,
+            ),
+            checks=(_NOT_CANCELED_BY_A_USER,),
+            effect="the supplier order numbers",
+        ),
+        IntentRule(
             action=LifecycleAction.ADD_ITEM,
             allowed_from=None,
             # An order that reads canceled only because every line is

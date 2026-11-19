@@ -87,6 +87,9 @@ from src.modules.fulfillment.application.use_cases.order.reopen_order_item impor
 from src.modules.fulfillment.application.use_cases.order.set_order_extra_costs import (
     SetOrderExtraCosts,
 )
+from src.modules.fulfillment.application.use_cases.order.set_order_supplier_order_numbers import (
+    SetOrderSupplierOrderNumbers,
+)
 from src.modules.fulfillment.application.use_cases.order.update_order import CancelOrder
 from src.modules.fulfillment.application.use_cases.order.update_order import RequestOrder
 from src.modules.fulfillment.application.use_cases.order.update_order import SubmitOrder
@@ -240,6 +243,20 @@ def get_set_order_extra_costs_use_case(
     lock_plan: LockPlan = Depends(get_lifecycle_lock_plan),
 ) -> SetOrderExtraCosts:
     return SetOrderExtraCosts(
+        order_repo=order_repo,
+        order_item_repo=order_item_repo,
+        uow=uow,
+        lock_plan=lock_plan,
+    )
+
+
+def get_set_order_supplier_order_numbers_use_case(
+    order_repo: IOrderRepository = Depends(get_order_repo),
+    order_item_repo: IOrderItemRepository = Depends(get_order_item_repo),
+    uow: IUnitOfWork = Depends(get_unit_of_work),
+    lock_plan: LockPlan = Depends(get_lifecycle_lock_plan),
+) -> SetOrderSupplierOrderNumbers:
+    return SetOrderSupplierOrderNumbers(
         order_repo=order_repo,
         order_item_repo=order_item_repo,
         uow=uow,

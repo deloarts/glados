@@ -59,6 +59,16 @@ class OrderUpdateRequest(BaseModel):
     expected_edit_version: int
 
 
+class OrderSupplierOrderNumbersUpdateRequest(BaseModel):
+    """Replaces every supplier order number of the order, in entry order."""
+
+    numbers: list[Annotated[str, Field(max_length=100)]] = Field(
+        default_factory=list, max_length=50
+    )
+    # The edit version read; a row that moved since answers 409.
+    expected_edit_version: int
+
+
 class OrderExtraCostRequest(BaseModel):
     kind: ExtraCostKind
     # Net, in EUR cents; a discount is sent as a positive amount.
@@ -108,6 +118,8 @@ class OrderResponse(EntityResponse):
     expected_delivery_date: date | None
     delivery_date: datetime | None
     storage_place: str | None
+    # The supplier's own numbers for the order, in entry order.
+    supplier_order_numbers: list[str]
     creator_id: int
     creator: PublicUserResponse | None
     changed_by_id: int | None

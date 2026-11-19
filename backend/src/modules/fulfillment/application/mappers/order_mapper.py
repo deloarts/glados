@@ -42,6 +42,7 @@ class OrderMapper:
             expected_delivery_date=entity.expected_delivery_date,
             delivery_date=entity.delivery_date,
             storage_place=entity.storage_place,
+            supplier_order_numbers=list(entity.supplier_order_numbers),
             creator_id=entity.creator_id,
             creator=UserMapper.to_public_result(entity.creator) if entity.creator else None,
             changed_by_id=entity.changed_by_id,

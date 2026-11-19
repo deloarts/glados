@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-16T10:29:42.552Z
+ * Generated: 2026-11-19T14:07:15.193Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -6136,6 +6136,29 @@ export interface paths {
          *     order and those items then read ORDERED.
          */
         put: operations["submit_order_api_v1_web_orders__order_id__submit_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/web/orders/{order_id}/supplier-order-numbers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Order Supplier Order Numbers
+         * @description Replaces the numbers under which the supplier keeps the order with the
+         *     list sent, each trimmed, blanks and repeats dropped. Needs write:orders
+         *     in every status until the order is delivered or canceled. Answers the
+         *     order with its lines.
+         */
+        put: operations["set_order_supplier_order_numbers_api_v1_web_orders__order_id__supplier_order_numbers_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -17491,7 +17514,7 @@ export interface components {
          * @description One user intent on a lifecycle aggregate.
          * @enum {string}
          */
-        LifecycleAction: "deliver" | "correct_delivery" | "close_short" | "reopen" | "cancel" | "hold" | "resume" | "force_complete" | "start" | "pause" | "record_completion" | "reverse_completion" | "mark_requested" | "mark_ordered" | "mark_ready_for_pickup" | "fulfil" | "allocate" | "edit_quantity" | "edit_structure" | "reorder_positions" | "move" | "remove" | "scrap" | "split" | "merge" | "assign_external" | "assign_internal" | "unassign_external" | "record_provision" | "send" | "award" | "close" | "approve_source" | "reject_source" | "switch_source" | "complete" | "archive" | "edit" | "add_item";
+        LifecycleAction: "deliver" | "correct_delivery" | "close_short" | "reopen" | "cancel" | "hold" | "resume" | "force_complete" | "start" | "pause" | "record_completion" | "reverse_completion" | "mark_requested" | "mark_ordered" | "mark_ready_for_pickup" | "fulfil" | "allocate" | "edit_quantity" | "edit_structure" | "reorder_positions" | "move" | "remove" | "scrap" | "split" | "merge" | "assign_external" | "assign_internal" | "unassign_external" | "record_provision" | "send" | "award" | "close" | "approve_source" | "reject_source" | "switch_source" | "complete" | "archive" | "edit" | "edit_supplier_order_numbers" | "add_item";
         /** LinkPdmUserEntryRequest */
         LinkPdmUserEntryRequest: {
             /** Pdm User Id */
@@ -21757,6 +21780,8 @@ export interface components {
             supplier_id: number;
             /** Supplier Name */
             supplier_name: string;
+            /** Supplier Order Numbers */
+            supplier_order_numbers: string[];
             /** Supplier Vat Id */
             supplier_vat_id: string;
         };
@@ -21766,6 +21791,16 @@ export interface components {
          * @enum {string}
          */
         OrderStatus: "draft" | "requested" | "partially_ordered" | "ordered" | "partially_delivered" | "delivered" | "canceled";
+        /**
+         * OrderSupplierOrderNumbersUpdateRequest
+         * @description Replaces every supplier order number of the order, in entry order.
+         */
+        OrderSupplierOrderNumbersUpdateRequest: {
+            /** Expected Edit Version */
+            expected_edit_version: number;
+            /** Numbers */
+            numbers?: string[];
+        };
         /** OrderUpdateRequest */
         OrderUpdateRequest: {
             /** Expected Delivery Date */
@@ -43523,6 +43558,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_order_supplier_order_numbers_api_v1_web_orders__order_id__supplier_order_numbers_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderSupplierOrderNumbersUpdateRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
