@@ -10,6 +10,7 @@ The rules for writing and checking an Alembic migration in the backend. [DEVELOP
     - [3.2 schema rules](#32-schema-rules)
     - [3.3 data steps](#33-data-steps)
   - [4 checking a migration](#4-checking-a-migration)
+  - [5 migrations on a branch](#5-migrations-on-a-branch)
 
 ## 1 the chain
 
@@ -28,7 +29,7 @@ A migration must never need a person to repair the database afterwards. Nobody e
 | Cause | Rule |
 | ----- | ---- |
 | A reloading dev backend applies an empty `alembic revision` template and marks the revision as done although no DDL ran. | Write the complete file before anything under `backend/src` changes, or write it by hand in one go ([section 3.1](#31-creating-the-file)). |
-| A migration is edited, renamed, given a new revision id or deleted after it was committed, which leaves every database that applied it on a revision the scripts no longer describe. | Fix forward with a new migration. |
+| A migration is edited, renamed, given a new revision id or deleted after a database applied it, which leaves that database on a revision the scripts no longer describe. | Once the migration is on `main`, fix forward with a new migration. While it is still on its branch, downgrade every database that applied it before changing it ([section 5](#5-migrations-on-a-branch)). |
 | Another branch also added a migration, and the two heads stop `alembic upgrade head`. | Before committing, point the new migration's `down_revision` at the current head (`poetry run alembic heads`) instead of adding a merge migration. |
 | DDL assumes the database matches the models and fails on a database that was repaired by hand or is a revision behind. | Guard every create and drop with an inspection ([section 3.2](#32-schema-rules)). |
 | A data step fails on an unexpected row and stops the upgrade half way. | Make data steps idempotent and tolerant ([section 3.3](#33-data-steps)). |
@@ -83,3 +84,14 @@ A migration must never need a person to repair the database afterwards. Nobody e
 - `poetry run pytest tests/integration/test_alembic_migrations.py -q` applies the whole chain to head on SQLite and checks that the history has a single head.
 - CI also runs `tests/integration/test_migrations_postgres.py` against an empty Postgres, which upgrades the chain and compares the result with the models.
 - `alembic upgrade --sql` cannot render migrations that inspect the database first, so it is no substitute for these tests.
+
+## 5 migrations on a branch
+
+A migration is fixed once it reaches `main`, because everything on `main` ships with the next release. Until then it lives on its branch, and the only databases that applied it are the developer's dev database and any test server the branch was deployed to. The rules below keep those databases repairable without stamping and keep the history on `main` at usually one revision per pull request.
+
+- **Prefer one migration per branch.** A further schema change on the same branch goes into the branch's existing migration by default. A second migration is the exception and needs the explicit approval of the branch owner, for example when the first one is already applied on a test server that should not be reset; the pull request then says why there are two.
+- **Changing the branch's migration.** Before editing, renaming or deleting it, downgrade every database that applied it to the revision it builds on, by running `poetry run alembic downgrade <down_revision>` on the branch. Then change the file and let the dev backend apply it again. Changing it without the downgrade is the repair case of [section 2](#2-what-forces-a-manual-repair).
+- **Two migrations on one branch without that approval.** Downgrade to the revision the first of them builds on, move the operations of the second into the first, delete the second, and check that `poetry run alembic heads` shows a single head.
+- **Before the pull request.** If `main` gained a migration since the branch started, point the branch migration's `down_revision` at the new head of `main` ([section 2](#2-what-forces-a-manual-repair)). Downgrade the dev database before changing `down_revision`, since that changes the chain the database sits on.
+- **Leaving the branch.** A dev database that applied the branch's migration is ahead of every branch without it, and the backend refuses to start there. Before switching to `main` or another branch, downgrade the dev database on this branch to the revision its migration builds on. The downgrade keeps the rest of the dev data and runs the migration's `downgrade()` against real rows, which tests it on every switch. If the switch already happened and the backend refuses to start, check the branch out again, downgrade there, and switch back.
+- **Test servers.** A test server that ran the branch keeps the migration in its database, so switching it to another line of work needs a restore from backup or a reset ([RELEASING.md section 4.4](../RELEASING.md#44-caveats)). Deploy a branch with a migration there only once the migration is final.
