@@ -9,7 +9,8 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/order/upload_order_file.py
   - backend/src/modules/fulfillment/application/use_cases/order/_file_kind.py
   - backend/src/modules/quality/application/use_cases/print_document/print_document.py
-lastVerified: 2026-11-10
+  - frontend/src/features/orders/components/OrderPrintButton.vue
+lastVerified: 2026-11-20
 ---
 
 An order collects what goes to the supplier and what comes back: the mails you send, the docket that travels with the goods, the extra costs on the invoice and the files such as the order confirmation. All of them are reached from the order page, and the mails and dockets also from a right-click on the order in the Orders list.
@@ -24,7 +25,7 @@ Once a request or order mail has gone out, the dialog **Mail Sent, Update Status
 
 ## Dockets {#dockets}
 
-Right-click the order in the Orders list and choose **Print Docket** to send the order docket to its printer, or **Download Docket** to save it as a PDF. Both need **Print Documents**. How the docket looks is set up under [Print Dockets](/handbook/resources/print-dockets).
+On the order page **Print** opens a menu with **Download Docket** and **Print Docket**, and the same two entries are on the right-click menu of the order in the Orders list. Choose **Print Docket** to send the order docket to its printer, or **Download Docket** to save it as a PDF. Both need **Print Documents**. How the docket looks is set up under [Print Dockets](/handbook/resources/print-dockets).
 
 ## Extra costs {#extra-costs}
 

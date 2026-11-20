@@ -389,7 +389,7 @@ describe('BoughtItemDetailView', () => {
   it('prints a label through printDocuments with the bought-item root and classifier', async () => {
     const { wrapper } = await mountView()
 
-    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menu = wrapper.findComponent({ ref: 'printMenu' })
     const items = menu.props('model') as { label: string; command: () => void }[]
     const labelItem = items.find((i) => i.label === 'Label')
     expect(labelItem).toBeDefined()
@@ -407,7 +407,7 @@ describe('BoughtItemDetailView', () => {
   it('prints a docket through printDocuments with the bought-item docket classifier', async () => {
     const { wrapper } = await mountView()
 
-    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menu = wrapper.findComponent({ ref: 'printMenu' })
     const items = menu.props('model') as { label: string; command: () => void }[]
     const docketItem = items.find((i) => i.label === 'Docket')
     expect(docketItem).toBeDefined()
@@ -420,20 +420,6 @@ describe('BoughtItemDetailView', () => {
       root_id: 1,
       items: [{ classifier: 'bought_item_docket' }],
     })
-  })
-
-  it('copies the item UUID to the clipboard', async () => {
-    getBoughtItemsMock.mockResolvedValue({
-      items: [makeItem({ public_id: 'copy-me-uuid' })],
-      total: 1,
-    })
-    const { wrapper } = await mountView()
-
-    const copyButton = wrapper.findAll('button').find((b) => b.text() === 'Copy UUID')
-    expect(copyButton).toBeTruthy()
-    await copyButton!.trigger('click')
-
-    expect(writeTextMock).toHaveBeenCalledWith('copy-me-uuid')
   })
 
   it('passes the fetched demand and order rows through to the cards', async () => {

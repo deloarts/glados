@@ -8,7 +8,6 @@ import { useI18n } from 'vue-i18n'
 import { usePermissions } from '@/core/composables/usePermissions'
 import { Permission } from '@/core/auth/permissions'
 import { useHostStore } from '@/core/host/stores/hostStore'
-import { useClipboard } from '@/core/composables/useClipboard'
 import { watchLoadingBar } from '@/core/composables/useLoadingBar'
 import { usePageTitle } from '@/core/composables/usePageTitle'
 
@@ -59,7 +58,6 @@ const router = useRouter()
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
 const hostStore = useHostStore()
-const { copyToClipboard } = useClipboard()
 const { printing, print } = useCatalogueItemPrint('bought')
 
 // A computed, since a successor link navigates this route to another id.
@@ -295,13 +293,6 @@ const printMenuItems = computed<MenuItem[]>(() => {
                 @click="toggleMenu(printMenu, $event)"
               />
             </span>
-            <Button
-              icon="mdi mdi-content-copy"
-              :label="t('common.copyUuid')"
-              severity="contrast"
-              text
-              @click="copyToClipboard(item.public_id)"
-            />
           </template>
         </template>
         <template #handbook>

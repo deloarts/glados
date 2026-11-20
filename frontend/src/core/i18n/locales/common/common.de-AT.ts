@@ -61,7 +61,8 @@ export default {
   copiedToClipboard: 'In die Zwischenablage kopiert.',
   copyFailed: 'Konnte nicht in die Zwischenablage kopiert werden.',
   share: {
-    tooltip: 'Link kopieren',
+    tooltip: 'Teilen',
+    copyLink: 'Link kopieren',
     copied: 'Link kopiert.',
   },
   unexpectedError: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',

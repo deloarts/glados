@@ -16,7 +16,6 @@ import { useMissingPermission } from '@/shared/composables/useMissingPermission'
 
 import { usePermissions } from '@/core/composables/usePermissions'
 import { Permission } from '@/core/auth/permissions'
-import { useClipboard } from '@/core/composables/useClipboard'
 import { watchLoadingBar } from '@/core/composables/useLoadingBar'
 import { useHostStore } from '@/core/host/stores/hostStore'
 import { usePageTitle } from '@/core/composables/usePageTitle'
@@ -62,7 +61,6 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
-const { copyToClipboard } = useClipboard()
 const hostStore = useHostStore()
 const { format: madeItemLabel } = useMadeItemLabel()
 const lotDialog = useLotDetail()
@@ -338,13 +336,6 @@ const printMenuItems = computed<MenuItem[]>(() => {
                 @click="togglePrintMenu($event)"
               />
             </span>
-            <Button
-              icon="mdi mdi-content-copy"
-              :label="t('common.copyUuid')"
-              severity="contrast"
-              text
-              @click="copyToClipboard(item.public_id)"
-            />
           </template>
         </template>
         <template #handbook>

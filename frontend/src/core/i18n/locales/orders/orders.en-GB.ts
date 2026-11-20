@@ -93,6 +93,7 @@ export default {
   },
   actions: {
     open: 'Open Order',
+    print: 'Print',
     printDocket: 'Print Docket',
     printDocketSent: 'Sent to the printer.',
     printDocketFailed: 'Could not print the order docket.',

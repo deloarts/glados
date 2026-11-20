@@ -92,6 +92,7 @@ export default {
     },
   },
   actions: {
+    print: 'Drucken',
     printDocket: 'Laufzettel drucken',
     printDocketSent: 'An den Drucker gesendet.',
     printDocketFailed: 'Der Laufzettel konnte nicht gedruckt werden.',

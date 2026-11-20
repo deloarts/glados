@@ -61,7 +61,8 @@ export default {
   copiedToClipboard: 'Copied to clipboard.',
   copyFailed: 'Could not copy to clipboard.',
   share: {
-    tooltip: 'Copy Link',
+    tooltip: 'Share',
+    copyLink: 'Copy Link',
     copied: 'Link copied.',
   },
   unexpectedError: 'Something went wrong. Please try again.',
