@@ -5,6 +5,7 @@ export default {
     filename: 'orders',
     columns: {
       orderStatus: 'Order Status',
+      supplierOrderNumbers: 'Supplier Order Numbers',
       lineStatus: 'Line Status',
       partNumber: 'Part Number',
       orderCode: 'Order Code',
@@ -47,6 +48,7 @@ export default {
     expectedDelivery: 'Exp. Delivery',
     deliveryDate: 'Delivered',
     storagePlace: 'Storage',
+    supplierOrderNumbers: 'Supplier Order #',
     note: 'Note',
     creator: 'Creator',
     created: 'Created',
@@ -60,6 +62,7 @@ export default {
   filters: {
     any: 'Any',
     filterBy: 'Filter',
+    filterByOrderNumber: 'Order or supplier no.',
     searchBy: 'Search',
   },
   status: {
@@ -192,7 +195,10 @@ export default {
       expectedDelivery: 'Expected Delivery Date',
       storagePlace: 'Storage Place',
       propagateDeliveryDate: 'Also apply to all order items',
+      supplierOrderNumbers: 'Supplier Order Numbers',
     },
+    supplierOrderNumbersHint: 'Press Enter or a comma to add a number.',
+    supplierOrderNumbersLocked: 'A delivered or canceled order takes no more supplier order numbers.',
     errors: {
       unknown: 'Something went wrong. Please try again.',
     },
@@ -205,6 +211,7 @@ export default {
     loadError: 'The order could not be loaded.',
     noDeliveryDateSet: 'No delivery date set',
     noStoragePlaceSet: 'No storage place set',
+    noSupplierOrderNumbersSet: 'No supplier order number set',
     noNoteSet: 'No note set',
     invoiceMissing: 'Invoice missing',
     invoiceMissingTooltip: 'The order is delivered but has no invoice attached.',

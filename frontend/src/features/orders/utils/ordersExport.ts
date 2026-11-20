@@ -39,6 +39,10 @@ export function ordersExportColumns(
 ): SpreadsheetColumn<OrderLineRow>[] {
   return [
     { header: t('orders.columns.orderNumber'), value: (row) => row.order.order_number },
+    {
+      header: t('orders.export.columns.supplierOrderNumbers'),
+      value: (row) => row.order.supplier_order_numbers.join(', ') || null,
+    },
     { header: t('orders.export.columns.orderStatus'), value: (row) => t(`orders.status.${row.order.status}`) },
     { header: t('orders.columns.supplier'), value: (row) => row.order.supplier_name },
     { header: t('orders.columns.orderedDate'), value: (row) => dateCell(row.order.ordered_date) },

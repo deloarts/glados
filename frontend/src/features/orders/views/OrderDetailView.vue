@@ -186,11 +186,8 @@ const {
     showDeliverAllDialog.value = true
   },
 })
-// The header and new lines follow the order's edit and add_item actions,
-// which an order someone canceled no longer offers.
-const canEditHeader = computed(
-  () => order.value !== null && orderActionGates.edit(order.value, canWrite.value),
-)
+// New lines follow the order's add_item action, which an order someone
+// canceled no longer offers; the header fields gate each edit menu entry.
 const canAddItem = computed(
   () => order.value !== null && orderActionGates.addItem(order.value, canWrite.value),
 )
@@ -269,6 +266,10 @@ const mailMenu = ref()
 const editMenuItems = computed<MenuItem[]>(() =>
   order.value ? editFieldMenuItems(order.value) : [],
 )
+// The compact edit button opens the field menu while any field is editable:
+// the supplier order numbers stay open to write:orders after the header
+// fields need manage:orders.
+const canEditAnyField = computed(() => editMenuItems.value.some((item) => item.disabled !== true))
 
 const addFileMenuItems = computed<MenuItem[]>(() => (order.value ? fileMenuItems(order.value) : []))
 
@@ -410,13 +411,16 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
               />
             </span>
 
-            <span v-if="isCompact" v-tooltip.bottom="editHeaderBlocked || undefined">
+            <span
+              v-if="isCompact"
+              v-tooltip.bottom="(!canEditAnyField && editHeaderBlocked) || undefined"
+            >
               <Button
                 icon="mdi mdi-pencil"
                 :label="t('orders.actions.edit')"
                 severity="contrast"
                 text
-                :disabled="!canEditHeader"
+                :disabled="!canEditAnyField"
                 @click="toggleMenu(editMenu, $event)"
               />
             </span>
@@ -426,14 +430,14 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
               <span
                 v-for="item in editMenuItems"
                 :key="menuItemLabel(item)"
-                v-tooltip.bottom="editHeaderBlocked || undefined"
+                v-tooltip.bottom="(item.disabled === true && item.title) || undefined"
               >
                 <Button
                   :icon="item.icon"
                   :label="menuItemLabel(item)"
                   severity="contrast"
                   text
-                  :disabled="!canEditHeader"
+                  :disabled="item.disabled === true"
                   @click="runMenuItem(item, $event)"
                 />
               </span>
@@ -618,7 +622,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
   </PageLayout>
 
 
-  <Menu ref="editMenu" :model="editMenuItems" popup />
+  <Menu ref="editMenu" :model="editMenuItems" popup :pt="disabledItemTooltipPt" />
   <Menu ref="fileMenu" :model="addFileMenuItems" popup />
   <Menu ref="markAllMenu" :model="markAllMenuItems" popup :pt="markAllMenuPt" />
   <Menu ref="mailMenu" :model="mailMenuItems" popup :pt="disabledItemTooltipPt" />

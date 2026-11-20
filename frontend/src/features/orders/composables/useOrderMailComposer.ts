@@ -154,6 +154,7 @@ export function useOrderMailComposer() {
 
       const vars: Record<string, string> = {
         order_number: order.order_number,
+        supplier_order_numbers: order.supplier_order_numbers.join(', '),
         supplier: supplier.name,
         note: order.note ?? '',
         ordered_date: order.ordered_date ?? '-',

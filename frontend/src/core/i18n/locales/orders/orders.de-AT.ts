@@ -5,6 +5,7 @@ export default {
     filename: 'bestellungen',
     columns: {
       orderStatus: 'Bestellstatus',
+      supplierOrderNumbers: 'Lieferantenauftragsnummern',
       lineStatus: 'Positionsstatus',
       partNumber: 'Teilenummer',
       orderCode: 'Bestellnummer',
@@ -47,6 +48,7 @@ export default {
     expectedDelivery: 'Erw. Lieferung',
     deliveryDate: 'Geliefert',
     storagePlace: 'Lagerort',
+    supplierOrderNumbers: 'Lieferantenauftragsnr.',
     note: 'Notiz',
     creator: 'Ersteller',
     created: 'Erstellt',
@@ -60,6 +62,7 @@ export default {
   filters: {
     any: 'Beliebig',
     filterBy: 'Filtern',
+    filterByOrderNumber: 'Bestell- oder Lieferantennr.',
     searchBy: 'Suchen',
   },
   status: {
@@ -193,7 +196,11 @@ export default {
       expectedDelivery: 'Erwartetes Lieferdatum',
       storagePlace: 'Lagerort',
       propagateDeliveryDate: 'Auch auf alle Bestellpositionen anwenden',
+      supplierOrderNumbers: 'Lieferantenauftragsnummern',
     },
+    supplierOrderNumbersHint: 'Mit Enter oder Komma fügst du eine Nummer hinzu.',
+    supplierOrderNumbersLocked:
+      'Eine gelieferte oder stornierte Bestellung nimmt keine Lieferantenauftragsnummern mehr an.',
     errors: {
       unknown: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
     },
@@ -206,6 +213,7 @@ export default {
     loadError: 'Die Bestellung konnte nicht geladen werden.',
     noDeliveryDateSet: 'Kein Liefertermin gesetzt',
     noStoragePlaceSet: 'Kein Lagerplatz gesetzt',
+    noSupplierOrderNumbersSet: 'Keine Lieferantenauftragsnummer gesetzt',
     noNoteSet: 'Keine Notiz gesetzt',
     invoiceMissing: 'Rechnung fehlt',
     invoiceMissingTooltip: 'Die Bestellung ist geliefert, aber es ist keine Rechnung angehängt.',

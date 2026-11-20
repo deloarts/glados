@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The info bar of the order page: number, status, supplier, total, delivery
-// date, a missing invoice, storage place and the quote requests the order
-// came from. Empty until the order has loaded.
+// date, a missing invoice, storage place, the supplier order numbers and the
+// quote requests the order came from. Empty until the order has loaded.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -39,6 +39,10 @@ const deliveryTooltip = computed(() =>
 const storagePlaceValue = computed(
   () => props.order?.storage_place ?? t('orders.detail.noStoragePlaceSet'),
 )
+const supplierOrderNumbersValue = computed(() => {
+  const numbers = props.order?.supplier_order_numbers ?? []
+  return numbers.length > 0 ? numbers.join(', ') : t('orders.detail.noSupplierOrderNumbersSet')
+})
 // Reads the files the side panel's OrderFilesSection already loaded, so the
 // hint costs no request of its own. Only a fully delivered order without a
 // single invoice file counts; partial invoicing is not visible from files.
@@ -91,6 +95,15 @@ const invoiceMissing = computed(
           v-tooltip.bottom="t('orders.columns.storagePlace')"
         />
         <span class="info-muted">{{ storagePlaceValue }}</span>
+      </span>
+      <span class="info-sep" />
+      <span class="info-field" data-testid="order-supplier-order-numbers">
+        <i
+          class="mdi mdi-pound-box-outline"
+          aria-hidden="true"
+          v-tooltip.bottom="t('orders.columns.supplierOrderNumbers')"
+        />
+        <span class="info-muted">{{ supplierOrderNumbersValue }}</span>
       </span>
       <template v-if="order.quote_requests.length > 0">
         <span class="info-sep" />

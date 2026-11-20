@@ -5,17 +5,18 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/order/create_order.py
   - backend/src/modules/fulfillment/application/use_cases/order/get_order.py
   - backend/src/modules/fulfillment/application/use_cases/order/update_order.py
+  - backend/src/modules/fulfillment/application/use_cases/order/set_order_supplier_order_numbers.py
   - backend/src/modules/fulfillment/domain/services/lifecycle/intents.py
-lastVerified: 2026-11-12
+lastVerified: 2026-11-20
 ---
 
 Under **Procurement**, the **Orders** tab lists every supplier order. An order groups the lines you buy from one supplier, or the steps of a lot you send to one. Most orders start from a demand list or a quote request award, and **New Order** starts an empty one with a **Supplier** and an optional **Note**. Creating an order needs **Write Orders**.
 
 ## The list {#list}
 
-Each row shows the **Order #**, the **Status**, the **Supplier**, the number of **Items**, the **Total (net)**, the **Ordered**, **Exp. Delivery** and **Delivered** dates, the **Storage** place and the **Note**. Click a row to expand it into its lines, and click the order number to open the order page. Right-click a row for the order's actions. **Export** saves the filtered orders as an Excel file, see [Exporting Demands and Orders](/handbook/procurement/list-export).
+Each row shows the **Order #**, the **Status**, the **Supplier**, the number of **Items**, the **Total (net)**, the **Ordered**, **Exp. Delivery** and **Delivered** dates, the **Storage** place and the **Note**. The supplier order numbers of an order appear as a second line under its **Order #**, and the filter of that column finds an order by either number. Click a row to expand it into its lines, and click the order number to open the order page. Right-click a row for the order's actions. **Export** saves the filtered orders as an Excel file, see [Exporting Demands and Orders](/handbook/procurement/list-export).
 
-The bar above the table searches by order number, supplier and the items on the lines, such as an order code or a lot number. It sorts by order number, ordered date or expected delivery, and groups by **Status** or **Supplier**. **Hide Delivered** and **Hide Canceled** keep the list to the open orders. When file storage is set up, **Missing Invoice** keeps only the orders without an invoice file, and **Show Files** adds a column with each order's files.
+The bar above the table searches by order number, supplier order number, supplier and the items on the lines, such as an order code or a lot number. It sorts by order number, ordered date or expected delivery, and groups by **Status** or **Supplier**. **Hide Delivered** and **Hide Canceled** keep the list to the open orders. When file storage is set up, **Missing Invoice** keeps only the orders without an invoice file, and **Show Files** adds a column with each order's files.
 
 ## The timeline {#timeline}
 
@@ -23,7 +24,9 @@ The bar above the table searches by order number, supplier and the items on the 
 
 ## The order page {#page}
 
-The bar at the top shows the status, the expected or actual delivery date, the storage place and the quote requests the lines came from. A delivered order without an invoice file shows **Invoice missing**. The buttons below add lines and files, edit the extra costs, change the **Supplier**, the **Expected Delivery Date**, the **Storage Place** and the **Note**, mark all lines, send mails and cancel the order. **Add Item** adds a **Bought item** or a **Virtual line** for something that is not in the catalogue. The note and the files sit in a panel beside the lines, which **Hide Files Panel** folds away. On a phone the page shows only the lines with their item, quantity and status.
+The bar at the top shows the status, the expected or actual delivery date, the storage place, the supplier order numbers and the quote requests the lines came from. A delivered order without an invoice file shows **Invoice missing**. The buttons below add lines and files, edit the extra costs, change the **Supplier**, the **Expected Delivery Date**, the **Storage Place**, the **Supplier Order Numbers** and the **Note**, mark all lines, send mails and cancel the order. **Add Item** adds a **Bought item** or a **Virtual line** for something that is not in the catalogue. The note and the files sit in a panel beside the lines, which **Hide Files Panel** folds away. On a phone the page shows only the lines with their item, quantity and status.
+
+The supplier order numbers are the numbers the supplier gives your order, for example on its order confirmation. An order can carry several of them. In **Supplier Order Numbers** you type a number and press Enter or a comma to add it, and the cross on a number removes it. They stay editable after the order went out, with **Write Orders**, until the order is delivered or canceled.
 
 Who may change what in which status is explained in [Order Lifecycle](/handbook/procurement/order-lifecycle#permissions). An action your permissions do not allow shows disabled, and where the app knows the missing permission, its tooltip names it.
 
@@ -38,3 +41,5 @@ The statuses are in [Order Lifecycle](/handbook/procurement/order-lifecycle), an
 **Invoices to collect.** Turn on **Missing Invoice** and **Hide Canceled**. The list shows every order without an invoice file, and the delivered ones among them are the invoices to ask the suppliers for.
 
 **Where is this part?** Type the order code of a bought item into the search. The list shows every order with a line for it, and expanding a row shows the line with its status.
+
+**An order confirmation arrives.** The supplier confirms an ordered order under AB-24117. Open the order, choose **Supplier Order Numbers**, type AB-24117, press Enter and save. The number now shows under the order number in the list, and searching for it finds the order.

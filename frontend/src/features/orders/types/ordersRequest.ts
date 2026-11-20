@@ -31,6 +31,9 @@ export type OrderUpdateRequest = Omit<
 export type OrderExtraCostRequest = Schemas['OrderExtraCostRequest']
 export type OrderExtraCostsUpdateRequest = Schemas['OrderExtraCostsUpdateRequest']
 
+export type OrderSupplierOrderNumbersUpdateRequest =
+  Schemas['OrderSupplierOrderNumbersUpdateRequest']
+
 export type OrderItemCreateRequest = Schemas['OrderItemCreateRequest']
 
 export type OrderItemUpdateRequest = Schemas['OrderItemUpdateRequest']

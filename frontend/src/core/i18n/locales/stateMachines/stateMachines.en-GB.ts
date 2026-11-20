@@ -157,6 +157,7 @@ export default {
     complete: 'Complete',
     archive: 'Archive',
     edit: 'Edit',
+    edit_supplier_order_numbers: 'Change Supplier Order Numbers',
     add_item: 'Add Line',
   },
   rows: {
@@ -247,6 +248,10 @@ export default {
         condition: 'Nobody canceled the order.',
         effect: 'Changes the supplier, the dates, the notes and the other header fields.',
         permission: 'Managing orders, once the order is submitted',
+      },
+      edit_supplier_order_numbers: {
+        condition: 'Nobody canceled the order.',
+        effect: 'Changes the supplier order numbers.',
       },
       add_item: {
         condition: 'Nobody canceled the order.',

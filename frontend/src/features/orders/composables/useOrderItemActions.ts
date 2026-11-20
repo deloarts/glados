@@ -42,13 +42,17 @@ export function isDeliverableLine(item: Pick<OrderItemResponse, 'actions'>): boo
 }
 
 /**
- * Whether the order's header can be edited and whether it takes a new line,
- * as the backend offers them in the order's actions; neither is offered on
- * an order someone canceled. `canWrite` is the base permission write:orders.
+ * Whether the order's header can be edited, whether its supplier order
+ * numbers can, and whether it takes a new line, as the backend offers them in
+ * the order's actions; none is offered on an order someone canceled, and the
+ * supplier order numbers not on a delivered one either. `canWrite` is the
+ * base permission write:orders.
  */
 export const orderActionGates = {
   edit: (order: Pick<OrderResponse, 'actions'>, canWrite: boolean): boolean =>
     canWrite && hasAction(order, 'edit'),
+  editSupplierOrderNumbers: (order: Pick<OrderResponse, 'actions'>, canWrite: boolean): boolean =>
+    canWrite && hasAction(order, 'edit_supplier_order_numbers'),
   addItem: (order: Pick<OrderResponse, 'actions'>, canWrite: boolean): boolean =>
     canWrite && hasAction(order, 'add_item'),
 }

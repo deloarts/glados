@@ -243,4 +243,17 @@ describe('OrdersTable', () => {
 
     expect(wrapper.findComponent({ name: 'OrderItemsTable' }).exists()).toBe(true)
   })
+
+  it('shows the supplier order numbers under the order number', async () => {
+    const wrapper = await mountTable(makeOrder({ supplier_order_numbers: ['AB-24117', 'AB-24131'] }))
+
+    const numbers = wrapper.get('[data-testid="supplier-order-numbers"]')
+    expect(numbers.text()).toBe('AB-24117, AB-24131')
+  })
+
+  it('leaves the second line out for an order without supplier order numbers', async () => {
+    const wrapper = await mountTable(makeOrder())
+
+    expect(wrapper.find('[data-testid="supplier-order-numbers"]').exists()).toBe(false)
+  })
 })
