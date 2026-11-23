@@ -120,11 +120,24 @@ async def test_an_order_offers_what_its_table_allows_and_cancel_past_requested_n
     actions = LifecycleActions()
 
     await actions.orders([draft, ordered], READER)
-    assert draft.actions == ["mark_requested", "mark_ordered", "cancel", "edit", "add_item"]
-    assert ordered.actions == ["deliver"]
+    assert draft.actions == [
+        "mark_requested",
+        "mark_ordered",
+        "cancel",
+        "edit",
+        "edit_supplier_order_numbers",
+        "add_item",
+    ]
+    assert ordered.actions == ["deliver", "edit_supplier_order_numbers"]
 
     await actions.orders([ordered], MANAGER)
-    assert ordered.actions == ["cancel", "deliver", "edit", "add_item"]
+    assert ordered.actions == [
+        "cancel",
+        "deliver",
+        "edit",
+        "edit_supplier_order_numbers",
+        "add_item",
+    ]
 
 
 async def test_the_lines_of_an_order_read_their_order_and_a_made_lines_lot():
@@ -241,7 +254,14 @@ async def test_the_order_response_carries_the_actions():
 
     response = respond(OrderResponse, result)
 
-    assert response.actions == ["mark_requested", "mark_ordered", "cancel", "edit", "add_item"]
+    assert response.actions == [
+        "mark_requested",
+        "mark_ordered",
+        "cancel",
+        "edit",
+        "edit_supplier_order_numbers",
+        "add_item",
+    ]
     assert response.items[0].actions == result.items[0].actions
 
 

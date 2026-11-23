@@ -92,7 +92,14 @@ async def test_an_order_and_its_lines_carry_their_actions_on_read_and_on_mark(db
     await db.commit()
 
     read = (await client.get(f"{ORDERS}/{purchase.id}")).json()
-    assert read["actions"] == ["mark_requested", "mark_ordered", "cancel", "edit", "add_item"]
+    assert read["actions"] == [
+        "mark_requested",
+        "mark_ordered",
+        "cancel",
+        "edit",
+        "edit_supplier_order_numbers",
+        "add_item",
+    ]
     assert read["items"][0]["actions"] == [
         "mark_requested",
         "mark_ordered",
