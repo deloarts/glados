@@ -265,12 +265,11 @@ const {
             <AgentBadge kind="order" :public-id="data.public_id" />
           </span>
           <span
-            v-if="data.supplier_order_numbers.length > 0"
             class="sub"
             data-testid="supplier-order-numbers"
             v-tooltip.bottom="t('orders.columns.supplierOrderNumbers')"
           >
-            {{ data.supplier_order_numbers.join(', ') }}
+            {{ data.supplier_order_numbers.join(', ') || getEmptyPlaceholder() }}
           </span>
         </div>
       </template>

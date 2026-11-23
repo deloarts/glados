@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { formatDateOrDash, formatDateTimeOrEmpty } from '@/core/utils/dates'
+import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { useHostStore } from '@/core/host/stores/hostStore'
 import InfoBar from '@/shared/components/resource-view/InfoBar.vue'
 import ArchivedOptionTag from '@/shared/components/archivable/ArchivedOptionTag.vue'
@@ -39,10 +40,11 @@ const deliveryTooltip = computed(() =>
 const storagePlaceValue = computed(
   () => props.order?.storage_place ?? t('orders.detail.noStoragePlaceSet'),
 )
-const supplierOrderNumbersValue = computed(() => {
-  const numbers = props.order?.supplier_order_numbers ?? []
-  return numbers.length > 0 ? numbers.join(', ') : t('orders.detail.noSupplierOrderNumbersSet')
-})
+// Without a number the admin's empty value symbol stands in, as in the
+// orders table and the mails.
+const supplierOrderNumbersValue = computed(
+  () => props.order?.supplier_order_numbers.join(', ') || getEmptyPlaceholder(),
+)
 // Reads the files the side panel's OrderFilesSection already loaded, so the
 // hint costs no request of its own. Only a fully delivered order without a
 // single invoice file counts; partial invoicing is not visible from files.

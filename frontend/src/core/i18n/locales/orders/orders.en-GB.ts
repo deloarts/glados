@@ -212,7 +212,6 @@ export default {
     loadError: 'The order could not be loaded.',
     noDeliveryDateSet: 'No delivery date set',
     noStoragePlaceSet: 'No storage place set',
-    noSupplierOrderNumbersSet: 'No supplier order number set',
     noNoteSet: 'No note set',
     invoiceMissing: 'Invoice missing',
     invoiceMissingTooltip: 'The order is delivered but has no invoice attached.',

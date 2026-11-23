@@ -214,7 +214,6 @@ export default {
     loadError: 'Die Bestellung konnte nicht geladen werden.',
     noDeliveryDateSet: 'Kein Liefertermin gesetzt',
     noStoragePlaceSet: 'Kein Lagerplatz gesetzt',
-    noSupplierOrderNumbersSet: 'Keine Lieferantenauftragsnummer gesetzt',
     noNoteSet: 'Keine Notiz gesetzt',
     invoiceMissing: 'Rechnung fehlt',
     invoiceMissingTooltip: 'Die Bestellung ist geliefert, aber es ist keine Rechnung angehängt.',
