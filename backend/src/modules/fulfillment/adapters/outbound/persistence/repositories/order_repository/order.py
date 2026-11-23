@@ -293,6 +293,7 @@ class SqlAlchemyOrderRepository:
         matching_supplier_ids = select(SupplierOrmModel.id).where(SupplierOrmModel.name.ilike(term))
         return or_(
             OrderOrmModel.order_number.ilike(term),
+            OrderOrmModel.supplier_order_numbers.ilike(term),
             OrderOrmModel.supplier_id.in_(matching_supplier_ids),
             OrderOrmModel.id.in_(matching_order_ids),
         )
@@ -367,9 +368,14 @@ class SqlAlchemyOrderRepository:
             when(filters.made_item_id, lambda made_item_id: self._made_item_clause(made_item_id)),
             when(filters.project_id, lambda project_id: self._project_clause(project_id)),
             when(filters.product_id, lambda product_id: self._product_clause(product_id)),
+            # The number filter matches the supplier's numbers for the order
+            # too, which the orders table shows under the order number.
             when(
                 filters.order_number,
-                lambda order_number: contains_ci(OrderOrmModel.order_number, order_number),
+                lambda order_number: or_(
+                    contains_ci(OrderOrmModel.order_number, order_number),
+                    contains_ci(OrderOrmModel.supplier_order_numbers, order_number),
+                ),
             ),
             when(filters.note, lambda note: contains_ci(OrderOrmModel.note, note)),
             when(

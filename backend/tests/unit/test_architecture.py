@@ -540,6 +540,8 @@ NON_LIFECYCLE_COMMITS = {
     "src/modules/fulfillment/application/use_cases/order/create_order.py:CreateOrder.execute",
     "src/modules/fulfillment/application/use_cases/order/update_order.py:UpdateOrder.execute",
     "src/modules/fulfillment/application/use_cases/order/set_order_extra_costs.py:SetOrderExtraCosts.execute",
+    "src/modules/fulfillment/application/use_cases/order/set_order_supplier_order_numbers.py:"
+    "SetOrderSupplierOrderNumbers.execute",
     "src/modules/fulfillment/application/use_cases/order/mark_order_item_ready_for_pickup.py:"
     "MarkOrderItemReadyForPickup.execute",
     "src/modules/fulfillment/application/use_cases/production_order/production_order_lifecycle.py:"

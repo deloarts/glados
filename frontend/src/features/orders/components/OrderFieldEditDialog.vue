@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useSubmitAction } from '@/shared/composables/useSubmitAction'
@@ -9,10 +9,16 @@ import { useSuppliersStore } from '@/features/suppliers'
 import { useArchivableOptions } from '@/shared/composables/useArchivableOptions'
 import ArchivedOptionTag from '@/shared/components/archivable/ArchivedOptionTag.vue'
 import ArchivedSelectionWarning from '@/shared/components/archivable/ArchivedSelectionWarning.vue'
+import TextChipsInput from '@/shared/components/forms/TextChipsInput.vue'
 import type { OrderResponse } from '../types/ordersResponse'
 import type { OrderUpdateRequest } from '../types/ordersRequest'
 
-export type OrderEditField = 'supplier' | 'expected_delivery_date' | 'storage_place' | 'note'
+export type OrderEditField =
+  | 'supplier'
+  | 'expected_delivery_date'
+  | 'storage_place'
+  | 'supplier_order_numbers'
+  | 'note'
 
 /**
  * For consumers that don't render off the orders list store, which
@@ -34,8 +40,11 @@ const form = reactive({
   note: '',
   expected_delivery_date: null as Date | null,
   storage_place: '',
+  supplier_order_numbers: [] as string[],
   propagateDeliveryDate: true,
 })
+
+const numbersInput = useTemplateRef<{ commitPending(): void }>('numbersInput')
 
 // Referencing an archived supplier is allowed; the picker keeps archived
 // rows selectable and tagged (see useArchivableOptions.ts).
@@ -52,6 +61,8 @@ const title = computed(() => {
       return t('orders.edit.fields.expectedDelivery')
     case 'storage_place':
       return t('orders.edit.fields.storagePlace')
+    case 'supplier_order_numbers':
+      return t('orders.edit.fields.supplierOrderNumbers')
     case 'note':
       return t('orders.edit.fields.note')
     default:
@@ -69,6 +80,7 @@ function open(target: OrderResponse, editField: OrderEditField): void {
     ? toLocalDayStart(target.expected_delivery_date)
     : null
   form.storage_place = target.storage_place ?? ''
+  form.supplier_order_numbers = [...target.supplier_order_numbers]
   form.propagateDeliveryDate = true
   if (editField === 'supplier' && suppliersStore.items.length === 0) void suppliersStore.refresh()
   visible.value = true
@@ -80,6 +92,22 @@ async function save(payload: Omit<OrderUpdateRequest, 'expected_edit_version'>):
   await run(async () => {
     await ordersStore.update(current.id, {
       ...payload,
+      expected_edit_version: current.edit_version,
+    })
+    visible.value = false
+    emit('saved')
+  }, t('orders.edit.errors.unknown'))
+}
+
+// The supplier order numbers have their own endpoint, since they stay
+// editable with write:orders after the order went out.
+async function saveSupplierOrderNumbers(): Promise<void> {
+  const current = order.value
+  if (!current) return
+  numbersInput.value?.commitPending()
+  await run(async () => {
+    await ordersStore.setSupplierOrderNumbers(current.id, {
+      numbers: form.supplier_order_numbers,
       expected_edit_version: current.edit_version,
     })
     visible.value = false
@@ -100,6 +128,9 @@ function onSave(): void {
       break
     case 'storage_place':
       void save({ storage_place: form.storage_place.trim() || null })
+      break
+    case 'supplier_order_numbers':
+      void saveSupplierOrderNumbers()
       break
     case 'note':
       void save({ note: form.note.trim() || null })
@@ -151,6 +182,16 @@ defineExpose({ open })
       <InputText v-model="form.storage_place" fluid autofocus @keyup.enter="onSave" />
     </div>
 
+    <div class="field-editor" v-else-if="field === 'supplier_order_numbers'">
+      <TextChipsInput
+        ref="numbersInput"
+        v-model="form.supplier_order_numbers"
+        :aria-label="title"
+        autofocus
+      />
+      <small class="field-hint">{{ t('orders.edit.supplierOrderNumbersHint') }}</small>
+    </div>
+
     <div class="field-editor" v-else-if="field === 'note'">
       <Textarea v-model="form.note" :aria-label="title" rows="3" auto-resize fluid autofocus />
     </div>
@@ -182,6 +223,10 @@ defineExpose({ open })
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-1);
+}
+
+.field-hint {
+  color: var(--p-text-muted-color);
 }
 
 .propagate-label {

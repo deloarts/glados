@@ -101,7 +101,12 @@ async def test_one_line_ordered_makes_the_order_partially_ordered(buyer, project
     assert order["status"] == "partially_ordered"
     # A new line counts as pending, which a partially ordered order keeps
     # open to the buyer.
-    assert set(order["actions"]) == {"mark_ordered", "deliver", "add_item"}
+    assert set(order["actions"]) == {
+        "mark_ordered",
+        "deliver",
+        "edit_supplier_order_numbers",
+        "add_item",
+    }
     assert "cancel" not in items[ordered]["actions"]
     assert {"cancel", "mark_ordered", "edit_quantity"} <= set(items[pending]["actions"])
 

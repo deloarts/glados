@@ -255,17 +255,29 @@ const {
       :show-filter-menu="false"
     >
       <template #body="{ data }: { data: OrderResponse }">
-        <!-- .stop so opening the order doesn't also toggle the row's
-             expansion on the way up to the row-click handler. -->
-        <RouterLink class="order-number-link" :to="`/procurement/orders/${data.id}`" @click.stop>
-          <strong>{{ data.order_number }}</strong>
-        </RouterLink>
-        <AgentBadge kind="order" :public-id="data.public_id" />
+        <div class="stack-cell">
+          <span>
+            <!-- .stop so opening the order doesn't also toggle the row's
+                 expansion on the way up to the row-click handler. -->
+            <RouterLink class="order-number-link" :to="`/procurement/orders/${data.id}`" @click.stop>
+              <strong>{{ data.order_number }}</strong>
+            </RouterLink>
+            <AgentBadge kind="order" :public-id="data.public_id" />
+          </span>
+          <span
+            class="sub"
+            data-testid="supplier-order-numbers"
+            v-tooltip.bottom="t('orders.columns.supplierOrderNumbers')"
+          >
+            {{ data.supplier_order_numbers.join(', ') || getEmptyPlaceholder() }}
+          </span>
+        </div>
       </template>
       <template #filter>
+        <!-- Matches the supplier's numbers for the order too. -->
         <InputText
           v-model="orderNumberFilter"
-          :placeholder="t('orders.filters.filterBy')"
+          :placeholder="t('orders.filters.filterByOrderNumber')"
           size="small"
           fluid
         />
@@ -484,7 +496,13 @@ const {
     :pt="disabledItemTooltipPt"
     @hide="contextMenuItem = null"
   />
-  <Menu ref="editMenu" :model="editMenuItems" popup @hide="editMenuOrder = null" />
+  <Menu
+    ref="editMenu"
+    :model="editMenuItems"
+    popup
+    :pt="disabledItemTooltipPt"
+    @hide="editMenuOrder = null"
+  />
   <OrderFieldEditDialog ref="editFieldDialog" />
 
   <OrderItemCreateForm
@@ -538,6 +556,18 @@ const {
 
 .muted-cell {
   color: var(--p-text-muted-color);
+}
+
+.stack-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sub {
+  color: var(--p-text-muted-color);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
 }
 
 .order-number-link {

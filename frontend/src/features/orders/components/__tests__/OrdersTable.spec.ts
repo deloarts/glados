@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { ConfirmationOptions } from 'openvue/confirmationoptions'
 
 import { mountWithApp } from '@/test-utils/mountWithApp'
+import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { makeOrderItemResponse, makeOrderResponse, makeTestRouter } from '@/test-utils/factories'
 import { useOrdersFiltersStore } from '../../stores/ordersFiltersStore'
 import type { OrderResponse } from '../../types/ordersResponse'
@@ -242,5 +243,18 @@ describe('OrdersTable', () => {
     await flushPromises()
 
     expect(wrapper.findComponent({ name: 'OrderItemsTable' }).exists()).toBe(true)
+  })
+
+  it('shows the supplier order numbers under the order number', async () => {
+    const wrapper = await mountTable(makeOrder({ supplier_order_numbers: ['AB-24117', 'AB-24131'] }))
+
+    const numbers = wrapper.get('[data-testid="supplier-order-numbers"]')
+    expect(numbers.text()).toBe('AB-24117, AB-24131')
+  })
+
+  it('shows the empty value symbol on the second line for an order without supplier order numbers', async () => {
+    const wrapper = await mountTable(makeOrder())
+
+    expect(wrapper.get('[data-testid="supplier-order-numbers"]').text()).toBe(getEmptyPlaceholder())
   })
 })

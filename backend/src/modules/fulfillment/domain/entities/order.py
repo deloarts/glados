@@ -59,6 +59,9 @@ class Order(Entity):
     # Moves on every user edit and irreversible action, never on a derived
     # status or date (domain/services/edit_version.py).
     edit_version: int = 0
+    # The numbers under which the supplier keeps this order, as its order
+    # confirmations name them, in the order they were entered.
+    supplier_order_numbers: list[str] = field(default_factory=list)
 
     # ── Denormalized (read-only, populated by repository mapper) ──────
     creator: User | None = None

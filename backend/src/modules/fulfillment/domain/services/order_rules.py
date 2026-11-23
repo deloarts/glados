@@ -34,6 +34,7 @@ from src.modules.fulfillment.domain.errors import OrderItemNotReadyForPickupErro
 from src.modules.fulfillment.domain.errors import OrderItemQuantityNotEditableError
 from src.modules.fulfillment.domain.errors import OrderItemReceivedLockedError
 from src.modules.fulfillment.domain.errors import OrderSupplierLockedError
+from src.modules.fulfillment.domain.errors import OrderSupplierOrderNumbersLockedError
 from src.modules.fulfillment.domain.errors import PickupInFutureError
 from src.modules.fulfillment.domain.services.lifecycle.intents import ORDER_INTENTS
 from src.modules.fulfillment.domain.services.lifecycle.intents import ORDER_ITEM_INTENTS
@@ -348,6 +349,20 @@ class OrderRules:
         the edit rule of the order intent table."""
         if order.canceled_at is not None:
             raise OrderCanceledError(f"Order #{order.id} is canceled and is not edited any more.")
+
+    @staticmethod
+    def assert_can_edit_supplier_order_numbers(actor: User, order: Order) -> None:
+        """write:orders in every status until the order is delivered or
+        canceled, the rule of the order intent table. Unlike the other header
+        fields they need no manage:orders once the order went out, since they
+        arrive with the supplier's confirmations."""
+        assert_has_permission(actor, Permission.WRITE_ORDERS, "update", "orders")
+        action = LifecycleAction.EDIT_SUPPLIER_ORDER_NUMBERS
+        if ORDER_INTENTS.check(action, order, None, actor) is not None:
+            raise OrderSupplierOrderNumbersLockedError(
+                f"Order #{order.id} is {order.status.value} and its supplier order numbers "
+                f"are not edited any more."
+            )
 
     @staticmethod
     def assert_line_editable(item: OrderItem) -> None:

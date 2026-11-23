@@ -17759,6 +17759,7 @@
           "complete",
           "archive",
           "edit",
+          "edit_supplier_order_numbers",
           "add_item"
         ],
         "title": "LifecycleAction",
@@ -31564,6 +31565,13 @@
             "title": "Supplier Name",
             "type": "string"
           },
+          "supplier_order_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supplier Order Numbers",
+            "type": "array"
+          },
           "supplier_vat_id": {
             "title": "Supplier Vat Id",
             "type": "string"
@@ -31583,6 +31591,7 @@
           "expected_delivery_date",
           "delivery_date",
           "storage_place",
+          "supplier_order_numbers",
           "creator_id",
           "creator",
           "changed_by_id",
@@ -31617,6 +31626,29 @@
         ],
         "title": "OrderStatus",
         "type": "string"
+      },
+      "OrderSupplierOrderNumbersUpdateRequest": {
+        "description": "Replaces every supplier order number of the order, in entry order.",
+        "properties": {
+          "expected_edit_version": {
+            "title": "Expected Edit Version",
+            "type": "integer"
+          },
+          "numbers": {
+            "items": {
+              "maxLength": 100,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Numbers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_edit_version"
+        ],
+        "title": "OrderSupplierOrderNumbersUpdateRequest",
+        "type": "object"
       },
       "OrderUpdateRequest": {
         "properties": {
@@ -85565,6 +85597,64 @@
           }
         ],
         "summary": "Submit Order",
+        "tags": [
+          "web/orders"
+        ]
+      }
+    },
+    "/api/v1/web/orders/{order_id}/supplier-order-numbers": {
+      "put": {
+        "description": "Replaces the numbers under which the supplier keeps the order with the\nlist sent, each trimmed, blanks and repeats dropped. Needs write:orders\nin every status until the order is delivered or canceled. Answers the\norder with its lines.",
+        "operationId": "set_order_supplier_order_numbers_api_v1_web_orders__order_id__supplier_order_numbers_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderSupplierOrderNumbersUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Set Order Supplier Order Numbers",
         "tags": [
           "web/orders"
         ]

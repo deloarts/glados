@@ -71,6 +71,24 @@ export function useOrdersTableMenus(actions: OrdersTableMenuActions) {
     editMenuOrder.value ? actions.editFieldMenuItems(editMenuOrder.value) : [],
   )
 
+  // The edit submenu stays open while any field is editable, since the
+  // supplier order numbers keep write:orders after the header fields need
+  // manage:orders; each entry carries its own state and reason.
+  function editFieldsMenuEntry(order: OrderResponse): MenuItem {
+    const items = actions.editFieldMenuItems(order)
+    const noneEditable = items.every((item) => item.disabled === true)
+    return {
+      label: t('orders.actions.edit'),
+      icon: 'mdi mdi-pencil',
+      disabled: noneEditable,
+      title:
+        noneEditable && offersAction(order, 'edit')
+          ? missingForAction(order, 'edit', Permission.WRITE_ORDERS) || undefined
+          : undefined,
+      items,
+    }
+  }
+
   const cm = ref()
   const contextMenuItem = ref<OrderResponse | null>(null)
 
@@ -99,15 +117,7 @@ export function useOrdersTableMenus(actions: OrdersTableMenuActions) {
         command: () => openOrder(order),
       },
       { separator: true },
-      {
-        label: t('orders.actions.edit'),
-        icon: 'mdi mdi-pencil',
-        disabled: !orderActionGates.edit(order, actions.canWrite.value),
-        title: offersAction(order, 'edit')
-          ? missingForAction(order, 'edit', Permission.WRITE_ORDERS) || undefined
-          : undefined,
-        items: actions.editFieldMenuItems(order),
-      },
+      editFieldsMenuEntry(order),
       {
         label: t('orders.actions.addItem'),
         icon: 'mdi mdi-plus',

@@ -54,6 +54,14 @@ class SetOrderExtraCostsCommand(BaseModel):
     expected_edit_version: int | None = None
 
 
+class SetOrderSupplierOrderNumbersCommand(BaseModel):
+    """The whole list of an order's supplier order numbers, in entry order."""
+
+    numbers: list[str] = Field(default_factory=list)
+    # The edit version the client read; a row that moved since answers 409.
+    expected_edit_version: int | None = None
+
+
 class OrderExtraCostResult(ResultBase):
     kind: ExtraCostKind
     amount: int
@@ -85,6 +93,7 @@ class OrderResult(ResultBase):
     expected_delivery_date: date | None
     delivery_date: datetime | None
     storage_place: str | None
+    supplier_order_numbers: list[str] = Field(default_factory=list)
     creator_id: int
     creator: PublicUserResult | None
     changed_by_id: int | None

@@ -32,6 +32,7 @@ watch(visible, (v) => {
 
 const SIMPLE_VARS = [
   'order_number',
+  'supplier_order_numbers',
   'supplier',
   'note',
   'ordered_date',

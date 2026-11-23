@@ -249,11 +249,12 @@ def test_an_ordered_line_of_a_partially_ordered_order_needs_manage_orders():
 def test_a_partially_ordered_order_is_submitted_for_its_own_actions():
     order = _Status(OrderStatus.PARTIALLY_ORDERED.value)
     assert set(ORDER_INTENTS.allowed_actions(order, None, MANAGER)) == _set(
-        A.MARK_ORDERED, A.CANCEL, A.DELIVER, A.EDIT, A.ADD_ITEM
+        A.MARK_ORDERED, A.CANCEL, A.DELIVER, A.EDIT, A.EDIT_SUPPLIER_ORDER_NUMBERS, A.ADD_ITEM
     )
-    # Its header is submitted, but a new line is pending and stays open.
+    # Its header is submitted, but a new line is pending and stays open, and
+    # the supplier order numbers need no manage:orders.
     assert set(ORDER_INTENTS.allowed_actions(order, None, OTHER)) == _set(
-        A.MARK_ORDERED, A.DELIVER, A.ADD_ITEM
+        A.MARK_ORDERED, A.DELIVER, A.EDIT_SUPPLIER_ORDER_NUMBERS, A.ADD_ITEM
     )
 
 
@@ -386,10 +387,29 @@ def test_order_item_close_short_needs_something_settled():
 @pytest.mark.parametrize(
     ("status", "expected"),
     [
-        (OrderStatus.DRAFT, _set(A.MARK_REQUESTED, A.MARK_ORDERED, A.CANCEL, A.EDIT, A.ADD_ITEM)),
-        (OrderStatus.REQUESTED, _set(A.MARK_ORDERED, A.CANCEL, A.EDIT, A.ADD_ITEM)),
-        (OrderStatus.ORDERED, _set(A.CANCEL, A.DELIVER, A.EDIT, A.ADD_ITEM)),
-        (OrderStatus.PARTIALLY_DELIVERED, _set(A.CANCEL, A.DELIVER, A.EDIT, A.ADD_ITEM)),
+        (
+            OrderStatus.DRAFT,
+            _set(
+                A.MARK_REQUESTED,
+                A.MARK_ORDERED,
+                A.CANCEL,
+                A.EDIT,
+                A.EDIT_SUPPLIER_ORDER_NUMBERS,
+                A.ADD_ITEM,
+            ),
+        ),
+        (
+            OrderStatus.REQUESTED,
+            _set(A.MARK_ORDERED, A.CANCEL, A.EDIT, A.EDIT_SUPPLIER_ORDER_NUMBERS, A.ADD_ITEM),
+        ),
+        (
+            OrderStatus.ORDERED,
+            _set(A.CANCEL, A.DELIVER, A.EDIT, A.EDIT_SUPPLIER_ORDER_NUMBERS, A.ADD_ITEM),
+        ),
+        (
+            OrderStatus.PARTIALLY_DELIVERED,
+            _set(A.CANCEL, A.DELIVER, A.EDIT, A.EDIT_SUPPLIER_ORDER_NUMBERS, A.ADD_ITEM),
+        ),
         (OrderStatus.DELIVERED, _set(A.EDIT, A.ADD_ITEM)),
         # Every line canceled, but nobody canceled the order itself.
         (OrderStatus.CANCELED, _set(A.EDIT, A.ADD_ITEM)),

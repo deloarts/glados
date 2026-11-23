@@ -23,10 +23,11 @@ A page is a `PageLayout` with up to three bars above its content, in this order.
 - A tab never brings a toolbar of its own. Its actions fill the page's controls bar, as the Devices and Sequences tabs of a product do.
 - On a page with tabs the record's own actions, such as Back to Products and Edit Product, show on its Overview tab only, and a tab without actions shows no controls bar at all.
 - The primary actions come first, and secondary ones such as History, Print and Compare follow after a divider.
-- A round handbook button at the bar's normal button size (`<HelpButton rounded />`) closes the controls bar. On a record's page a round share button before it (`ShareButton`) copies the record's lasting `/resolve` link.
+- A round handbook button at the bar's normal button size (`<HelpButton rounded />`) closes the controls bar. On a record's page a round share button before it (`ShareButton`) opens a menu that copies the record's lasting `/resolve` link or its UUID as plain text, so the page needs no Copy UUID button of its own.
 - A list without actions, such as the production exceptions, has no controls bar, and its handbook button closes the views bar instead.
 - The `ViewsBar` (slot `#views`) holds how a list is looked at: Sync, Views, Group By, Sort By, Show Actions and Clear. Lists with filtering, grouping or sorting have one, such as the catalogue and the orders.
 - A detail page with many actions sets `wrap-menu` on its `PageLayout`, so its buttons wrap onto a new line as a whole instead of breaking their labels.
+- Before its buttons wrap, such a page collapses groups of related actions into one menu button each with `useControlsBarFit`, so the bar keeps to one row. The widest group collapses first and the next one only while the bar is still too narrow, and a group spreads out again once there is room for it. The bar's own width counts rather than the screen's, so the side menu and the longer German labels are taken into account. A collapsed group is a plain button with the group's short label that opens a menu, since it has no action of its own to run on a click, and its menu shows the reason on a disabled entry as the spread out buttons do. A split button stays for an action with variants, such as Add Item. The order page collapses its edit fields, then its mark-all actions, then its mails.
 
 ## 2 tabs
 

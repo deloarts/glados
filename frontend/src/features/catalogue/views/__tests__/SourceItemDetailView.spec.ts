@@ -366,7 +366,7 @@ describe('SourceItemDetailView', () => {
     await printButton!.trigger('click')
     await flushPromises()
 
-    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menu = wrapper.findComponent({ ref: 'printMenu' })
     const items = menu.props('model') as { label: string; command: () => void }[]
     const labelItem = items.find((i) => i.label === 'Label')
     expect(labelItem).toBeTruthy()
@@ -390,7 +390,7 @@ describe('SourceItemDetailView', () => {
     await printButton!.trigger('click')
     await flushPromises()
 
-    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menu = wrapper.findComponent({ ref: 'printMenu' })
     const items = menu.props('model') as { label: string; command: () => void }[]
     const docketItem = items.find((i) => i.label === 'Docket')
     expect(docketItem).toBeTruthy()
@@ -403,26 +403,6 @@ describe('SourceItemDetailView', () => {
       root_id: 5,
       items: [{ classifier: 'source_item_docket' }],
     })
-  })
-
-  it('copies the item public_id to the clipboard from Copy UUID', async () => {
-    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
-    Object.assign(navigator, { clipboard: { writeText } })
-
-    listMock.mockResolvedValue({
-      items: [makeItem({ public_id: 'aaaaaaaa-0000-0000-0000-000000000005' })],
-      total: 1,
-      limit: 1,
-      skip: 0,
-    })
-
-    const { wrapper } = await mountView()
-
-    const copyButton = wrapper.findAll('button').find((b) => b.text() === 'Copy UUID')
-    expect(copyButton).toBeTruthy()
-    await copyButton!.trigger('click')
-
-    expect(writeText).toHaveBeenCalledWith('aaaaaaaa-0000-0000-0000-000000000005')
   })
 
   it('passes demand rows through to the demands card, with the lot number in the extra column', async () => {

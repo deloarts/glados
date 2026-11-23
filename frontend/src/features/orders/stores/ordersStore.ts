@@ -9,6 +9,7 @@ import { getOrder } from '../api/getOrder'
 import { getOrders } from '../api/getOrders'
 import { updateOrder } from '../api/updateOrder'
 import { setOrderExtraCosts } from '../api/setOrderExtraCosts'
+import { setOrderSupplierOrderNumbers } from '../api/setOrderSupplierOrderNumbers'
 import { submitOrder } from '../api/submitOrder'
 import { requestOrder } from '../api/requestOrder'
 import { cancelOrder } from '../api/cancelOrder'
@@ -32,6 +33,7 @@ import type {
   OrderCreateRequest,
   OrderExtraCostsUpdateRequest,
   OrderFilterParams,
+  OrderSupplierOrderNumbersUpdateRequest,
   OrderUpdateRequest,
 } from '../types/ordersRequest'
 import type {
@@ -86,6 +88,15 @@ export const useOrdersStore = defineStore('orders', () => {
     payload: OrderExtraCostsUpdateRequest,
   ): Promise<OrderResponse> {
     const saved = await setOrderExtraCosts(id, payload)
+    await refreshOrder(id)
+    return saved
+  }
+
+  async function setSupplierOrderNumbers(
+    id: number,
+    payload: OrderSupplierOrderNumbersUpdateRequest,
+  ): Promise<OrderResponse> {
+    const saved = await setOrderSupplierOrderNumbers(id, payload)
     await refreshOrder(id)
     return saved
   }
@@ -283,6 +294,7 @@ export const useOrdersStore = defineStore('orders', () => {
     create,
     update,
     setExtraCosts,
+    setSupplierOrderNumbers,
     submit,
     request,
     cancel,

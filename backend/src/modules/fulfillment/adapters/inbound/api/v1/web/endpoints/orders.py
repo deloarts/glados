@@ -46,6 +46,9 @@ from src.modules.fulfillment.adapters.inbound.api.deps.orders import get_request
 from src.modules.fulfillment.adapters.inbound.api.deps.orders import (
     get_set_order_extra_costs_use_case,
 )
+from src.modules.fulfillment.adapters.inbound.api.deps.orders import (
+    get_set_order_supplier_order_numbers_use_case,
+)
 from src.modules.fulfillment.adapters.inbound.api.deps.orders import get_submit_order_use_case
 from src.modules.fulfillment.adapters.inbound.api.deps.orders import get_update_order_item_use_case
 from src.modules.fulfillment.adapters.inbound.api.deps.orders import get_update_order_use_case
@@ -69,6 +72,9 @@ from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import Or
 from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import OrderItemResponse
 from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import OrderItemUpdateRequest
 from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import OrderResponse
+from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import (
+    OrderSupplierOrderNumbersUpdateRequest,
+)
 from src.modules.fulfillment.adapters.inbound.api.schemas.order_schema import OrderUpdateRequest
 from src.modules.fulfillment.application.dto.order_dto import CreateOrderCommand
 from src.modules.fulfillment.application.dto.order_dto import CreateOrderItemCommand
@@ -76,6 +82,7 @@ from src.modules.fulfillment.application.dto.order_dto import DeliverAllResult
 from src.modules.fulfillment.application.dto.order_dto import OrderItemResult
 from src.modules.fulfillment.application.dto.order_dto import OrderResult
 from src.modules.fulfillment.application.dto.order_dto import SetOrderExtraCostsCommand
+from src.modules.fulfillment.application.dto.order_dto import SetOrderSupplierOrderNumbersCommand
 from src.modules.fulfillment.application.dto.order_dto import UpdateOrderCommand
 from src.modules.fulfillment.application.dto.order_dto import UpdateOrderItemCommand
 from src.modules.fulfillment.application.services.lifecycle_actions import LifecycleActions
@@ -112,6 +119,9 @@ from src.modules.fulfillment.application.use_cases.order.process_order_item_deli
 from src.modules.fulfillment.application.use_cases.order.reopen_order_item import ReopenOrderItem
 from src.modules.fulfillment.application.use_cases.order.set_order_extra_costs import (
     SetOrderExtraCosts,
+)
+from src.modules.fulfillment.application.use_cases.order.set_order_supplier_order_numbers import (
+    SetOrderSupplierOrderNumbers,
 )
 from src.modules.fulfillment.application.use_cases.order.update_order import CancelOrder
 from src.modules.fulfillment.application.use_cases.order.update_order import RequestOrder
@@ -197,6 +207,24 @@ async def set_order_extra_costs(
     manage:orders once the order is past REQUESTED; a canceled order takes
     no change. Answers the order with its lines and totals."""
     cmd = SetOrderExtraCostsCommand(**body.model_dump())
+    result = await use_case.execute(actor=actor, order_id=order_id, cmd=cmd)
+    await actions.orders([result], actor)
+    return result
+
+
+@router.put("/{order_id}/supplier-order-numbers", response_model=OrderResponse)
+async def set_order_supplier_order_numbers(
+    order_id: int,
+    body: OrderSupplierOrderNumbersUpdateRequest,
+    actor: User = Depends(get_current_active_user),
+    use_case: SetOrderSupplierOrderNumbers = Depends(get_set_order_supplier_order_numbers_use_case),
+    actions: LifecycleActions = Depends(get_lifecycle_actions),
+) -> OrderResult:
+    """Replaces the numbers under which the supplier keeps the order with the
+    list sent, each trimmed, blanks and repeats dropped. Needs write:orders
+    in every status until the order is delivered or canceled. Answers the
+    order with its lines."""
+    cmd = SetOrderSupplierOrderNumbersCommand(**body.model_dump())
     result = await use_case.execute(actor=actor, order_id=order_id, cmd=cmd)
     await actions.orders([result], actor)
     return result

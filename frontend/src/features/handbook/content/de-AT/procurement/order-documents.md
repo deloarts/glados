@@ -9,7 +9,8 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/order/upload_order_file.py
   - backend/src/modules/fulfillment/application/use_cases/order/_file_kind.py
   - backend/src/modules/quality/application/use_cases/print_document/print_document.py
-lastVerified: 2026-11-10
+  - frontend/src/features/orders/components/OrderPrintButton.vue
+lastVerified: 2026-11-20
 ---
 
 Eine Bestellung sammelt, was zum Lieferanten geht und was zurückkommt: die Mails, die du sendest, den Laufzettel, der mit der Ware geht, die Zusatzkosten auf der Rechnung und die Dateien wie die Auftragsbestätigung. Du erreichst all das von der Bestellseite aus, die Mails und Laufzettel auch per Rechtsklick auf die Bestellung in der Bestellliste.
@@ -24,7 +25,7 @@ Sobald eine Anfrage- oder Bestell-Mail weg ist, fragt der Dialog **Mail gesendet
 
 ## Laufzettel {#dockets}
 
-Klick mit der rechten Maustaste auf die Bestellung in der Bestellliste und wähle **Laufzettel drucken**, um den Laufzettel der Bestellung an seinen Drucker zu schicken, oder **Laufzettel herunterladen**, um ihn als PDF zu speichern. Beides braucht **Dokumente drucken**. Wie der Laufzettel aussieht, richtest du unter [Laufzettel](/handbook/resources/print-dockets) ein.
+Auf der Bestellseite öffnet **Drucken** ein Menü mit **Laufzettel herunterladen** und **Laufzettel drucken**, und dieselben zwei Einträge findest du per Rechtsklick auf die Bestellung in der Bestellliste. Wähle **Laufzettel drucken**, um den Laufzettel der Bestellung an seinen Drucker zu schicken, oder **Laufzettel herunterladen**, um ihn als PDF zu speichern. Beides braucht **Dokumente drucken**. Wie der Laufzettel aussieht, richtest du unter [Laufzettel](/handbook/resources/print-dockets) ein.
 
 ## Zusatzkosten {#extra-costs}
 

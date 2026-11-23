@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useMediaQuery } from '@vueuse/core'
 import { useConfirm } from 'openvue/useconfirm'
 import { useAppToast } from '@/core/composables/useAppToast'
 import { usePhoneLayout } from '@/core/composables/usePhoneLayout'
@@ -13,10 +12,9 @@ import { useOrdersStore } from '../stores/ordersStore'
 import { watchLoadingBar } from '@/core/composables/useLoadingBar'
 import { Permission } from '@/core/auth/permissions'
 import { useHostStore } from '@/core/host/stores/hostStore'
+import { useControlsBarFit } from '@/shared/composables/useControlsBarFit'
 import { useResizablePanelWidth } from '@/shared/composables/useResizablePanelWidth'
-import constants from '@/constants'
 
-import { useClipboard } from '@/core/composables/useClipboard'
 import { MailComposeDialog } from '@/features/mail'
 
 import PageLayout from '@/shared/components/resource-view/PageLayout.vue'
@@ -43,6 +41,7 @@ import OrderFieldEditDialog from '../components/OrderFieldEditDialog.vue'
 import OrderMailPostSendDialog from '../components/OrderMailPostSendDialog.vue'
 import OrderExtraCostsDialog from '../components/OrderExtraCostsDialog.vue'
 import OrderDetailInfoBar from '../components/OrderDetailInfoBar.vue'
+import OrderPrintButton from '../components/OrderPrintButton.vue'
 import OrderDetailSidePanel from '../components/OrderDetailSidePanel.vue'
 import { useMissingPermission } from '@/shared/composables/useMissingPermission'
 
@@ -61,7 +60,6 @@ const hostStore = useHostStore()
 const ordersStore = useOrdersStore()
 const confirm = useConfirm()
 const toast = useAppToast()
-const { copyToClipboard } = useClipboard()
 const { fileMenuItems } = useOrderFileUpload()
 const { dialogRef: editFieldDialog, menuItems: editFieldMenuItems } = useOrderEditFields()
 const {
@@ -109,9 +107,9 @@ const extraCostsDisabled = computed(
 )
 
 // ── Toolbar density ───────────────────────────────────────────────────
-// Below the desktop breakpoint the edit, mark-all and mail actions collapse
-// into one menu button each, so the bar does not wrap into several rows.
-const isCompact = useMediaQuery(`(max-width: ${constants.minWidthDesktop - 1}px)`)
+// Short of room, the edit fields collapse into one menu button first, then
+// the mark-all actions, then the mails.
+const { collapsed } = useControlsBarFit(useTemplateRef('controlsBar'), ['edit', 'markAll', 'mail'])
 // A phone shows the order's lines only; the note and files panel beside
 // them is for the desktop.
 const { phoneMode } = usePhoneLayout()
@@ -186,11 +184,8 @@ const {
     showDeliverAllDialog.value = true
   },
 })
-// The header and new lines follow the order's edit and add_item actions,
-// which an order someone canceled no longer offers.
-const canEditHeader = computed(
-  () => order.value !== null && orderActionGates.edit(order.value, canWrite.value),
-)
+// New lines follow the order's add_item action, which an order someone
+// canceled no longer offers; the header fields gate each edit menu entry.
 const canAddItem = computed(
   () => order.value !== null && orderActionGates.addItem(order.value, canWrite.value),
 )
@@ -269,6 +264,10 @@ const mailMenu = ref()
 const editMenuItems = computed<MenuItem[]>(() =>
   order.value ? editFieldMenuItems(order.value) : [],
 )
+// The compact edit button opens the field menu while any field is editable:
+// the supplier order numbers stay open to write:orders after the header
+// fields need manage:orders.
+const canEditAnyField = computed(() => editMenuItems.value.some((item) => item.disabled !== true))
 
 const addFileMenuItems = computed<MenuItem[]>(() => (order.value ? fileMenuItems(order.value) : []))
 
@@ -352,7 +351,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
     </template>
 
     <template #controls>
-      <ControlsBar>
+      <ControlsBar ref="controlsBar">
         <template #start>
           <Button
             icon="mdi mdi-arrow-left"
@@ -410,13 +409,16 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
               />
             </span>
 
-            <span v-if="isCompact" v-tooltip.bottom="editHeaderBlocked || undefined">
+            <span
+              v-if="collapsed.edit"
+              v-tooltip.bottom="(!canEditAnyField && editHeaderBlocked) || undefined"
+            >
               <Button
                 icon="mdi mdi-pencil"
                 :label="t('orders.actions.edit')"
                 severity="contrast"
                 text
-                :disabled="!canEditHeader"
+                :disabled="!canEditAnyField"
                 @click="toggleMenu(editMenu, $event)"
               />
             </span>
@@ -426,14 +428,14 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
               <span
                 v-for="item in editMenuItems"
                 :key="menuItemLabel(item)"
-                v-tooltip.bottom="editHeaderBlocked || undefined"
+                v-tooltip.bottom="(item.disabled === true && item.title) || undefined"
               >
                 <Button
                   :icon="item.icon"
                   :label="menuItemLabel(item)"
                   severity="contrast"
                   text
-                  :disabled="!canEditHeader"
+                  :disabled="item.disabled === true"
                   @click="runMenuItem(item, $event)"
                 />
               </span>
@@ -441,7 +443,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
 
             <Divider layout="vertical" />
 
-            <span v-if="isCompact" v-tooltip.bottom="markAllBlocked || undefined">
+            <span v-if="collapsed.markAll" v-tooltip.bottom="markAllBlocked || undefined">
               <Button
                 icon="mdi mdi-check-all"
                 :label="t('orders.actions.markAll')"
@@ -490,7 +492,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
             <Divider layout="vertical" />
 
             <Button
-              v-if="isCompact"
+              v-if="collapsed.mail"
               icon="mdi mdi-email-outline"
               :label="t('orders.actions.mail')"
               severity="contrast"
@@ -522,6 +524,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
 
             <Divider layout="vertical" />
 
+            <OrderPrintButton :order="order" />
             <span v-tooltip.bottom="cancelBlocked || undefined">
               <Button
                 icon="mdi mdi-close-circle-outline"
@@ -532,13 +535,6 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
                 @click="confirmCancelOrder"
               />
             </span>
-            <Button
-              icon="mdi mdi-content-copy"
-              :label="t('common.copyUuid')"
-              severity="contrast"
-              text
-              @click="copyToClipboard(order.public_id)"
-            />
           </template>
         </template>
         <template #handbook>
@@ -618,7 +614,7 @@ watch([showDeliverDialog, showMoveItemDialog], (open, wasOpen) => {
   </PageLayout>
 
 
-  <Menu ref="editMenu" :model="editMenuItems" popup />
+  <Menu ref="editMenu" :model="editMenuItems" popup :pt="disabledItemTooltipPt" />
   <Menu ref="fileMenu" :model="addFileMenuItems" popup />
   <Menu ref="markAllMenu" :model="markAllMenuItems" popup :pt="markAllMenuPt" />
   <Menu ref="mailMenu" :model="mailMenuItems" popup :pt="disabledItemTooltipPt" />

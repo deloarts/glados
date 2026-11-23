@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { mountWithApp } from '@/test-utils/mountWithApp'
 import { makeOrderResponse, makeUserResponse } from '@/test-utils/factories'
 import { useCurrentUserStore } from '@/core/stores/currentUserStore'
+import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import type { SupplierResponse } from '@/features/suppliers'
 import type { DefaultMailTemplateResult } from '../../api/getDefaultMailTemplate'
 
@@ -167,6 +168,33 @@ describe('useOrderMailComposer', () => {
     expect(toastAddMock).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'warn' }),
     )
+  })
+
+  describe('supplier_order_numbers', () => {
+    async function bodyFor(numbers: string[]): Promise<string> {
+      getSupplierMock.mockResolvedValue(makeSupplier({ order_email: 'orders@supplier.example' }))
+      getDefaultMailTemplateMock.mockResolvedValue({
+        kind: 'order_canceled',
+        language: 'en',
+        subject: 'Subject',
+        body: 'Your reference: {{ supplier_order_numbers }}.',
+        configured: true,
+      })
+      const { result } = mountComposable()
+      await result.composeOrderMail(
+        makeOrderResponse({ supplier_order_numbers: numbers }),
+        'order_canceled',
+      )
+      return result.dialogState.body
+    }
+
+    it('lists the numbers separated by commas', async () => {
+      expect(await bodyFor(['AB-24117', 'AB-24131'])).toContain('Your reference: AB-24117, AB-24131.')
+    })
+
+    it('puts the empty value symbol in for an order without one', async () => {
+      expect(await bodyFor([])).toContain(`Your reference: ${getEmptyPlaceholder()}.`)
+    })
   })
 
   // order_canceled has no per-supplier override column at all (see supplierResponse.ts),

@@ -6,7 +6,6 @@ import Tooltip from 'openvue/tooltip'
 import type { ConfirmationOptions } from 'openvue/confirmationoptions'
 
 import { mountWithApp } from '@/test-utils/mountWithApp'
-import constants from '@/constants'
 import type { OrderItemResponse, OrderResponse } from '../../types/ordersResponse'
 
 vi.mock('@/core/api', () => ({
@@ -47,6 +46,21 @@ vi.mock('../../stores/ordersStore', () => ({
     markAllItemsOrdered: markAllItemsOrderedMock,
   }),
 }))
+
+// jsdom lays nothing out, so the bar never measures a lack of room. A test
+// sets how many of the page's groups are collapsed, in the order the page
+// names them, before it mounts the view.
+const barFit = vi.hoisted(() => ({ collapsedGroups: 0 }))
+vi.mock('@/shared/composables/useControlsBarFit', async () => {
+  const { ref } = await import('vue')
+  return {
+    useControlsBarFit: (_bar: unknown, groups: readonly string[]) => ({
+      collapsed: ref(
+        Object.fromEntries(groups.map((group, index) => [group, index < barFit.collapsedGroups])),
+      ),
+    }),
+  }
+})
 
 // `confirm.require`'s conventional shape (message/header/icon/accept/reject
 // props) is asserted directly on the mock call rather than through the real
@@ -130,26 +144,6 @@ function axiosError(status: number): unknown {
   return { isAxiosError: true, response: { status } }
 }
 
-/**
- * Puts the toolbar into its compact (tablet/phone) layout. The view's
- * `useMediaQuery` reads `matches` off whatever the global matchMedia stub
- * returns, so answering true for exactly its below-desktop query, and
- * nothing else since OpenVue components ask about their own breakpoints too,
- * is all it takes. Returns the restore function; call it in `finally`.
- */
-function stubCompactScreen(): () => void {
-  const original = window.matchMedia
-  const compactQuery = `(max-width: ${constants.minWidthDesktop - 1}px)`
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn<(query: string) => unknown>().mockImplementation((query: string) => ({
-      ...(original(query) as object),
-      matches: query === compactQuery,
-    })),
-  )
-  return () => vi.stubGlobal('matchMedia', original)
-}
-
 function buttonLabels(wrapper: { findAll(selector: string): { text(): string }[] }): string[] {
   return wrapper.findAll('button').map((b) => b.text())
 }
@@ -164,6 +158,7 @@ describe('OrderDetailView', () => {
     markAllItemsOrderedMock.mockReset().mockResolvedValue(undefined)
     confirmRequireMock.mockReset()
     filesById = {}
+    barFit.collapsedGroups = 0
   })
 
   it('shows the order identity once loaded', async () => {
@@ -308,45 +303,56 @@ describe('OrderDetailView', () => {
     expect(labels).not.toContain('Mail')
   })
 
-  it('collapses the edit, mark-all and mail actions into menu buttons below the desktop breakpoint', async () => {
-    const restore = stubCompactScreen()
-    try {
-      getOrderMock.mockResolvedValue(
-        makeOrder({
-          items: [{ id: 1, status: 'requested', actions: ['mark_ordered'] } as OrderItemResponse],
-        }),
-      )
+  it('collapses the edit, mark-all and mail actions into menu buttons once all three lack room', async () => {
+    barFit.collapsedGroups = 3
+    getOrderMock.mockResolvedValue(
+      makeOrder({
+        items: [{ id: 1, status: 'requested', actions: ['mark_ordered'] } as OrderItemResponse],
+      }),
+    )
 
-      const wrapper = await mountView()
+    const wrapper = await mountView()
 
-      const labels = buttonLabels(wrapper)
-      expect(labels).toContain('Edit Order')
-      expect(labels).toContain('Mark All')
-      expect(labels).toContain('Mail')
-      expect(labels).not.toContain('Storage Place')
-      expect(labels).not.toContain('Mark All as Ordered')
-      expect(labels).not.toContain('Request Mail')
-      // Only those three groups collapse; the rest of the bar is unchanged.
-      expect(labels).toContain('Add Item')
-      expect(labels).toContain('Cancel Order')
+    const labels = buttonLabels(wrapper)
+    expect(labels).toContain('Edit Order')
+    expect(labels).toContain('Mark All')
+    expect(labels).toContain('Mail')
+    expect(labels).not.toContain('Storage Place')
+    expect(labels).not.toContain('Mark All as Ordered')
+    expect(labels).not.toContain('Request Mail')
+    // Only those three groups collapse; the rest of the bar is unchanged.
+    expect(labels).toContain('Add Item')
+    expect(labels).toContain('Cancel Order')
 
-      // The menu behind "Mark All" carries the same actions and wiring the
-      // desktop buttons have.
-      const markAllButton = wrapper.findAll('button').find((b) => b.text() === 'Mark All')
-      await markAllButton!.trigger('click')
-      await flushPromises()
+    // The menu behind "Mark All" carries the same actions and wiring the
+    // spread out buttons have.
+    const markAllButton = wrapper.findAll('button').find((b) => b.text() === 'Mark All')
+    await markAllButton!.trigger('click')
+    await flushPromises()
 
-      const markOrdered = Array.from(document.body.querySelectorAll('[data-testid="mark-all-menu-item"]')).find(
-        (el) => el.textContent?.trim() === 'Mark All as Ordered',
-      )
-      expect(markOrdered).toBeTruthy()
-      markOrdered!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flushPromises()
+    const markOrdered = Array.from(document.body.querySelectorAll('[data-testid="mark-all-menu-item"]')).find(
+      (el) => el.textContent?.trim() === 'Mark All as Ordered',
+    )
+    expect(markOrdered).toBeTruthy()
+    markOrdered!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
 
-      expect(markAllItemsOrderedMock).toHaveBeenCalledWith(42)
-    } finally {
-      restore()
-    }
+    expect(markAllItemsOrderedMock).toHaveBeenCalledWith(42)
+  })
+
+  it('collapses the edit fields first and keeps the mark-all and mail buttons spread out', async () => {
+    barFit.collapsedGroups = 1
+    getOrderMock.mockResolvedValue(makeOrder())
+
+    const wrapper = await mountView()
+
+    const labels = buttonLabels(wrapper)
+    expect(labels).toContain('Edit Order')
+    expect(labels).not.toContain('Storage Place')
+    expect(labels).toContain('Mark All as Ordered')
+    expect(labels).not.toContain('Mark All')
+    expect(labels).toContain('Request Mail')
+    expect(labels).not.toContain('Mail')
   })
 
   it('confirms before canceling the order, and confirming calls the same store action', async () => {

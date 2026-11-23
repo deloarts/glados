@@ -24,6 +24,9 @@ from src.modules.platform.adapters.outbound.persistence.models.changed_by_column
     ChangedByColumns,
 )
 from src.modules.platform.adapters.outbound.persistence.models.changelog_type import ChangelogType
+from src.modules.platform.adapters.outbound.persistence.models.string_list_type import (
+    StringListType,
+)
 
 if TYPE_CHECKING:
     from src.modules.catalogue.adapters.outbound.persistence.models.supplier_model import (
@@ -62,6 +65,11 @@ class OrderOrmModel(ChangedByColumns, Base):
     expected_delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     delivery_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     storage_place: Mapped[str | None] = mapped_column(String, nullable=True)
+    # The supplier's own numbers for this order, a JSON list as text, so the
+    # order filters and the global search can match an entry with LIKE.
+    supplier_order_numbers: Mapped[list[str]] = mapped_column(
+        StringListType, nullable=False, default=list, server_default="[]"
+    )
 
     # Lifecycle intents, see order.py's matching field comment.
     requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

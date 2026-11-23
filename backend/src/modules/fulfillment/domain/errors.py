@@ -157,6 +157,11 @@ class OrderCanceledError(ConflictError):
     canceled, which takes no new lines and no further changes."""
 
 
+class OrderSupplierOrderNumbersLockedError(ConflictError):
+    """The supplier order numbers of an order were changed after the order
+    reached a terminal status, delivered or canceled."""
+
+
 class OrderItemCanceledError(ConflictError):
     """A canceled order line was edited; it waits for nothing any more."""
 

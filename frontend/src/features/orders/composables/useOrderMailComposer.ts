@@ -8,6 +8,7 @@ import type { SupplierResponse } from '@/features/suppliers'
 import { useCurrentUserStore } from '@/core/stores/currentUserStore'
 import { appLocaleForLanguage } from '@/core/i18n'
 import { formatPrice } from '@/core/utils/currency'
+import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { TABLE_COLUMN_KEYS, resolveOrderTemplate } from '@/shared/order-mail'
 import type { TableColumnLabels } from '@/shared/order-mail'
 import { extraCostName, signedExtraCost } from '@/shared/utils/extraCosts'
@@ -154,6 +155,7 @@ export function useOrderMailComposer() {
 
       const vars: Record<string, string> = {
         order_number: order.order_number,
+        supplier_order_numbers: order.supplier_order_numbers.join(', ') || getEmptyPlaceholder(),
         supplier: supplier.name,
         note: order.note ?? '',
         ordered_date: order.ordered_date ?? '-',

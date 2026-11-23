@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // The info bar of the order page: number, status, supplier, total, delivery
-// date, a missing invoice, storage place and the quote requests the order
-// came from. Empty until the order has loaded.
+// date, a missing invoice, storage place, the supplier order numbers and the
+// quote requests the order came from. Empty until the order has loaded.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { formatDateOrDash, formatDateTimeOrEmpty } from '@/core/utils/dates'
+import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { useHostStore } from '@/core/host/stores/hostStore'
 import InfoBar from '@/shared/components/resource-view/InfoBar.vue'
 import ArchivedOptionTag from '@/shared/components/archivable/ArchivedOptionTag.vue'
@@ -38,6 +39,11 @@ const deliveryTooltip = computed(() =>
 )
 const storagePlaceValue = computed(
   () => props.order?.storage_place ?? t('orders.detail.noStoragePlaceSet'),
+)
+// Without a number the admin's empty value symbol stands in, as in the
+// orders table and the mails.
+const supplierOrderNumbersValue = computed(
+  () => props.order?.supplier_order_numbers.join(', ') || getEmptyPlaceholder(),
 )
 // Reads the files the side panel's OrderFilesSection already loaded, so the
 // hint costs no request of its own. Only a fully delivered order without a
@@ -91,6 +97,15 @@ const invoiceMissing = computed(
           v-tooltip.bottom="t('orders.columns.storagePlace')"
         />
         <span class="info-muted">{{ storagePlaceValue }}</span>
+      </span>
+      <span class="info-sep" />
+      <span class="info-field" data-testid="order-supplier-order-numbers">
+        <i
+          class="mdi mdi-pound-box-outline"
+          aria-hidden="true"
+          v-tooltip.bottom="t('orders.columns.supplierOrderNumbers')"
+        />
+        <span class="info-muted">{{ supplierOrderNumbersValue }}</span>
       </span>
       <template v-if="order.quote_requests.length > 0">
         <span class="info-sep" />

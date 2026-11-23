@@ -69,6 +69,7 @@ stateDiagram-v2
 | `cancel` | draft, requested, partially_ordered, ordered, partially_delivered |   |   | manage:orders once past REQUESTED |
 | `deliver` | partially_ordered, ordered, partially_delivered |   |   |   |
 | `edit` | any |   | nobody canceled the order | manage:orders once past REQUESTED |
+| `edit_supplier_order_numbers` | draft, requested, partially_ordered, ordered, partially_delivered |   | nobody canceled the order |   |
 | `add_item` | any |   | nobody canceled the order | manage:orders once the order or the line is past REQUESTED |
 
 | Row | Condition | Status |

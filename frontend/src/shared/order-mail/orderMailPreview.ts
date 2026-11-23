@@ -297,6 +297,7 @@ const SAMPLE_ITEMS: SampleOrderLine[] = [
 // dialogs preview against identical values.
 export const SAMPLE_ORDER_MAIL_VARS: Record<string, string> = {
   order_number: 'ORD-2024-001',
+  supplier_order_numbers: 'AB-24117, AB-24131',
   supplier: 'Sample Supplier Ltd',
   note: 'Please deliver to the main entrance.',
   ordered_date: '2024-01-15',

@@ -29,6 +29,7 @@ const draftOrder: OrderResponse = {
   expected_delivery_date: null,
   delivery_date: null,
   storage_place: null,
+  supplier_order_numbers: [],
   creator_id: 1,
   creator: null,
   supplier_id: 5,

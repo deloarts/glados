@@ -49,6 +49,7 @@ _SAMPLE_NOTIFICATION_ITEMS: list[dict[str, Any]] = [
 # same variable set, only the recipient and framing differ.
 _ORDER_VARIABLES: tuple[str, ...] = (
     "order_number",
+    "supplier_order_numbers",
     "supplier",
     "note",
     "ordered_date",
@@ -61,6 +62,7 @@ _ORDER_VARIABLES: tuple[str, ...] = (
 
 _ORDER_SAMPLE_CONTEXT: dict[str, Any] = {
     "order_number": "ORD-2026-0001",
+    "supplier_order_numbers": "AB-24117, AB-24131",
     "supplier": "Sample Supplier Ltd",
     "note": "Please deliver to the main entrance.",
     "ordered_date": "2026-01-15",

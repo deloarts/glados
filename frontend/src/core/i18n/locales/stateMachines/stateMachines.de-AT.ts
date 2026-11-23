@@ -157,6 +157,7 @@ export default {
     complete: 'Abschließen',
     archive: 'Archivieren',
     edit: 'Bearbeiten',
+    edit_supplier_order_numbers: 'Lieferantenauftragsnummern ändern',
     add_item: 'Position hinzufügen',
   },
   rows: {
@@ -247,6 +248,10 @@ export default {
         condition: 'Niemand hat die Bestellung storniert.',
         effect: 'Ändert Lieferant, Termine, Notizen und die übrigen Kopfdaten.',
         permission: 'Bestellungen verwalten, sobald die Bestellung abgeschickt ist',
+      },
+      edit_supplier_order_numbers: {
+        condition: 'Niemand hat die Bestellung storniert.',
+        effect: 'Ändert die Lieferantenauftragsnummern.',
       },
       add_item: {
         condition: 'Niemand hat die Bestellung storniert.',

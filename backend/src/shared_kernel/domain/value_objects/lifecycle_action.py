@@ -56,4 +56,5 @@ class LifecycleAction(StrValueEnum):
     COMPLETE = "complete"
     ARCHIVE = "archive"
     EDIT = "edit"
+    EDIT_SUPPLIER_ORDER_NUMBERS = "edit_supplier_order_numbers"
     ADD_ITEM = "add_item"
