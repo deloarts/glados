@@ -106,7 +106,7 @@ describe('HandbookIndexView', () => {
       .find((tile) => tile.text().includes('Procurement'))!
 
     expect(procurement.classes()).not.toContain('handbook-index-tile-empty')
-    expect(procurement.find('.handbook-index-tile-count').text()).toBe('21')
+    expect(procurement.find('.handbook-index-tile-count').text()).toBe('22')
     expect(procurement.findAll('.handbook-index-tile-link').map((l) => l.text())).toEqual([
       'Allocating Demands',
       'Auto-Assigning Lots',
@@ -116,6 +116,7 @@ describe('HandbookIndexView', () => {
       'Creating Demands from a Sheet',
       'Delivery Tolerances',
       'Exporting Demands and Orders',
+      'External Work',
       'Made Item Demand Lifecycle',
       'Made Item Demand Transitions',
       'Marking an Order Line as Delivered',
