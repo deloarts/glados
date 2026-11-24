@@ -11,6 +11,7 @@ there. The walk callers pass that zone in, and the read paths resolve it
 from `SchedulingRepos.settings`.
 """
 
+from collections.abc import Iterable
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC
@@ -60,6 +61,16 @@ from src.modules.fulfillment.domain.services.scheduling import resolve_internal_
 from src.modules.fulfillment.domain.services.scheduling import resolve_mixed_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_position_lead_days
 from src.modules.fulfillment.domain.services.scheduling import stale_external_predecessor
+from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkChain
+from src.modules.fulfillment.domain.services.scheduling.external_work import (
+    is_outsourced_unassigned,
+)
+from src.modules.fulfillment.domain.services.scheduling.external_work import (
+    position_has_external_work,
+)
+from src.modules.fulfillment.domain.services.scheduling.external_work_explanation import (
+    remaining_minutes,
+)
 from src.modules.fulfillment.domain.value_objects.lot_status import TERMINAL_LOT_STATUSES
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
@@ -367,15 +378,65 @@ async def describe_predecessor_positions(
     """Every earlier open position of the lot as a PredecessorPosition, so
     the propagated walk can redo the chain resolution with in-run dates.
     Its days are days of `zone`."""
-    earlier_positions = [p for p in lot.positions if p.sequence < position.sequence]
+    return await _describe_open_positions(
+        [p for p in lot.positions if p.sequence < position.sequence],
+        lot,
+        repos,
+        sibling_orders_by_position,
+        order_items_by_position,
+        default_external_lead_days,
+        material_ready_at_cache,
+        zone=zone,
+    )
+
+
+async def describe_lot_chain(
+    lot: ProductionLot,
+    repos: SchedulingRepos,
+    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
+    order_items_by_position: dict[int, OrderItem] | None = None,
+    default_external_lead_days: int = 0,
+    material_ready_at_cache: dict[int, date | None] | None = None,
+    *,
+    zone: tzinfo,
+) -> tuple[PredecessorPosition, ...]:
+    """Every open position of the lot, the last one included, described as
+    describe_predecessor_positions describes the earlier ones."""
+    return await _describe_open_positions(
+        list(lot.positions),
+        lot,
+        repos,
+        sibling_orders_by_position,
+        order_items_by_position,
+        default_external_lead_days,
+        material_ready_at_cache,
+        zone=zone,
+    )
+
+
+async def _describe_open_positions(
+    positions: list[LotPosition],
+    lot: ProductionLot,
+    repos: SchedulingRepos,
+    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None,
+    order_items_by_position: dict[int, OrderItem] | None,
+    default_external_lead_days: int,
+    material_ready_at_cache: dict[int, date | None] | None,
+    *,
+    zone: tzinfo,
+) -> tuple[PredecessorPosition, ...]:
+    """The open ones of `positions` as PredecessorPositions, in days of
+    `zone`. An outsourced UNASSIGNED position carries the lead days of its
+    steps, since it has no order line yet."""
     described: list[PredecessorPosition] = []
-    for earlier in earlier_positions:
+    for earlier in positions:
         if earlier.status in _TERMINAL_POSITION_STATUSES:
             continue
         external_ready_at = None
         stored_internal_ready_at = None
         typed_external_date = None
         lead_days = None
+        outsourced_unassigned = is_outsourced_unassigned(earlier)
         if earlier.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
             external_ready_at = await _external_ready_at(
                 earlier.id, repos, order_items_by_position, zone=zone
@@ -389,6 +450,8 @@ async def describe_predecessor_positions(
             lead_days = resolve_position_lead_days(
                 earlier.steps, supplier_override, default_external_lead_days
             )
+        elif outsourced_unassigned:
+            lead_days = resolve_position_lead_days(earlier.steps, None, default_external_lead_days)
         stored_internal_ready_moment = None
         if earlier.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
             stored_internal_ready_moment = await _internal_ready_moment(
@@ -415,9 +478,55 @@ async def describe_predecessor_positions(
                 typed_external_date=typed_external_date,
                 material_ready_at=material_ready_at,
                 stored_internal_ready_moment=stored_internal_ready_moment,
+                outsourced_unassigned=outsourced_unassigned,
             )
         )
     return tuple(described)
+
+
+async def describe_external_work_chains(
+    lot_ids: list[int],
+    prefetch: "SchedulingPrefetch",
+    repos: SchedulingRepos,
+    default_external_lead_days: int,
+    *,
+    zone: tzinfo,
+) -> list[ExternalWorkChain]:
+    """The chain of each lot of `lot_ids`, the lots with open external
+    work, from a prefetch that loaded them, for
+    scheduling.forecast_external_work once the walk has placed the internal
+    orders. Walking each lot's whole chain dates the positions no later
+    order of the lot reads, such as the last position of a lot or an
+    outsourced one without a supplier."""
+    chains: list[ExternalWorkChain] = []
+    for lot_id in sorted(lot_ids):
+        lot = prefetch.lots_by_id.get(lot_id)
+        if lot is None:
+            continue
+        positions = await describe_lot_chain(
+            lot,
+            repos,
+            prefetch.sibling_orders_by_position,
+            prefetch.order_items_by_position,
+            default_external_lead_days,
+            prefetch.material_ready_at_by_lot,
+            zone=zone,
+        )
+        chains.append(
+            ExternalWorkChain(
+                lot_id=lot.id,
+                positions=positions,
+                external_position_ids=frozenset(
+                    p.id for p in lot.positions if position_has_external_work(p)
+                ),
+                target_date=prefetch.target_date_by_lot.get(lot.id),
+                remaining_minutes_by_position={
+                    p.id: remaining_minutes(p, prefetch.sibling_orders_by_position.get(p.id, []))
+                    for p in lot.positions
+                },
+            )
+        )
+    return chains
 
 
 async def resolve_material_ready_at(
@@ -616,15 +725,18 @@ async def prefetch_scheduling_data(
     repos: SchedulingRepos,
     pool_repo: IMachinePoolRepository | None = None,
     lots_by_id: dict[int, ProductionLot] | None = None,
+    extra_lot_ids: Iterable[int] = (),
     *,
     zone: tzinfo,
 ) -> SchedulingPrefetch:
     """Loads everything build_order_context reads for the active orders in
     a fixed number of queries. `lots_by_id` pre-seeds lots the caller holds,
-    and material readiness is a day of `zone`."""
+    `extra_lot_ids` adds lots no active order belongs to, such as the lots
+    of external work, and material readiness is a day of `zone`."""
     active = [o for o in orders if o.status in ACTIVE_PRODUCTION_ORDER_STATUSES]
     lot_cache: dict[int, ProductionLot | None] = dict(lots_by_id or {})
-    missing_lot_ids = sorted({o.lot_id for o in active if o.lot_id not in lot_cache})
+    wanted_lot_ids = {o.lot_id for o in active} | set(extra_lot_ids)
+    missing_lot_ids = sorted(lot_id for lot_id in wanted_lot_ids if lot_id not in lot_cache)
     if missing_lot_ids:
         fetched = {lot.id: lot for lot in await repos.lots.get_by_ids(missing_lot_ids)}
         for lot_id in missing_lot_ids:

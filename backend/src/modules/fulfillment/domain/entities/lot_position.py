@@ -105,6 +105,8 @@ class LotPosition(Entity):
     # An internal position can be split across several orders.
     production_orders: list[ProductionOrder] = field(default_factory=list)
 
+    # The supplier of that line.
+    order_item_supplier_id: int | None = None
     # Without it the forecast sums the steps' lead times.
     order_item_supplier_external_lead_time_days: int | None = None
 
@@ -112,3 +114,8 @@ class LotPosition(Entity):
     # order item always wins for readiness.
     planned_pickup_date: date | None = None
     planned_delivery_date: date | None = None
+    # External work only: the latest day it can leave for the supplier
+    # without making the lot miss its target date, None without one.
+    latest_pickup_date: date | None = None
+    # The latest pickup plus the lead days, the day it is back at the latest.
+    latest_delivery_date: date | None = None

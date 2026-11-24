@@ -5,10 +5,13 @@ export { getLot } from './api/getLot'
 export { getLots } from './api/getLots'
 export { getProductionOrderFileBlob } from './api/getProductionOrderFileBlob'
 export { useProductionSchedule } from './composables/useProductionSchedule'
+export { assignExternalPosition } from './lots/api/assignExternalPosition'
 export { autoAssignLots } from './lots/api/autoAssignLots'
 export { getProductionOrder } from './lots/api/getProductionOrder'
 export { previewAutoAssignLots } from './lots/api/previewAutoAssignLots'
+export { unassignExternalPosition } from './lots/api/unassignExternalPosition'
 export { useLotNumberCache } from './lots/composables/useLotNumberCache'
+export { useProductionLotDetailStore } from './lots/stores/productionLotDetailStore'
 export { useProductionLotsStore } from './stores/productionLotsStore'
 export { useProductionOrderFilesStore } from './stores/productionOrderFilesStore'
 export { useProductionQueueStore } from './stores/productionQueueStore'
@@ -20,6 +23,7 @@ export { getProductionWip } from './wip/api/getProductionWip'
 
 export type {
   AutoAssignLotGroupResponse,
+  LotPositionResponse,
   LotPriority,
   LotResponse,
   LotStatus,
@@ -38,6 +42,8 @@ export type { ProjectedSpan } from './utils/productionPlanningTasks'
 export type { WipLotResponse } from './wip/types/productionWipResponse'
 
 export { default as LotCreateDialog } from './lots/components/LotCreateDialog.vue'
+export { default as LotPositionAssignDialog } from './lots/components/LotPositionAssignDialog.vue'
+export { default as LotPositionProvisionDialog } from './lots/components/LotPositionProvisionDialog.vue'
 export { default as SourceItemDemandCreateDialog } from './lots/components/SourceItemDemandCreateDialog.vue'
 export { default as ProductionOrderCompletionDialog } from './components/ProductionOrderCompletionDialog.vue'
 export { default as ProductionOrderStartDialog } from './queue/components/ProductionOrderStartDialog.vue'

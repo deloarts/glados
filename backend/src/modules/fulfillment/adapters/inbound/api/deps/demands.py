@@ -567,6 +567,7 @@ def get_update_made_item_demand_use_case(
     demand_repo: IMadeItemDemandItemRepository = Depends(get_made_item_demand_repo),
     made_item_repo: IMadeItemQueries = Depends(get_made_item_repo),
     allocation_repo: IMadeItemAllocationRepository = Depends(get_made_item_allocation_repo),
+    recompute_schedule: RecomputeMachineSchedule = Depends(get_recompute_machine_schedule_use_case),
     uow: IUnitOfWork = Depends(get_unit_of_work),
     reconciler: LifecycleReconciler = Depends(get_lifecycle_reconciler),
 ) -> UpdateMadeItemDemandItem:
@@ -576,6 +577,7 @@ def get_update_made_item_demand_use_case(
         uow=uow,
         reconciler=reconciler,
         allocation_repo=allocation_repo,
+        recompute_schedule=recompute_schedule,
     )
 
 

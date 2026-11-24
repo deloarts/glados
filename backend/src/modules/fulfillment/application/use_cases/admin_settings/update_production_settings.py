@@ -88,6 +88,11 @@ class UpdateProductionSettings:
             if cmd.response_time_days is not None
             else current.response_time_days
         )
+        external_safety_margin_days = (
+            cmd.external_safety_margin_days
+            if cmd.external_safety_margin_days is not None
+            else current.external_safety_margin_days
+        )
         require_qa = cmd.require_qa if cmd.require_qa is not None else current.require_qa
         frozen_window_hours = (
             cmd.frozen_window_hours
@@ -140,6 +145,7 @@ class UpdateProductionSettings:
             default_weekly_hours=default_weekly_hours,
             default_external_lead_days=default_external_lead_days,
             response_time_days=response_time_days,
+            external_safety_margin_days=external_safety_margin_days,
             require_qa=require_qa,
             default_inspection_method_id=default_inspection_method_id,
             require_source_item_approval=require_source_item_approval,

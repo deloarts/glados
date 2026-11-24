@@ -2,6 +2,8 @@
 Edits a made item demand through the edit the demand families share
 (_demand_family/update_demand.py). A made item demand adds its alteration
 link: whether it is an alteration and of which made item, which must exist.
+Its desired delivery date is the target date of every lot allocated to it
+that has none of its own, so a changed date runs the schedule walk.
 """
 
 from src.modules.catalogue.domain.errors import MadeItemNotFoundError
@@ -19,6 +21,7 @@ from src.modules.fulfillment.ports.outbound.repositories.made_item_demand_reposi
 from src.modules.fulfillment.ports.outbound.repositories.made_item_demand_repository import (
     IMadeItemDemandItemRepository,
 )
+from src.modules.platform.application.services.schedule_recompute_port import ScheduleRecompute
 from src.modules.platform.ports.outbound.unit_of_work_port import IUnitOfWork
 
 
@@ -36,9 +39,14 @@ class UpdateDemandItem(
         uow: IUnitOfWork,
         reconciler: LifecycleReconciler,
         allocation_repo: IMadeItemAllocationRepository | None = None,
+        recompute_schedule: ScheduleRecompute | None = None,
     ) -> None:
         super().__init__(
-            demand_repo, uow=uow, reconciler=reconciler, allocation_repo=allocation_repo
+            demand_repo,
+            uow=uow,
+            reconciler=reconciler,
+            allocation_repo=allocation_repo,
+            recompute_schedule=recompute_schedule,
         )
         self._items = made_item_repo
 

@@ -12,7 +12,9 @@ demand is locked as the allocation writers lock it, so the quantity guard
 sees every committed allocation.
 
 A family's subclass binds `_spec` and `_demand_rules` and supplies the
-checks and fields it adds as hooks.
+checks and fields it adds as hooks. A family whose desired delivery date
+dates lots, the made item demands, passes the schedule recompute, which then
+runs after a changed date is committed.
 """
 
 from datetime import date
@@ -35,6 +37,10 @@ from src.modules.fulfillment.domain.services.quantity_edit_rules import (
 from src.modules.fulfillment.domain.services.quantity_edit_rules import quantity_changed
 from src.modules.platform.application.services.command_changelog import diff_command
 from src.modules.platform.application.services.lookup import found_or_raise
+from src.modules.platform.application.services.schedule_recompute_port import ScheduleRecompute
+from src.modules.platform.application.services.schedule_recompute_port import (
+    recompute_schedule_after_commit,
+)
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.domain.services.quantities import assert_whole_pieces
 from src.modules.platform.infrastructure.logging.logger import log
@@ -88,11 +94,13 @@ class UpdateDemand(Generic[CD, C, R]):
         uow: IUnitOfWork,
         reconciler: LifecycleReconciler,
         allocation_repo: AllocatedQuantityRepo | None = None,
+        recompute_schedule: ScheduleRecompute | None = None,
     ) -> None:
         self._demands = demand_repo
         self._uow = uow
         self._reconciler = reconciler
         self._allocations = allocation_repo
+        self._recompute = recompute_schedule
 
     async def execute(self, actor: User, demand_id: int, cmd: C) -> R:
         spec = self._spec
@@ -119,6 +127,7 @@ class UpdateDemand(Generic[CD, C, R]):
             )
 
         changelog_entry = diff_command(demand, cmd)
+        date_changed = demand.desired_delivery_date != cmd.desired_delivery_date
 
         demand.quantity = cmd.quantity
         demand.unit = cmd.unit
@@ -137,6 +146,11 @@ class UpdateDemand(Generic[CD, C, R]):
         if result.changed_ids(spec.aggregate):
             saved = await self._demands.get_by_id(saved.id) or saved
         await self._uow.commit()
+        if date_changed:
+            await recompute_schedule_after_commit(
+                self._recompute,
+                after=f"changing the desired date of demand #{saved.id}; the edit is committed.",
+            )
         log.info("Updated demand #%s.", saved.id)
         return spec.to_result(saved)
 

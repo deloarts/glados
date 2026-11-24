@@ -18,6 +18,7 @@ from src.modules.fulfillment.ports.outbound.repositories.production_order_reposi
 )
 from src.modules.platform.adapters.outbound.persistence.pagination import clamp_page
 from src.modules.platform.const import SERVER_DEFAULT_TIMEZONE
+from tests.unit._external_work import external_work_lot_ids
 
 # The tenant's default timezone FakeSettingsRepo reports, the seeded one.
 TENANT_TIMEZONE = SERVER_DEFAULT_TIMEZONE
@@ -126,6 +127,9 @@ class FakeLotRepo:
     async def get_by_id(self, id: int) -> ProductionLot | None:
         return self.lots.get(id)
 
+    async def get_ids_with_external_work(self) -> list[int]:
+        return external_work_lot_ids(self.lots.values())
+
     async def get_by_ids(self, ids: list[int], *, refresh: bool = False) -> list:
         found = [await self.get_by_id(i) for i in ids]
         return [item for item in found if item is not None]
@@ -153,6 +157,8 @@ class FakeLotRepo:
             if position is not None:
                 position.planned_pickup_date = forecast.planned_pickup_date
                 position.planned_delivery_date = forecast.planned_delivery_date
+                position.latest_pickup_date = forecast.latest_pickup_date
+                position.latest_delivery_date = forecast.latest_delivery_date
 
 
 class FakeEmptyRepo:

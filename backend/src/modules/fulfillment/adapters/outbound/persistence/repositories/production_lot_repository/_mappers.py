@@ -165,6 +165,8 @@ def position_orm_to_entity(orm: LotPositionOrmModel) -> LotPosition:
         steps=[step_orm_to_entity(s) for s in sorted(orm.steps, key=lambda s: s.sequence)],
         planned_pickup_date=orm.planned_pickup_date,
         planned_delivery_date=orm.planned_delivery_date,
+        latest_pickup_date=orm.latest_pickup_date,
+        latest_delivery_date=orm.latest_delivery_date,
     )
 
 
@@ -183,6 +185,8 @@ def position_entity_to_dict(position: LotPosition) -> dict[str, Any]:
         "lot_id": position.lot_id,
         "planned_pickup_date": position.planned_pickup_date,
         "planned_delivery_date": position.planned_delivery_date,
+        "latest_pickup_date": position.latest_pickup_date,
+        "latest_delivery_date": position.latest_delivery_date,
     }
 
 

@@ -53,6 +53,7 @@ from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import (
     bought_items_demand_buckets,
 )
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import dashboard
+from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import external_work
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import made_items_allocations
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import made_items_demand
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import made_items_demand_buckets
@@ -431,6 +432,11 @@ router.include_router(
     quote_requests.router,
     prefix=f"{API_WEB}/quote-requests",
     tags=["web/quote-requests"],
+)
+router.include_router(
+    external_work.router,
+    prefix=f"{API_WEB}/external-work",
+    tags=["web/external-work"],
 )
 router.include_router(
     quote_request_files.router,

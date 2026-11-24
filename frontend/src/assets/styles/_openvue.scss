@@ -369,6 +369,15 @@
   }
 }
 
+// A tooltip that spells out a calculation, one term per line, such as how a
+// date of the external work list comes about: as wide as its longest line
+// instead of the theme's narrow maximum, so a term only wraps on a screen
+// too narrow for it.
+.p-tooltip.tooltip-calculation {
+  width: max-content;
+  max-width: min(40rem, calc(100vw - 2rem));
+}
+
 // ControlsBar's Actions menu on a phone: one action per full-width row,
 // labels from the left, and no vertical dividers between the rows. A button
 // wrapped in a tooltip span or a SplitButton fills its row the same way.

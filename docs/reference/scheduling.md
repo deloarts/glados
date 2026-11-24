@@ -6,6 +6,7 @@ The exact behaviour of the schedule walk and of Auto-Plan: how an order's window
   - [1.1 where an order starts](#11-where-an-order-starts)
   - [1.2 running orders and kept windows](#12-running-orders-and-kept-windows)
   - [1.3 machines without working time](#13-machines-without-working-time)
+  - [1.4 external work](#14-external-work)
 - [2 passes and chain cycles](#2-passes-and-chain-cycles)
 - [3 when the walk runs](#3-when-the-walk-runs)
 - [4 Auto-Plan](#4-auto-plan)
@@ -47,6 +48,18 @@ The walk lives in `src/modules/fulfillment/domain/services/scheduling/` and plac
 - Every walk, Auto-Plan's included, cuts open and upcoming downtimes out of the machine calendars.
 - An open downtime blocks the rest of the local day from its start, so one reported ahead blocks its own day and marks the machine down only once it begins.
 
+### 1.4 external work
+
+The rules live in `domain/services/scheduling/external_work.py`, and the production lot repository mirrors which positions count in SQL.
+
+- External work is an open position that is `EXTERNAL` or `MIXED`, or `UNASSIGNED` with a fabrication step whose method is usually outsourced (`required_external`).
+- Every walk forecasts each position of external work of a lot that is not terminal, also when no production order exists at all, by walking the lot's whole chain of open positions as an order's predecessors are walked. A position no later order reads, such as the last one of a lot, gets its forecast that way.
+- The forecast pickup (`planned_pickup_date`) is the ready date of the chain before the position, or the raw material's for the first position, plus `response_time_days`. The forecast delivery (`planned_delivery_date`) is pickup plus the position's lead days, the supplier's when it has a line, else the sum of its methods' lead times with `default_external_lead_days` for a method without one.
+- An outsourced `UNASSIGNED` position is forecast for display only. It contributes nothing to the chain, so the orders after it stay undated as before.
+- The latest pickup (`latest_pickup_date`) counts back from the lot's target date less `external_safety_margin_days`, the way Auto-Plan dates its positions: a position done in house takes its remaining minutes in days of 480 minutes, at least one, and an external one its lead days, all in calendar days and without waiting at the machines. An external position must be back when the position after it has to start and leaves its lead days before that.
+- A position's remaining minutes are its active orders' estimates, or without any its steps' setup plus their minutes per piece for the pieces not done yet.
+- A lot without a target date gives its external work no latest pickup.
+
 ## 2 passes and chain cycles
 
 - One pass of the walk reads the readiness of earlier positions from before the walk, so the walk repeats until no readiness changes (`schedule_all_propagated`).
@@ -60,7 +73,7 @@ The walk lives in `src/modules/fulfillment/domain/services/scheduling/` and plac
 ## 3 when the walk runs
 
 - A write that can move a planned date requests a walk of the whole schedule after its commit (`recompute_schedule_after_commit`).
-- Besides the order, lot and line writers, these writes are the machine calendars, working hours, exceptions and downtimes, tenant holidays, the production and general settings, machine pools, a machine's update, archive and restore, a lot step's delete and reorder, a position regroup, a supplier or fabrication method change (their lead times date external steps) and a line moved to another supplier.
+- Besides the order, lot and line writers, these writes are the machine calendars, working hours, exceptions and downtimes, tenant holidays, the production and general settings, machine pools, a machine's update, archive and restore, a lot step's delete and reorder, a position regroup, a supplier or fabrication method change (their lead times date external steps), a line moved to another supplier and a changed desired date of a made item demand (it is the target date of the lots allocated to it that have none).
 - In the app the request only draws a coalescing generation and stages a `ScheduleRecomputeRequested` event (`RecomputeMachineSchedule` built with `defer`).
 - The `schedule` event worker walks on a fresh session, skipping a walk that a concurrent one already covered.
 - A tick in every worker walks every 15 minutes and right after tenant midnight too (`schedule_tick.py`).
