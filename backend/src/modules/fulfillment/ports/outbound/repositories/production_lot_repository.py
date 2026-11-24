@@ -30,6 +30,8 @@ class ExternalWorkFilterDto:
     limit: int | None = None
     search: str | None = None
     fabrication_method_id: int | None = None
+    # Any of these methods, for the infoscreen widget.
+    fabrication_method_ids: list[int] | None = None
     # The supplier of the live line, or for a position without one the
     # default supplier of its outsourced method.
     supplier_id: int | None = None

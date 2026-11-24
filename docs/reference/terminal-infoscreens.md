@@ -39,7 +39,7 @@ The settings, bars and widgets of an infoscreen, everything its feed carries and
 
 ## 3 widgets and permissions
 
-- The widgets are `machine_board`, `machine_detail`, `lots_due`, `late_lots`, `qa_queue`, `deliveries_expected`, `products`, `projects`, `weather`, `message` and `clock`.
+- The widgets are `machine_board`, `machine_detail`, `lots_due`, `late_lots`, `qa_queue`, `deliveries_expected`, `external_work`, `products`, `projects`, `weather`, `message` and `clock`.
 - An order card shows the lot number, the part number and the article name, one per line, and no times; the feed's order cards carry no planned start or end.
 - Reading screens and the preview needs no permission beyond being signed in.
 - Creating, editing, archiving and restoring need `write:infoscreens`.
@@ -73,6 +73,7 @@ The settings, bars and widgets of an infoscreen, everything its feed carries and
 | `qa_queue` | Open inspection orders, as on the QA worklist. |
 | `machine_detail` | One machine (`machine_id`, required): its state, the order on it now (running or paused), or the next in queue when none is, with the made item, its full-size picture, its drawing when `show_drawing` is on, its revision, material, mass, base size, quantities and routing step, the item's source or bought item with the lot's input demand status and expected delivery, and the order's own lot; then the next `next_count` (0 to 5) orders as cards. No lot times. An archived or missing machine answers with `machine_name` null. |
 | `deliveries_expected` | Open ordered supplier lines expected from today to the horizon, oldest first, and with `show_overdue` also the open lines expected before today, each with its days late; the display groups them by day and highlights today. |
+| `external_work` | The parts that still have to leave for a supplier for an outside process, as the procurement list of external work dates them (`GetExternalWork`, through Planning & fulfillment's `application/facade/external_work.py`): latest pickup from today to `horizon_days` (0 to 30, default 7) ahead, and with `show_overdue` (default on) also the ones whose latest pickup has passed, each with its days late. Parts already handed to the supplier have left and are not shown. Optionally only the methods in `fabrication_method_ids` and, with `only_with_supplier`, only parts on an order. Each row carries the lot, the item, the quantity, the methods in the screen's language, the supplier or the methods' default supplier as a suggestion, the ready date, the latest pickup, the day it is due back and the alert. `layout` is `days` (default), grouped by the latest pickup, or `suppliers`, one lane per supplier with its next send-out day and how many parts are ready; the display groups the rows itself. |
 | `products` | Live products marked active, by product number, and with `show_projects` the projects in status `active` on each. |
 | `projects` | Projects in status `active`, by project number, with their product. |
 | `weather` | The forecast for the widget's town from the weather service (section 4.6), with `status` `ok`, `unavailable` or `off`. |

@@ -35,6 +35,10 @@ from src.modules.catalogue.domain.value_objects.step_role import StepRole
 from src.modules.catalogue.ports.outbound.catalogue_queries import IItemPictureQueries
 from src.modules.catalogue.ports.outbound.catalogue_queries import IMadeItemFileQueries
 from src.modules.catalogue.ports.outbound.catalogue_queries import IMadeItemQueries
+from src.modules.fulfillment.application.facade.external_work import ExternalWorkAlert
+from src.modules.fulfillment.application.facade.external_work import ExternalWorkQuery
+from src.modules.fulfillment.application.facade.external_work import ExternalWorkStage
+from src.modules.fulfillment.application.facade.external_work import GetExternalWork
 from src.modules.fulfillment.application.facade.scheduling import IMachineCalendarRepository
 from src.modules.fulfillment.application.facade.scheduling import IMachinePoolRepository
 from src.modules.fulfillment.application.facade.scheduling import IProductionMachineRepository
@@ -65,7 +69,9 @@ from src.modules.operations.application.dto.infoscreen_dto import ThemePreset
 from src.modules.operations.application.dto.infoscreen_dto import VerticalAlign
 from src.modules.operations.application.dto.infoscreen_feed_dto import ClockWidgetData
 from src.modules.operations.application.dto.infoscreen_feed_dto import DeliveriesExpectedWidgetData
+from src.modules.operations.application.dto.infoscreen_feed_dto import ExternalWorkWidgetData
 from src.modules.operations.application.dto.infoscreen_feed_dto import InfoscreenDeliveryRow
+from src.modules.operations.application.dto.infoscreen_feed_dto import InfoscreenExternalWorkRow
 from src.modules.operations.application.dto.infoscreen_feed_dto import InfoscreenFeedBanner
 from src.modules.operations.application.dto.infoscreen_feed_dto import InfoscreenFeedResult
 from src.modules.operations.application.dto.infoscreen_feed_dto import InfoscreenFeedScreen
@@ -100,6 +106,7 @@ from src.modules.operations.domain.entities.infoscreen import Infoscreen
 from src.modules.operations.domain.errors import WeatherUnavailableError
 from src.modules.operations.domain.value_objects.infoscreen import ClockWidget
 from src.modules.operations.domain.value_objects.infoscreen import DeliveriesExpectedWidget
+from src.modules.operations.domain.value_objects.infoscreen import ExternalWorkWidget
 from src.modules.operations.domain.value_objects.infoscreen import InfoscreenWidget
 from src.modules.operations.domain.value_objects.infoscreen import LateLotsWidget
 from src.modules.operations.domain.value_objects.infoscreen import LotsDueWidget
@@ -117,6 +124,7 @@ from src.modules.operations.ports.outbound.weather_port import IWeatherService
 from src.modules.operations.ports.outbound.weather_port import WeatherClientContact
 from src.modules.platform.application.services.tenant_timezone import tenant_zone
 from src.modules.platform.const import VERSION
+from src.modules.platform.domain.value_objects.localized_text import LocalizedText
 from src.modules.quality.domain.policies.production_kpi import is_lot_late
 from src.modules.quality.ports.outbound.quality_queries import IProductionKpiQueries
 from src.modules.quality.ports.outbound.quality_queries import KpiScope
@@ -135,6 +143,16 @@ _MAX_LOT_ROWS = 50
 _MAX_DUE_LOTS_READ = 500
 _MAX_QA_ROWS = 50
 _MAX_DELIVERY_ROWS = 50
+# A screen shows a few dozen rows at most.
+_MAX_EXTERNAL_WORK_ROWS = 60
+# The stages of parts still in the house; handed over ones have left.
+_EXTERNAL_WORK_NOT_SENT = (
+    ExternalWorkStage.UNASSIGNED,
+    ExternalWorkStage.PENDING,
+    ExternalWorkStage.REQUESTED,
+    ExternalWorkStage.ORDERED,
+)
+_EXTERNAL_WORK_ALERTS = (ExternalWorkAlert.NOT_READY_IN_TIME, ExternalWorkAlert.OVERDUE)
 _MAX_DELIVERY_ORDERS = 200
 _MAX_PRODUCTS = 100
 _MAX_PROJECTS = 200
@@ -235,6 +253,7 @@ class BuildInfoscreenFeed:
         made_item_repo: IMadeItemQueries,
         made_item_file_repo: IMadeItemFileQueries,
         weather: IWeatherService,
+        external_work: GetExternalWork,
     ) -> None:
         self._repos = repos
         self._machines = machine_repo
@@ -251,6 +270,7 @@ class BuildInfoscreenFeed:
         self._made_items = made_item_repo
         self._made_item_files = made_item_file_repo
         self._weather = weather
+        self._external_work_list = external_work
 
     async def execute(self, infoscreen: Infoscreen) -> InfoscreenFeedResult:
         now = now_utc()
@@ -336,6 +356,8 @@ class BuildInfoscreenFeed:
                 return await self._projects_data(widget)
             case MachineDetailWidget():
                 return await self._machine_detail(widget, ctx)
+            case ExternalWorkWidget():
+                return await self._external_work(widget, ctx)
 
     # ── Machine board ─────────────────────────────────────────────────
 
@@ -616,6 +638,59 @@ class BuildInfoscreenFeed:
                 )
             )
         return DeliveriesExpectedWidgetData(deliveries=rows)
+
+    # ── External work ─────────────────────────────────────────────────
+
+    async def _external_work(
+        self, widget: ExternalWorkWidget, ctx: _FeedContext
+    ) -> ExternalWorkWidgetData:
+        """The parts that must leave for a supplier from today to the
+        horizon, with the overdue ones before them when the widget asks for
+        them, as the procurement list of external work dates them. Parts
+        already handed to the supplier have left and are not shown."""
+        today = ctx.today
+        page = await self._external_work_list.execute(
+            ExternalWorkQuery(
+                limit=_MAX_EXTERNAL_WORK_ROWS,
+                latest_pickup_from=None if widget.show_overdue else today,
+                latest_pickup_to=today + timedelta(days=widget.horizon_days),
+                stages=list(_EXTERNAL_WORK_NOT_SENT),
+                fabrication_method_ids=list(widget.fabrication_method_ids) or None,
+                only_with_supplier=widget.only_with_supplier,
+            )
+        )
+        await ctx.links.prefetch(ItemKind.MADE, [row.made_item_id for row in page.items])
+        rows: list[InfoscreenExternalWorkRow] = []
+        for row in page.items:
+            on_order = row.order_item_id is not None
+            alert = row.alert.value if row.alert in _EXTERNAL_WORK_ALERTS else None
+            rows.append(
+                InfoscreenExternalWorkRow(
+                    lot_number=row.lot_number,
+                    part_number=row.part_number or None,
+                    item_name=row.article_name or None,
+                    quantity=row.quantity,
+                    methods=[
+                        LocalizedText.of(method.name).resolve(ctx.language, ctx.default_language)
+                        for method in row.fabrication_methods
+                    ],
+                    supplier_name=(row.supplier_name if on_order else row.suggested_supplier_name)
+                    or None,
+                    supplier_suggested=not on_order,
+                    latest_pickup_date=row.latest_pickup_date,
+                    ready_from=None if row.ready_now else row.planned_pickup_date,
+                    ready_now=row.ready_now,
+                    due_back_date=row.back_by_date,
+                    alert=cast(Literal["not_ready_in_time", "overdue"] | None, alert),
+                    days_late=(
+                        rules.days_overdue(row.latest_pickup_date, today)
+                        if row.latest_pickup_date is not None
+                        else None
+                    ),
+                    thumbnail_url=ctx.links.url(ItemKind.MADE, row.made_item_id),
+                )
+            )
+        return ExternalWorkWidgetData(rows=rows)
 
     # ── Weather ───────────────────────────────────────────────────────
 

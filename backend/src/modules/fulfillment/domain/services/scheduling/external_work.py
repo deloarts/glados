@@ -22,9 +22,10 @@ from src.modules.fulfillment.domain.services.scheduling.walk_context import Pred
 from src.modules.fulfillment.domain.services.scheduling.walk_context import (
     resolve_chain_external_forecasts,
 )
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkAlert
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkStage
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
-from src.shared_kernel.domain.value_objects.value_enum import StrValueEnum
 
 # A completed or canceled position sends nothing to a supplier any more.
 _CLOSED_POSITION_STATUSES = frozenset({LotPositionStatus.COMPLETED, LotPositionStatus.CANCELED})
@@ -134,29 +135,6 @@ def forecast_external_work(
     return forecasts
 
 
-class ExternalWorkStage(StrValueEnum):
-    """Where a position of external work stands with its supplier, as the
-    procurement list filters it. Pieces handed over put it at the supplier
-    until some come back."""
-
-    UNASSIGNED = "unassigned"
-    PENDING = "pending"
-    REQUESTED = "requested"
-    ORDERED = "ordered"
-    AT_SUPPLIER = "at_supplier"
-    PARTIALLY_BACK = "partially_back"
-
-
-class ExternalWorkAlert(StrValueEnum):
-    """Why a position of external work needs attention in the procurement
-    list. NOT_READY_IN_TIME and OVERDUE are critical, NO_TARGET_DATE only
-    explains a missing latest pickup."""
-
-    NOT_READY_IN_TIME = "not_ready_in_time"
-    OVERDUE = "overdue"
-    NO_TARGET_DATE = "no_target_date"
-
-
 def inputs_ready(position: LotPosition, lot: ProductionLot) -> bool:
     """Whether the pieces of the position are already there to go out:
     every earlier position of the lot is closed, or for the first position
@@ -185,3 +163,16 @@ def external_work_alert(
     if not ready_now and ready_from is not None and ready_from > latest:
         return ExternalWorkAlert.NOT_READY_IN_TIME
     return None
+
+
+__all__ = [
+    "ExternalWorkAlert",
+    "ExternalWorkChain",
+    "ExternalWorkStage",
+    "external_work_alert",
+    "forecast_external_work",
+    "inputs_ready",
+    "is_outsourced_unassigned",
+    "latest_pickup_dates",
+    "position_has_external_work",
+]

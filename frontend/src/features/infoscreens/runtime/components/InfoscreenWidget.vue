@@ -11,6 +11,7 @@ import type {
 } from '../types/infoscreenFeed'
 import ClockWidget from './widgets/ClockWidget.vue'
 import DeliveriesExpectedWidget from './widgets/DeliveriesExpectedWidget.vue'
+import ExternalWorkWidget from './widgets/ExternalWorkWidget.vue'
 import LateLotsWidget from './widgets/LateLotsWidget.vue'
 import LotsDueWidget from './widgets/LotsDueWidget.vue'
 import MachineBoardWidget from './widgets/MachineBoardWidget.vue'
@@ -59,6 +60,11 @@ const messageConfig = computed(() => (props.config?.type === 'message' ? props.c
   <QaQueueWidget v-else-if="pair?.type === 'qa_queue'" :config="pair.config" :data="pair.data" />
   <DeliveriesExpectedWidget
     v-else-if="pair?.type === 'deliveries_expected'"
+    :config="pair.config"
+    :data="pair.data"
+  />
+  <ExternalWorkWidget
+    v-else-if="pair?.type === 'external_work'"
     :config="pair.config"
     :data="pair.data"
   />

@@ -14057,6 +14057,89 @@
         "title": "ExternalWorkStage",
         "type": "string"
       },
+      "ExternalWorkWidgetConfig": {
+        "properties": {
+          "fabrication_method_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Fabrication Method Ids",
+            "type": "array"
+          },
+          "horizon_days": {
+            "default": 7,
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "layout": {
+            "default": "days",
+            "enum": [
+              "days",
+              "suppliers"
+            ],
+            "title": "Layout",
+            "type": "string"
+          },
+          "only_with_supplier": {
+            "default": false,
+            "title": "Only With Supplier",
+            "type": "boolean"
+          },
+          "show_overdue": {
+            "default": true,
+            "title": "Show Overdue",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "const": "external_work",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExternalWorkWidgetConfig",
+        "type": "object"
+      },
+      "ExternalWorkWidgetData": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/InfoscreenExternalWorkRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "type": {
+            "const": "external_work",
+            "default": "external_work",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rows"
+        ],
+        "title": "ExternalWorkWidgetData",
+        "type": "object"
+      },
       "ExtraCostKind": {
         "enum": [
           "shipping",
@@ -15685,6 +15768,158 @@
         "title": "InfoscreenDisplayWindow",
         "type": "object"
       },
+      "InfoscreenExternalWorkRow": {
+        "description": "A part that goes to a supplier for an outside process. No persons\nand no customer: the lot, the item, the methods and a company.",
+        "properties": {
+          "alert": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_ready_in_time",
+                  "overdue"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert"
+          },
+          "days_late": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Late"
+          },
+          "due_back_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Back Date"
+          },
+          "item_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Name"
+          },
+          "latest_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Pickup Date"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Methods",
+            "type": "array"
+          },
+          "part_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Part Number"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "number"
+          },
+          "ready_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready From"
+          },
+          "ready_now": {
+            "title": "Ready Now",
+            "type": "boolean"
+          },
+          "supplier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier Name"
+          },
+          "supplier_suggested": {
+            "title": "Supplier Suggested",
+            "type": "boolean"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          }
+        },
+        "required": [
+          "lot_number",
+          "part_number",
+          "item_name",
+          "quantity",
+          "methods",
+          "supplier_name",
+          "supplier_suggested",
+          "latest_pickup_date",
+          "ready_from",
+          "ready_now",
+          "due_back_date",
+          "alert",
+          "days_late",
+          "thumbnail_url"
+        ],
+        "title": "InfoscreenExternalWorkRow",
+        "type": "object"
+      },
       "InfoscreenFeedBanner": {
         "properties": {
           "severity": {
@@ -15764,6 +15999,7 @@
                       "mapping": {
                         "clock": "#/components/schemas/ClockWidgetData",
                         "deliveries_expected": "#/components/schemas/DeliveriesExpectedWidgetData",
+                        "external_work": "#/components/schemas/ExternalWorkWidgetData",
                         "late_lots": "#/components/schemas/LateLotsWidgetData",
                         "lots_due": "#/components/schemas/LotsDueWidgetData",
                         "machine_board": "#/components/schemas/MachineBoardWidgetData",
@@ -15809,6 +16045,9 @@
                       },
                       {
                         "$ref": "#/components/schemas/MachineDetailWidgetData"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ExternalWorkWidgetData"
                       }
                     ]
                   },
@@ -16407,6 +16646,7 @@
                     "mapping": {
                       "clock": "#/components/schemas/ClockWidgetConfig",
                       "deliveries_expected": "#/components/schemas/DeliveriesExpectedWidgetConfig",
+                      "external_work": "#/components/schemas/ExternalWorkWidgetConfig",
                       "late_lots": "#/components/schemas/LateLotsWidgetConfig",
                       "lots_due": "#/components/schemas/LotsDueWidgetConfig",
                       "machine_board": "#/components/schemas/MachineBoardWidgetConfig",
@@ -16452,6 +16692,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/MachineDetailWidgetConfig"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExternalWorkWidgetConfig"
                     }
                   ]
                 },

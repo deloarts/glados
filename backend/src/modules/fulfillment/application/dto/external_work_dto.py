@@ -5,12 +5,12 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkAlert
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkStage
 from src.modules.fulfillment.domain.services.scheduling.external_work_explanation import (
     DateTermKind,
 )
 from src.modules.fulfillment.domain.services.scheduling.walk_context import LeadDaysSource
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkAlert
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkStage
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
 from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
@@ -107,6 +107,7 @@ class ExternalWorkQuery(ResultModel):
     limit: int | None = None
     search: str | None = None
     fabrication_method_id: int | None = None
+    fabrication_method_ids: list[int] | None = None
     supplier_id: int | None = None
     part: str | None = None
     lot_ids: list[int] | None = None

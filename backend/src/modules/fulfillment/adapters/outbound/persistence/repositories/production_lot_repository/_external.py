@@ -45,8 +45,8 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories.producti
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
     _live_lot,
 )
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkAlert
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkStage
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkAlert
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkStage
 from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
 from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
     ExternalWorkFilterDto,
@@ -173,6 +173,13 @@ def _filtered(filters: ExternalWorkFilterDto) -> Select[tuple[int, int]]:
             exists().where(
                 LotStepOrmModel.position_id == _lp.id,
                 LotStepOrmModel.fabrication_method_id == filters.fabrication_method_id,
+            )
+        )
+    if filters.fabrication_method_ids:
+        query = query.where(
+            exists().where(
+                LotStepOrmModel.position_id == _lp.id,
+                LotStepOrmModel.fabrication_method_id.in_(filters.fabrication_method_ids),
             )
         )
     if filters.supplier_id is not None:

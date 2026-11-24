@@ -34,6 +34,7 @@ export const WIDGET_TYPES: InfoscreenWidgetType[] = [
   'late_lots',
   'qa_queue',
   'deliveries_expected',
+  'external_work',
   'machine_detail',
   'products',
   'projects',
@@ -67,6 +68,9 @@ export const ROTATION_SECONDS = { min: 10, max: 600, default: 30 } as const
 export const NEXT_COUNT = { min: 1, max: 10, default: 3 } as const
 export const LOTS_DUE_HORIZON_DAYS = { min: 1, max: 60, default: 7 } as const
 export const DELIVERIES_HORIZON_DAYS = { min: 0, max: 30, default: 0 } as const
+export const EXTERNAL_WORK_HORIZON_DAYS = { min: 0, max: 30, default: 7 } as const
+/** How the external work widget lays its parts out: by day or a lane per supplier. */
+export const EXTERNAL_WORK_LAYOUTS = ['days', 'suppliers'] as const
 export const DETAIL_NEXT_COUNT = { min: 0, max: 5, default: 3 } as const
 export const WEATHER_DAYS = { min: 0, max: 7, default: 3 } as const
 
@@ -93,6 +97,16 @@ export function defaultWidget(type: InfoscreenWidgetType): InfoscreenWidgetConfi
         title: null,
         horizon_days: DELIVERIES_HORIZON_DAYS.default,
         show_overdue: false,
+      }
+    case 'external_work':
+      return {
+        type,
+        title: null,
+        horizon_days: EXTERNAL_WORK_HORIZON_DAYS.default,
+        show_overdue: true,
+        fabrication_method_ids: [],
+        only_with_supplier: false,
+        layout: 'days',
       }
     case 'machine_detail':
       // No machine yet; the widget is incomplete until one is picked.

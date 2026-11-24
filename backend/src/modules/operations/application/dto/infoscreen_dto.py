@@ -20,6 +20,8 @@ from src.modules.operations.domain.value_objects.infoscreen import DELIVERIES_HO
 from src.modules.operations.domain.value_objects.infoscreen import DELIVERIES_HORIZON_MIN
 from src.modules.operations.domain.value_objects.infoscreen import DETAIL_NEXT_COUNT_MAX
 from src.modules.operations.domain.value_objects.infoscreen import DETAIL_NEXT_COUNT_MIN
+from src.modules.operations.domain.value_objects.infoscreen import EXTERNAL_WORK_HORIZON_MAX
+from src.modules.operations.domain.value_objects.infoscreen import EXTERNAL_WORK_HORIZON_MIN
 from src.modules.operations.domain.value_objects.infoscreen import LOTS_HORIZON_MAX
 from src.modules.operations.domain.value_objects.infoscreen import LOTS_HORIZON_MIN
 from src.modules.operations.domain.value_objects.infoscreen import MAX_BAR_TEXT_LENGTH
@@ -105,6 +107,16 @@ class DeliveriesExpectedWidgetConfig(BaseModel):
     show_overdue: bool = False
 
 
+class ExternalWorkWidgetConfig(BaseModel):
+    type: Literal["external_work"]
+    title: str | None = _title()
+    horizon_days: int = Field(default=7, ge=EXTERNAL_WORK_HORIZON_MIN, le=EXTERNAL_WORK_HORIZON_MAX)
+    show_overdue: bool = True
+    fabrication_method_ids: list[int] = _ids()
+    only_with_supplier: bool = False
+    layout: Literal["days", "suppliers"] = "days"
+
+
 class MessageWidgetConfig(BaseModel):
     """A text the screen shows as Markdown, stored as typed."""
 
@@ -173,7 +185,8 @@ InfoscreenWidgetConfig = Annotated[
     | WeatherWidgetConfig
     | ProductsWidgetConfig
     | ProjectsWidgetConfig
-    | MachineDetailWidgetConfig,
+    | MachineDetailWidgetConfig
+    | ExternalWorkWidgetConfig,
     Field(discriminator="type"),
 ]
 

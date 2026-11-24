@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T09:11:25.921Z
+ * Generated: 2026-11-24T09:58:29.754Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -16333,6 +16333,49 @@ export interface components {
          * @enum {string}
          */
         ExternalWorkStage: "unassigned" | "pending" | "requested" | "ordered" | "at_supplier" | "partially_back";
+        /** ExternalWorkWidgetConfig */
+        ExternalWorkWidgetConfig: {
+            /** Fabrication Method Ids */
+            fabrication_method_ids?: number[];
+            /**
+             * Horizon Days
+             * @default 7
+             */
+            horizon_days: number;
+            /**
+             * Layout
+             * @default days
+             * @enum {string}
+             */
+            layout: "days" | "suppliers";
+            /**
+             * Only With Supplier
+             * @default false
+             */
+            only_with_supplier: boolean;
+            /**
+             * Show Overdue
+             * @default true
+             */
+            show_overdue: boolean;
+            /** Title */
+            title?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "external_work";
+        };
+        /** ExternalWorkWidgetData */
+        ExternalWorkWidgetData: {
+            /** Rows */
+            rows: components["schemas"]["InfoscreenExternalWorkRow"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "external_work";
+        };
         /**
          * ExtraCostKind
          * @enum {string}
@@ -16957,6 +17000,41 @@ export interface components {
             /** Start */
             start: string;
         };
+        /**
+         * InfoscreenExternalWorkRow
+         * @description A part that goes to a supplier for an outside process. No persons
+         *     and no customer: the lot, the item, the methods and a company.
+         */
+        InfoscreenExternalWorkRow: {
+            /** Alert */
+            alert: ("not_ready_in_time" | "overdue") | null;
+            /** Days Late */
+            days_late: number | null;
+            /** Due Back Date */
+            due_back_date: string | null;
+            /** Item Name */
+            item_name: string | null;
+            /** Latest Pickup Date */
+            latest_pickup_date: string | null;
+            /** Lot Number */
+            lot_number: string;
+            /** Methods */
+            methods: string[];
+            /** Part Number */
+            part_number: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Ready From */
+            ready_from: string | null;
+            /** Ready Now */
+            ready_now: boolean;
+            /** Supplier Name */
+            supplier_name: string | null;
+            /** Supplier Suggested */
+            supplier_suggested: boolean;
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+        };
         /** InfoscreenFeedBanner */
         InfoscreenFeedBanner: {
             /** Severity */
@@ -16984,7 +17062,7 @@ export interface components {
             /** Timezone */
             timezone: string;
             /** Widgets */
-            widgets: ((components["schemas"]["MachineBoardWidgetData"] | components["schemas"]["LotsDueWidgetData"] | components["schemas"]["LateLotsWidgetData"] | components["schemas"]["QaQueueWidgetData"] | components["schemas"]["DeliveriesExpectedWidgetData"] | components["schemas"]["MessageWidgetData"] | components["schemas"]["ClockWidgetData"] | components["schemas"]["WeatherWidgetData"] | components["schemas"]["ProductsWidgetData"] | components["schemas"]["ProjectsWidgetData"] | components["schemas"]["MachineDetailWidgetData"]) | null)[][];
+            widgets: ((components["schemas"]["MachineBoardWidgetData"] | components["schemas"]["LotsDueWidgetData"] | components["schemas"]["LateLotsWidgetData"] | components["schemas"]["QaQueueWidgetData"] | components["schemas"]["DeliveriesExpectedWidgetData"] | components["schemas"]["MessageWidgetData"] | components["schemas"]["ClockWidgetData"] | components["schemas"]["WeatherWidgetData"] | components["schemas"]["ProductsWidgetData"] | components["schemas"]["ProjectsWidgetData"] | components["schemas"]["MachineDetailWidgetData"] | components["schemas"]["ExternalWorkWidgetData"]) | null)[][];
         };
         /** InfoscreenFeedScreen */
         InfoscreenFeedScreen: {
@@ -17132,7 +17210,7 @@ export interface components {
              */
             layout: "full" | "two_columns" | "main_side" | "grid_2x2" | "two_rows" | "three_rows" | "grid_2x3" | "grid_3x2";
             /** Slots */
-            slots: ((components["schemas"]["MachineBoardWidgetConfig"] | components["schemas"]["LotsDueWidgetConfig"] | components["schemas"]["LateLotsWidgetConfig"] | components["schemas"]["QaQueueWidgetConfig"] | components["schemas"]["DeliveriesExpectedWidgetConfig"] | components["schemas"]["MessageWidgetConfig"] | components["schemas"]["ClockWidgetConfig"] | components["schemas"]["WeatherWidgetConfig"] | components["schemas"]["ProductsWidgetConfig"] | components["schemas"]["ProjectsWidgetConfig"] | components["schemas"]["MachineDetailWidgetConfig"]) | null)[];
+            slots: ((components["schemas"]["MachineBoardWidgetConfig"] | components["schemas"]["LotsDueWidgetConfig"] | components["schemas"]["LateLotsWidgetConfig"] | components["schemas"]["QaQueueWidgetConfig"] | components["schemas"]["DeliveriesExpectedWidgetConfig"] | components["schemas"]["MessageWidgetConfig"] | components["schemas"]["ClockWidgetConfig"] | components["schemas"]["WeatherWidgetConfig"] | components["schemas"]["ProductsWidgetConfig"] | components["schemas"]["ProjectsWidgetConfig"] | components["schemas"]["MachineDetailWidgetConfig"] | components["schemas"]["ExternalWorkWidgetConfig"]) | null)[];
         };
         /** InfoscreenProductRow */
         InfoscreenProductRow: {

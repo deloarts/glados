@@ -6,8 +6,8 @@ from datetime import date
 from fastapi import Query
 
 from src.modules.fulfillment.application.dto.external_work_dto import ExternalWorkQuery
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkAlert
-from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkStage
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkAlert
+from src.modules.fulfillment.domain.value_objects.external_work import ExternalWorkStage
 from src.modules.platform.adapters.inbound.api.schemas.pagination_schema import PageParams
 
 

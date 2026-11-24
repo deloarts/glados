@@ -41,6 +41,9 @@ from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.lot_step import LotStep
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
+from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
+    ExternalWorkFilterDto,
+)
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.domain.value_objects.permission import Permission
 from src.modules.workspace.adapters.outbound.persistence.repositories.project_repository import (
@@ -370,3 +373,22 @@ async def test_the_product_filter_keeps_only_lots_of_that_product(scenario) -> N
     body = (await scenario["client"].get(f"{BASE}/", params={"product_ids": [999]})).json()
 
     assert body["items"] == []
+
+
+async def test_the_repository_filters_by_any_of_several_methods(scenario, db: Session) -> None:
+    """The infoscreen widget narrows to several methods at once."""
+    repo = SqlAlchemyProductionLotRepository(db)
+    methods = scenario["methods"]
+
+    _, both = await repo.get_external_work_page(
+        ExternalWorkFilterDto(
+            today=date(2030, 3, 1),
+            fabrication_method_ids=[methods["milling"], methods["hardening"]],
+        )
+    )
+    _, milling = await repo.get_external_work_page(
+        ExternalWorkFilterDto(today=date(2030, 3, 1), fabrication_method_ids=[methods["milling"]])
+    )
+
+    assert len(both) == 2
+    assert milling == []

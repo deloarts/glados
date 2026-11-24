@@ -144,6 +144,36 @@ class DeliveriesExpectedWidgetData(ResultModel):
     deliveries: list[InfoscreenDeliveryRow]
 
 
+class InfoscreenExternalWorkRow(ResultModel):
+    """A part that goes to a supplier for an outside process. No persons
+    and no customer: the lot, the item, the methods and a company."""
+
+    lot_number: str
+    part_number: str | None
+    item_name: str | None
+    quantity: float
+    # The methods' names in the screen's language.
+    methods: list[str]
+    supplier_name: str | None
+    # The supplier is the methods' default, the part is not ordered yet.
+    supplier_suggested: bool
+    latest_pickup_date: date | None
+    # When the pieces can go out, None once they are there.
+    ready_from: date | None
+    ready_now: bool
+    # The day it is due back from the supplier.
+    due_back_date: date | None
+    # Why the part needs attention, the procurement list's alert.
+    alert: Literal["not_ready_in_time", "overdue"] | None
+    days_late: int | None = None
+    thumbnail_url: str | None
+
+
+class ExternalWorkWidgetData(ResultModel):
+    type: Literal["external_work"] = "external_work"
+    rows: list[InfoscreenExternalWorkRow]
+
+
 class MessageWidgetData(ResultModel):
     type: Literal["message"] = "message"
     # Markdown, rendered on the display.
@@ -305,7 +335,8 @@ InfoscreenWidgetData = Annotated[
     | WeatherWidgetData
     | ProductsWidgetData
     | ProjectsWidgetData
-    | MachineDetailWidgetData,
+    | MachineDetailWidgetData
+    | ExternalWorkWidgetData,
     Field(discriminator="type"),
 ]
 
