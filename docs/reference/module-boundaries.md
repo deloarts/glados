@@ -134,7 +134,7 @@ Planning and fulfillment stays one module because the lifecycle reconciler locks
 
 | Layer, from the top | Groups | Why it sits there |
 | ------------------- | ------ | ----------------- |
-| composition | `dashboard`, `todo` | The todo list composes the list use cases of the groups below and adds the user's open meeting todos through Workspace's `IMeetingTodoQueries` port, and the dashboard reads their repositories. |
+| composition | `dashboard`, `todo`, `external_work` | The todo list composes the list use cases of the groups below and adds the user's open meeting todos through Workspace's `IMeetingTodoQueries` port, and the dashboard reads their repositories. The list of external work reads the lots and the scheduling services and is imported by no other group, only by its facade. |
 | award and allocation | `quote_request`, `source_item_allocation` | Awarding a quote request creates an order with its lines and assigns lot positions to it. The source item allocations reuse the source item demand family's binding (`source_item_demand/_spec.py`). |
 | work | `order`, `bought_item_demand`, `made_item_demand`, `source_item_demand`, the three `*_demand_bucket` groups, `production_order`, `production_machine`, `machine_pool`, `admin_settings` | Each group owns one kind of record. An order delivery of a made line and a production order's completion or scrap create a lot, and cancelling a demand cancels its lot, so these groups sit above the lots. |
 | lots | `production_lot` | Of the other groups, the lot use cases import only the schedule recompute. |

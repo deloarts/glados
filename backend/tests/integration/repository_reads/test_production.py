@@ -58,6 +58,9 @@ from src.modules.fulfillment.ports.outbound.repositories.machine_pool_repository
     MachinePoolFilterDto,
 )
 from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
+    ExternalWorkFilterDto,
+)
+from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
     LotFilterDto,
 )
 from src.modules.fulfillment.ports.outbound.repositories.production_machine_repository import (
@@ -88,6 +91,8 @@ async def _lots(g: Graph, r: Any) -> None:
     await r.get_by_id_for_update(lot.id)
     await r.get_by_ids([lot.id])
     await r.get_ids_after(0, 10)
+    await r.get_ids_with_external_work()
+    await r.get_external_work_page(ExternalWorkFilterDto(today=TODAY))
     forced = await r.get_by_id(lot.id)
     forced.force_completed_at = datetime(2026, 2, 1, tzinfo=UTC)
     await r.save(forced)

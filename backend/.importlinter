@@ -120,7 +120,7 @@ type = layers
 containers =
     src.modules.fulfillment.application
 layers =
-    use_cases.dashboard | use_cases.todo
+    use_cases.dashboard | use_cases.todo | use_cases.external_work
     use_cases.quote_request | use_cases.source_item_allocation
     use_cases.order | use_cases.bought_item_demand | use_cases.made_item_demand | use_cases.source_item_demand | use_cases.bought_item_demand_bucket | use_cases.made_item_demand_bucket | use_cases.source_item_demand_bucket | use_cases.production_order | use_cases.production_machine | use_cases.machine_pool | use_cases.admin_settings
     use_cases.production_lot
