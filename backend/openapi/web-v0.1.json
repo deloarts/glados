@@ -1644,6 +1644,10 @@
             "title": "Example",
             "type": "string"
           },
+          "external_first_step_needs_no_material": {
+            "title": "External First Step Needs No Material",
+            "type": "boolean"
+          },
           "external_safety_margin_days": {
             "title": "External Safety Margin Days",
             "type": "integer"
@@ -1696,6 +1700,7 @@
           "require_source_item_approval",
           "assign_approved_material_to_item",
           "overwrite_item_material_on_approval",
+          "external_first_step_needs_no_material",
           "example"
         ],
         "title": "AdminProductionSettingsResponse",
@@ -59086,6 +59091,17 @@
               }
             ],
             "title": "Default Weekly Hours"
+          },
+          "external_first_step_needs_no_material": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External First Step Needs No Material"
           },
           "external_safety_margin_days": {
             "anyOf": [

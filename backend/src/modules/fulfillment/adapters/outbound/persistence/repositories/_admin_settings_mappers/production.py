@@ -34,6 +34,7 @@ def to_entity(o: AdminProductionSettingsOrmModel) -> AdminProductionSettings:
         require_source_item_approval=o.require_source_item_approval,
         assign_approved_material_to_item=o.assign_approved_material_to_item,
         overwrite_item_material_on_approval=o.overwrite_item_material_on_approval,
+        external_first_step_needs_no_material=o.external_first_step_needs_no_material,
         default_inspection_method_id=o.default_inspection_method_id,
     )
 
@@ -50,5 +51,6 @@ def to_dict(s: AdminProductionSettings) -> dict[str, Any]:
         "require_source_item_approval": s.require_source_item_approval,
         "assign_approved_material_to_item": s.assign_approved_material_to_item,
         "overwrite_item_material_on_approval": s.overwrite_item_material_on_approval,
+        "external_first_step_needs_no_material": s.external_first_step_needs_no_material,
         "default_inspection_method_id": s.default_inspection_method_id,
     }

@@ -1108,6 +1108,9 @@ export default {
     requireSourceItemApproval: 'Require Source Item Approval',
     requireSourceItemApprovalHint:
       'While on, a lot sourced from a source item gets no source item demand until a user with Manage Production Lots approves it. Bought items are not affected. Turning this on puts existing undemanded source-item lots into approval; turning it off releases pending lots again, but a rejected lot stays rejected.',
+    externalFirstStepNeedsNoMaterial: 'No Material for an External First Step',
+    externalFirstStepNeedsNoMaterialHint:
+      "On by default: a supplier who does a lot's first position brings the material, so the lot gets no source item demand and needs no approval. While the first position is not assigned yet and every one of its steps uses a method that is typically outsourced, the lot waits for that first step. When off, every lot with a material source demands its material, whoever does the first position. Turning this off gives the lots that wait for their first step or get their material from the supplier their demand again, or puts them into approval.",
     assignApprovedMaterialToItem: 'Assign Approved Material to Item',
     assignApprovedMaterialToItemHint:
       "Off by default: approving a lot's material source only releases that lot. When enabled, the approved source item is also written to the lot's made item as its default material source, so future lots for that item are seeded with it. This lets any user who can approve (Manage Production Lots) change the item's material source without needing Write Made Items. An item whose material source is a bought item is never changed, and an item already naming a different source item is only changed when Overwrite Existing Upon Approval is on.",

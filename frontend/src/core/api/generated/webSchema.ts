@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T13:07:30.271Z
+ * Generated: 2026-11-24T14:04:05.014Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -12458,6 +12458,8 @@ export interface components {
             };
             /** Example */
             example: string;
+            /** External First Step Needs No Material */
+            external_first_step_needs_no_material: boolean;
             /** External Safety Margin Days */
             external_safety_margin_days: number;
             /** Frozen Window Hours */
@@ -30383,6 +30385,8 @@ export interface components {
             default_weekly_hours?: {
                 [key: string]: components["schemas"]["WorkIntervalSchema"][];
             } | null;
+            /** External First Step Needs No Material */
+            external_first_step_needs_no_material?: boolean | null;
             /** External Safety Margin Days */
             external_safety_margin_days?: number | null;
             /** Frozen Window Hours */

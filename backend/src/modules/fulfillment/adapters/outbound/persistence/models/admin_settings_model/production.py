@@ -62,6 +62,9 @@ class AdminProductionSettingsOrmModel(Base):
     overwrite_item_material_on_approval: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    external_first_step_needs_no_material: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     default_inspection_method_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey(

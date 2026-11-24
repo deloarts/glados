@@ -119,6 +119,11 @@ class UpdateProductionSettings:
             if cmd.overwrite_item_material_on_approval is not None
             else current.overwrite_item_material_on_approval
         )
+        external_first_step_needs_no_material = (
+            cmd.external_first_step_needs_no_material
+            if cmd.external_first_step_needs_no_material is not None
+            else current.external_first_step_needs_no_material
+        )
         validate_numbering_format(production_order_number_format)
         validate_weekly_hours(default_weekly_hours)
 
@@ -151,6 +156,7 @@ class UpdateProductionSettings:
             require_source_item_approval=require_source_item_approval,
             assign_approved_material_to_item=assign_approved_material_to_item,
             overwrite_item_material_on_approval=overwrite_item_material_on_approval,
+            external_first_step_needs_no_material=external_first_step_needs_no_material,
             frozen_window_hours=frozen_window_hours,
         )
 

@@ -27,6 +27,7 @@ class UpdateProductionSettingsRequest(BaseModel):
     require_source_item_approval: bool | None = None
     assign_approved_material_to_item: bool | None = None
     overwrite_item_material_on_approval: bool | None = None
+    external_first_step_needs_no_material: bool | None = None
 
 
 class AdminProductionSettingsResponse(EntityResponse):
@@ -41,4 +42,5 @@ class AdminProductionSettingsResponse(EntityResponse):
     require_source_item_approval: bool
     assign_approved_material_to_item: bool
     overwrite_item_material_on_approval: bool
+    external_first_step_needs_no_material: bool
     example: str
