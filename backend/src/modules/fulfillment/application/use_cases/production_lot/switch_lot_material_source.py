@@ -44,9 +44,9 @@ from src.modules.fulfillment.application.dto.production_lot_dto import (
 )
 from src.modules.fulfillment.application.mappers.production_lot_mapper import LotMapper
 from src.modules.fulfillment.application.services.allocation_locks import lock_for_allocation
-from src.modules.fulfillment.application.services.allocation_release import release_source_demand
 from src.modules.fulfillment.application.services.lifecycle_loader import AggregateIds
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
+from src.modules.fulfillment.application.services.lot_material_demand import LotMaterialDemand
 from src.modules.fulfillment.application.services.source_item_demand_factory import (
     build_source_item_demand,
 )
@@ -62,7 +62,6 @@ from src.modules.fulfillment.domain.errors import LotHasOpenDemandError
 from src.modules.fulfillment.domain.errors import LotHasPlacedDemandError
 from src.modules.fulfillment.domain.errors import LotNotFoundError
 from src.modules.fulfillment.domain.errors import LotRawMaterialAlreadyLinkedError
-from src.modules.fulfillment.domain.services.lifecycle.demand import SOURCE_FILL_RANK
 from src.modules.fulfillment.domain.services.lot_event_service import build_lot_event
 from src.modules.fulfillment.domain.services.lot_rules import LotRules
 from src.modules.fulfillment.domain.services.lot_rules import assert_lot_action
@@ -132,6 +131,9 @@ class SwitchLotMaterialSource:
         self._recompute = recompute_schedule
         self._projects = project_repo
         self._line_release = line_release
+        self._material = LotMaterialDemand(
+            source_item_demand_repo, source_item_allocation_repo, line_release
+        )
         self._uow = uow
         self._reconciler = reconciler
 
@@ -196,7 +198,6 @@ class SwitchLotMaterialSource:
         missing: tuple[float, str, float] | None = None
         if old_demand is not None:
             missing = await self._settle_old_demand(actor, old_demand, now)
-            await self._demands.save(old_demand)
 
         # A new source is a new approval decision, so a client still holding
         # the old one gets a 409 when it approves or rejects.
@@ -281,29 +282,11 @@ class SwitchLotMaterialSource:
         self, actor: User, demand: SourceItemDemandItem, now: datetime
     ) -> tuple[float, str, float] | None:
         """Ends the old demand and returns what the new source still has to
-        bring as (quantity, unit, items per unit), or None for the whole lot.
-        A demand nothing reached yet is canceled. One that already received
-        pieces keeps them and is marked fulfilled, its allocations on lines
-        whose pieces have not arrived cut down to what did arrive, so the
-        lines stay with purchasing."""
-        if demand.status != SourceItemDemandStatus.OPEN:
-            released = await self._line_release.release(SOURCE_FILL_RANK, demand.id)
-            arrived = sum(
-                a.quantity for a in await self._allocations.get_by_demand_item_id(demand.id)
-            )
-            if quantity_gt(arrived, 0.0):
-                demand.fulfilled_manually_at = now
-                demand.changed = now
-                demand.changes = append_changelog(
-                    demand.changes,
-                    actor.full_name,
-                    f"Material source switched; kept the {arrived:.3f} {demand.unit} that "
-                    f"arrived and released {released:.3f} {demand.unit} that had not.",
-                )
-                return (max(demand.quantity - arrived, 0.0), demand.unit, demand.items_per_unit)
-        await release_source_demand(
-            demand, self._allocations, actor, now, "Demand canceled (source switched)."
-        )
+        bring as (quantity, unit, items per unit), or None for the whole lot
+        (lot_material_demand.py)."""
+        arrived = await self._material.settle(actor, demand, now, reason="source switched")
+        if quantity_gt(arrived, 0.0):
+            return (max(demand.quantity - arrived, 0.0), demand.unit, demand.items_per_unit)
         return None
 
     async def _assert_project_active(self, lot: ProductionLot) -> None:
