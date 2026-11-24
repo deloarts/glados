@@ -56,6 +56,10 @@ class PredecessorPosition:
     # The latest persisted planned_end over this position's own orders as a
     # moment, the floor a successor starts from (predecessor_ready_moment).
     stored_internal_ready_moment: datetime | None = None
+    # An UNASSIGNED position whose fabrication steps use a method that is
+    # usually outsourced. It gets a forecast for display, but the forecast
+    # never feeds the chain, so it moves no internal order.
+    outsourced_unassigned: bool = False
 
 
 LeadDaysSource = Literal["supplier", "method", "default"]
@@ -102,6 +106,13 @@ class ExternalForecast:
     position_id: int
     planned_pickup_date: date | None
     planned_delivery_date: date | None
+    # External work only: the latest day it can leave for the supplier,
+    # counted back from the lot's target date (forecast_external_work).
+    # None without a target date, and for a forecast that only the walk
+    # wrote, which forecast_external_work then completes.
+    latest_pickup_date: date | None = None
+    # The latest pickup plus the position's lead days.
+    latest_delivery_date: date | None = None
 
 
 def resolve_external_forecast(
@@ -234,7 +245,11 @@ def _predecessor_ready_at_with_forecast(
     """Like position_ready_at_in_run, but an EXTERNAL/MIXED predecessor
     without a typed or actual date falls back to its forecast instead of
     leaving the chain unknown. The forecast is returned even when a typed
-    date wins, because it is persisted regardless."""
+    date wins, because it is persisted regardless. An outsourced UNASSIGNED
+    position is forecast as well, but contributes nothing to the chain,
+    exactly as before it had a forecast."""
+    if pred.kind == LotPositionKind.UNASSIGNED and pred.outsourced_unassigned:
+        return None, resolve_external_forecast(pred, chain_end_before, response_time_days)
     if pred.kind == LotPositionKind.EXTERNAL:
         forecast = resolve_external_forecast(pred, chain_end_before, response_time_days)
         return pred.external_ready_at or forecast.planned_delivery_date, forecast
@@ -360,6 +375,19 @@ def refresh_predecessor_readiness(
             ctx.predecessor_positions, placed_moment_by_position
         ),
     )
+
+
+def resolve_chain_external_forecasts(
+    positions: tuple[PredecessorPosition, ...],
+    placed_end_by_position: dict[int, date | None],
+    response_time_days: int,
+) -> dict[int, ExternalForecast]:
+    """The forecast of every external position in one lot's chain of open
+    positions, by position id. It walks the chain exactly as an order's
+    predecessors are walked, so a position that feeds a later order gets
+    the same forecast either way, and a position that feeds none, such as
+    the last one of a lot, gets one too."""
+    return _walk_predecessor_positions(positions, placed_end_by_position, response_time_days)[2]
 
 
 def resolve_external_forecasts(

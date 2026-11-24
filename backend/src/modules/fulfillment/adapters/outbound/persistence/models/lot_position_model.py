@@ -70,6 +70,13 @@ class LotPositionOrmModel(ChangedByColumns, Base):
     # this position isn't known yet. See scheduling.ExternalForecast.
     planned_pickup_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     planned_delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # The latest day an external work position can leave for the supplier
+    # without making the lot miss its target date, counted back by the same
+    # recompute. NULL without a target date. See scheduling.external_work.
+    latest_pickup_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # The day it is back at the latest when it leaves on latest_pickup_date,
+    # that day plus the position's lead days.
+    latest_delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     creator_id: Mapped[int] = mapped_column(
         Integer,

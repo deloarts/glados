@@ -45,3 +45,7 @@ class AdminProductionSettings(Entity):
     # lies within this many hours from now, so the shop floor's next hours
     # do not shift under it; 0 freezes nothing.
     frozen_window_hours: int = 0
+    # Days kept free before a lot's target date when the latest send-out day
+    # of its external work is counted back, since that count assumes no
+    # waiting at the machines.
+    external_safety_margin_days: int = 2

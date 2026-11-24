@@ -33,6 +33,13 @@ from functools import partial
 from anyio import to_thread
 
 from src.modules.fulfillment.application.services.scheduling_context import SchedulingRepos
+from src.modules.fulfillment.application.services.scheduling_context import (
+    describe_external_work_chains,
+)
+from src.modules.fulfillment.application.services.scheduling_context import prefetch_scheduling_data
+from src.modules.fulfillment.application.use_cases.production_schedule._walk_inputs import (
+    ScheduleWalkInputs,
+)
 from src.modules.fulfillment.application.use_cases.production_schedule._walk_inputs import (
     build_schedule_walk_inputs,
 )
@@ -41,8 +48,11 @@ from src.modules.fulfillment.domain.entities.admin_settings.production import (
 )
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
 from src.modules.fulfillment.domain.events.schedule_events import ScheduleRecomputeRequested
+from src.modules.fulfillment.domain.services.scheduling import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling import ScheduleWalkResult
+from src.modules.fulfillment.domain.services.scheduling import placed_ends_by_position
 from src.modules.fulfillment.domain.services.scheduling import schedule_all_propagated
+from src.modules.fulfillment.domain.services.scheduling.external_work import forecast_external_work
 from src.modules.fulfillment.ports.outbound.fulfillment_settings_repository import (
     IFulfillmentSettingsRepository,
 )
@@ -81,6 +91,16 @@ def _empty_schedule_walk_result() -> ScheduleWalkResult:
     return ScheduleWalkResult(
         by_machine={}, by_pool={}, manual=[], unassigned=[], machine_cursors={}
     )
+
+
+def _walked_contexts(inputs: ScheduleWalkInputs) -> list[OrderSchedulingContext]:
+    """Every order context the walk placed, in whatever queue it sat."""
+    contexts: list[OrderSchedulingContext] = []
+    for queue in [*inputs.machine_queues.values(), *inputs.pool_queues.values()]:
+        contexts.extend(queue)
+    contexts.extend(inputs.manual_queue)
+    contexts.extend(inputs.unassigned)
+    return contexts
 
 
 def _changed_planning_fields(
@@ -248,12 +268,33 @@ class RecomputeMachineSchedule:
         once. Callers that already hold the settings pass them in."""
         started = time.perf_counter()
         orders = await self._repos.orders.get_all_non_terminal()
-        if not orders:
+        external_work_lot_ids = await self._repos.lots.get_ids_with_external_work()
+        if not orders and not external_work_lot_ids:
             return _empty_schedule_walk_result()
 
         settings = settings or await self._settings.get_production()
         if response_time_days is None:
             response_time_days = settings.response_time_days
+        zone = await tenant_zone(self._settings)
+        if not orders:
+            # A lot of external work only still needs its forecast.
+            prefetch = await prefetch_scheduling_data(
+                [], self._repos, extra_lot_ids=external_work_lot_ids, zone=zone
+            )
+            chains = await describe_external_work_chains(
+                external_work_lot_ids,
+                prefetch,
+                self._repos,
+                settings.default_external_lead_days,
+                zone=zone,
+            )
+            await self._repos.lots.save_position_forecasts(
+                forecast_external_work(
+                    chains, {}, response_time_days, settings.external_safety_margin_days
+                )
+            )
+            await self._uow.commit()
+            return _empty_schedule_walk_result()
 
         now = now_utc()
         inputs = await build_schedule_walk_inputs(
@@ -266,7 +307,16 @@ class RecomputeMachineSchedule:
             response_time_days,
             downtime_repo=self._downtimes,
             now=now,
-            zone=await tenant_zone(self._settings),
+            extra_lot_ids=external_work_lot_ids,
+            zone=zone,
+        )
+        # Read with the orders, so the walk's read transaction holds both.
+        external_work_chains = await describe_external_work_chains(
+            external_work_lot_ids,
+            inputs.prefetch,
+            self._repos,
+            settings.default_external_lead_days,
+            zone=zone,
         )
         # The reads are done; ending their transaction keeps the CPU phase
         # from sitting idle in one, which the server ends after a while. The
@@ -301,8 +351,19 @@ class RecomputeMachineSchedule:
             _changed_planning_fields(result, inputs.orders_by_id)
         )
 
-        # Forecasts exist only for positions that feed a later order.
-        await self._repos.lots.save_position_forecasts(list(result.external_forecasts.values()))
+        # The walk forecasts the positions that feed a later order; the
+        # lots' own chains add every other external position, such as the
+        # last one of a lot. Both read the same chain, so they agree.
+        forecasts = dict(result.external_forecasts)
+        placed_end_by_position = placed_ends_by_position(_walked_contexts(inputs), result)
+        for forecast in forecast_external_work(
+            external_work_chains,
+            placed_end_by_position,
+            response_time_days,
+            settings.external_safety_margin_days,
+        ):
+            forecasts[forecast.position_id] = forecast
+        await self._repos.lots.save_position_forecasts(list(forecasts.values()))
 
         await self._uow.commit()
 

@@ -1116,6 +1116,9 @@ export default {
     responseTimeDays: 'Reaktionszeit für geplanten Start (Tage)',
     responseTimeDaysHint:
       'Nur weil ein Schritt heute fertig wird, kann der nächste nicht zwingend auch heute beginnen, dieser Puffer wird sowohl auf das Fertigstellungsdatum eines vorherigen Schritts als auch auf das Ankunftsdatum von Rohmaterial aufgeschlagen, bevor eines von beiden den frühesten Start des nächsten Schritts einschränken kann. Gilt überall, wo Zeitpläne berechnet werden, nicht nur bei Auto-Plan.',
+    externalSafetyMarginDays: 'Sicherheitsabstand für Fremdbearbeitung (Tage)',
+    externalSafetyMarginDaysHint:
+      'So viele Tage bleiben vor dem Zieltermin eines Loses frei, wenn der späteste Versandtag seiner Fremdbearbeitung zurückgerechnet wird. Die Rechnung kennt keine Wartezeit an den Maschinen, der Abstand fängt sie auf.',
     frozenWindowHours: 'Fixierter Zeitraum (Stunden)',
     frozenWindowHoursHint:
       'Eine Neuberechnung des Zeitplans behält das geplante Zeitfenster eines eingereihten Auftrags, der innerhalb so vieler Stunden ab jetzt beginnt, damit sich die nächsten Stunden in der Fertigung nicht verschieben. Auto-Plan und manuelle Änderungen verschieben ihn trotzdem. Bei 0 wird nichts fixiert.',

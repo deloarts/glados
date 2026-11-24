@@ -39,6 +39,7 @@ onMounted(() => {
 interface ProductionForm {
   default_external_lead_days: number
   response_time_days: number
+  external_safety_margin_days: number
   frozen_window_hours: number
   require_qa: boolean
   default_inspection_method_id: number | null
@@ -52,6 +53,7 @@ interface ProductionForm {
 const form = reactive<ProductionForm>({
   default_external_lead_days: 0,
   response_time_days: 1,
+  external_safety_margin_days: 2,
   frozen_window_hours: 0,
   require_qa: false,
   default_inspection_method_id: null,
@@ -68,6 +70,7 @@ watch(
     if (!s) return
     form.default_external_lead_days = s.default_external_lead_days
     form.response_time_days = s.response_time_days
+    form.external_safety_margin_days = s.external_safety_margin_days
     form.frozen_window_hours = s.frozen_window_hours
     form.require_qa = s.require_qa
     form.default_inspection_method_id = s.default_inspection_method_id
@@ -94,6 +97,7 @@ const { saving, onSave } = useSettingsSave(async () => {
   await store.saveProduction({
     default_external_lead_days: form.default_external_lead_days,
     response_time_days: form.response_time_days,
+    external_safety_margin_days: form.external_safety_margin_days,
     frozen_window_hours: form.frozen_window_hours,
     require_qa: form.require_qa,
     default_inspection_method_id: form.default_inspection_method_id,
@@ -154,6 +158,20 @@ const { saving, onSave } = useSettingsSave(async () => {
         <InputNumber
           v-model="form.response_time_days"
           :input-id="`${uid}-response-time-days`"
+          :disabled="!canWrite"
+          :min="0"
+          :use-grouping="false"
+        />
+      </div>
+
+      <div class="field-row">
+        <label :for="`${uid}-external-safety-margin-days`">
+          {{ t('adminSettings.production.externalSafetyMarginDays') }}
+          <span class="hint">{{ t('adminSettings.production.externalSafetyMarginDaysHint') }}</span>
+        </label>
+        <InputNumber
+          v-model="form.external_safety_margin_days"
+          :input-id="`${uid}-external-safety-margin-days`"
           :disabled="!canWrite"
           :min="0"
           :use-grouping="false"

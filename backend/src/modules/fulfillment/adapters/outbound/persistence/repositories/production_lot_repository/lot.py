@@ -16,6 +16,7 @@ from uuid import UUID
 from sqlalchemy import CursorResult
 from sqlalchemy import Select
 from sqlalchemy import desc
+from sqlalchemy import exists
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
@@ -73,6 +74,9 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories._raw_mat
 from src.modules.fulfillment.adapters.outbound.persistence.repositories._raw_material_coverage import (
     compute_raw_material_arrived_quantity,
 )
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._external import (
+    external_work_page,
+)
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
     _actionable_lot_exists,
 )
@@ -81,6 +85,12 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories.producti
 )
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
     _date_in_range,
+)
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
+    _external_work_position,
+)
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
+    _live_lot,
 )
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository._filters import (
     _source_delivery_exists,
@@ -166,6 +176,9 @@ from src.modules.fulfillment.domain.errors import LotPositionInUseError
 from src.modules.fulfillment.domain.services.scheduling import ExternalForecast
 from src.modules.fulfillment.domain.value_objects.lot_status import TERMINAL_LOT_STATUSES
 from src.modules.fulfillment.domain.value_objects.source_approval_status import SourceApprovalStatus
+from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
+    ExternalWorkFilterDto,
+)
 from src.modules.fulfillment.ports.outbound.repositories.production_lot_repository import (
     LotFilterDto,
 )
@@ -258,6 +271,23 @@ class SqlAlchemyProductionLotRepository(LotReadModelMixin):
 
     async def get_ids_after(self, after_id: int, limit: int) -> list[int]:
         return await ids_after(self._db, ProductionLotOrmModel.id, after_id, limit)
+
+    async def get_external_work_page(
+        self, filters: ExternalWorkFilterDto
+    ) -> tuple[int, list[tuple[int, int]]]:
+        return await external_work_page(self._db, filters)
+
+    async def get_ids_with_external_work(self) -> list[int]:
+        lp = LotPositionOrmModel
+        ids = await self._db.scalars(
+            select(ProductionLotOrmModel.id)
+            .where(
+                _live_lot(),
+                exists().where(lp.lot_id == ProductionLotOrmModel.id, _external_work_position(lp)),
+            )
+            .order_by(ProductionLotOrmModel.id)
+        )
+        return list(ids.all())
 
     async def get_by_project_id(
         self, project_id: int, *, refresh: bool = False
@@ -757,6 +787,8 @@ class SqlAlchemyProductionLotRepository(LotReadModelMixin):
                     {
                         "planned_pickup_date": forecast.planned_pickup_date,
                         "planned_delivery_date": forecast.planned_delivery_date,
+                        "latest_pickup_date": forecast.latest_pickup_date,
+                        "latest_delivery_date": forecast.latest_delivery_date,
                     },
                 )
                 for forecast in forecasts

@@ -29,6 +29,12 @@ const TABS: TabConfig[] = [
     component: asyncTab(() => import('@/features/quote-requests/views/QuoteRequestsView.vue')),
   },
   {
+    value: 'external-work',
+    labelKey: 'procurement.sections.externalWork',
+    icon: 'mdi-truck-delivery-outline',
+    component: asyncTab(() => import('@/features/procurement/views/ExternalWorkView.vue')),
+  },
+  {
     value: 'bought-items-demand',
     labelKey: 'procurement.sections.boughtItemsDemand',
     icon: 'mdi-format-list-checks',

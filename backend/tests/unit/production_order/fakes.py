@@ -37,6 +37,7 @@ from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import Lif
 from src.modules.fulfillment.ports.outbound.repositories.production_order_repository import (
     ProductionOrderFilterDto,
 )
+from tests.unit._external_work import external_work_lot_ids
 from tests.unit.lifecycle.fake_demand_reconciler import ReconcilerAllocations
 from tests.unit.lifecycle.fake_demand_reconciler import ReconcilerDemands
 from tests.unit.lifecycle.fake_reconciler import EmptyRows
@@ -78,6 +79,9 @@ class FakeProductionLotRepository:
 
     async def lock_for_update(self, ids: list[int]) -> None:
         self.lock_calls.append(list(ids))
+
+    async def get_ids_with_external_work(self) -> list[int]:
+        return external_work_lot_ids(await self.get_by_ids(sorted(self._lots)))
 
     async def get_by_ids(self, ids: list[int], *, refresh: bool = False) -> list[ProductionLot]:
         return [self._lots[i] for i in ids if i in self._lots]

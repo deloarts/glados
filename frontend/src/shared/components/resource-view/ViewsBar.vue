@@ -24,6 +24,12 @@ withDefaults(
     /** Omit (or leave empty) to hide the Group By button entirely, since not every resource has a meaningful grouping. */
     groupByItems?: MenuItem[]
     groupByActive?: boolean
+    /**
+     * Names the active grouping on the button, such as "Group by Method",
+     * instead of filling the button. Omit to keep the plain "Group By"
+     * label that fills while a grouping is active.
+     */
+    groupByLabel?: string
     /** Omit (or leave empty) to hide the Sort By button entirely. */
     sortByItems?: MenuItem[]
     sortByActive?: boolean
@@ -43,6 +49,7 @@ withDefaults(
     hideViewsToggle: false,
     groupByItems: () => [],
     groupByActive: false,
+    groupByLabel: undefined,
     sortByItems: () => [],
     sortByActive: false,
     searchPlaceholder: undefined,
@@ -135,10 +142,10 @@ function toggleViewsPopover(event: Event) {
       <Divider layout="vertical" />
       <SplitButton
         v-if="groupByItems.length > 0"
-        :label="t('common.groupBy')"
+        :label="groupByLabel ?? t('common.groupBy')"
         :model="groupByItems"
         severity="contrast"
-        :text="!groupByActive"
+        :text="groupByLabel !== undefined || !groupByActive"
         @click="emit('clear-group-by')"
       />
       <SplitButton

@@ -34,6 +34,7 @@ from src.modules.catalogue.adapters.outbound.persistence.models.source_item_mode
 from src.modules.catalogue.adapters.outbound.persistence.models.source_item_type_model import (
     SourceItemTypeOrmModel,
 )
+from src.modules.catalogue.domain.value_objects.step_role import StepRole
 from src.modules.fulfillment.adapters.outbound.persistence.models.lot_position_model import (
     LotPositionOrmModel,
 )
@@ -158,6 +159,26 @@ def _live_lot() -> ColumnElement[bool]:
     force-completed or scrapped lot can keep positions that are neither
     complete nor canceled."""
     return ProductionLotOrmModel.status.notin_(sorted(TERMINAL_LOT_STATUSES))
+
+
+def _external_work_position(lp: type[LotPositionOrmModel]) -> ColumnElement[bool]:
+    """The position is open external work, mirroring
+    scheduling.external_work.position_has_external_work: EXTERNAL or MIXED,
+    or UNASSIGNED with a fabrication step whose method is usually
+    outsourced."""
+    outsourced_step = exists().where(
+        LotStepOrmModel.position_id == lp.id,
+        LotStepOrmModel.role == StepRole.FABRICATION.value,
+        LotStepOrmModel.fabrication_method_id == FabricationMethodOrmModel.id,
+        FabricationMethodOrmModel.required_external.is_(True),
+    )
+    return and_(
+        lp.status.notin_([LotPositionStatus.COMPLETED.value, LotPositionStatus.CANCELED.value]),
+        or_(
+            lp.kind.in_([LotPositionKind.EXTERNAL.value, LotPositionKind.MIXED.value]),
+            and_(lp.kind == LotPositionKind.UNASSIGNED.value, outsourced_step),
+        ),
+    )
 
 
 def _actionable_lot_exists(mode: str) -> ColumnElement[bool]:

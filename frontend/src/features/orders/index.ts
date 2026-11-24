@@ -1,6 +1,7 @@
 // Public barrel of the orders feature. Other features import through here
 // (enforced by eslint). Export only what other features consume.
 
+export { createOrder } from './api/createOrder'
 export { createOrderItem } from './api/createOrderItem'
 export { getOrder } from './api/getOrder'
 export { getOrders } from './api/getOrders'

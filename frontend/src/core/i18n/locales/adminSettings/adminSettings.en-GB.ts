@@ -1090,6 +1090,9 @@ export default {
     responseTimeDays: 'Response Time for Planned Start (days)',
     responseTimeDaysHint:
       "A step finishing today doesn't mean the next one can start today too. This buffer is added on top of both a predecessor step's finish date and a raw material's arrival date before either can gate the next step's earliest start. Applies everywhere schedules are computed, not just Auto-Plan.",
+    externalSafetyMarginDays: 'Safety Margin for External Work (days)',
+    externalSafetyMarginDaysHint:
+      "These days stay free before a lot's target date when the latest send-out day of its external work is counted back. The count knows no waiting at the machines, and the margin absorbs it.",
     frozenWindowHours: 'Frozen Window (hours)',
     frozenWindowHoursHint:
       'A schedule recompute keeps the planned window of a queued order that starts within this many hours from now, so the next hours on the shop floor do not shift. Auto-Plan and manual changes still move it. 0 freezes nothing.',

@@ -7,4 +7,5 @@ export { useSuppliersStore } from './stores/suppliersStore'
 
 export type { SupplierResponse } from './types/supplierResponse'
 
+export { default as SupplierFormDialog } from './components/SupplierFormDialog.vue'
 export { default as SupplierSearchFilter } from './components/SupplierSearchFilter.vue'

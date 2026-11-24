@@ -88,6 +88,15 @@ class InfoscreenWidgetType(StrValueEnum):
     PRODUCTS = "products"
     PROJECTS = "projects"
     MACHINE_DETAIL = "machine_detail"
+    EXTERNAL_WORK = "external_work"
+
+
+@unique
+class InfoscreenExternalWorkLayout(StrValueEnum):
+    # Grouped by the day the parts must leave at the latest.
+    DAYS = "days"
+    # One lane per supplier with its next send-out day and how much is ready.
+    SUPPLIERS = "suppliers"
 
 
 @unique
@@ -148,6 +157,8 @@ LOTS_HORIZON_MIN: Final = 1
 LOTS_HORIZON_MAX: Final = 60
 DELIVERIES_HORIZON_MIN: Final = 0
 DELIVERIES_HORIZON_MAX: Final = 30
+EXTERNAL_WORK_HORIZON_MIN: Final = 0
+EXTERNAL_WORK_HORIZON_MAX: Final = 30
 WEATHER_DAYS_MIN: Final = 0
 WEATHER_DAYS_MAX: Final = 7
 MAX_PLACE_NAME_LENGTH: Final = 200
@@ -204,6 +215,23 @@ class DeliveriesExpectedWidget:
     # Adds the open lines expected before today, ahead of today's.
     show_overdue: bool = False
     type: str = field(default=InfoscreenWidgetType.DELIVERIES_EXPECTED.value, init=False)
+
+
+@dataclass(frozen=True)
+class ExternalWorkWidget:
+    """The parts that go to a supplier for an outside process and must leave
+    from today to `horizon_days` ahead, by their latest pickup."""
+
+    title: str | None = None
+    horizon_days: int = 7
+    # Adds the parts whose latest pickup has passed, ahead of today's.
+    show_overdue: bool = True
+    # Only these methods; none means every method.
+    fabrication_method_ids: tuple[int, ...] = ()
+    # Only parts already on a supplier's order.
+    only_with_supplier: bool = False
+    layout: str = InfoscreenExternalWorkLayout.DAYS.value
+    type: str = field(default=InfoscreenWidgetType.EXTERNAL_WORK.value, init=False)
 
 
 @dataclass(frozen=True)
@@ -286,6 +314,7 @@ InfoscreenWidget = (
     | ProductsWidget
     | ProjectsWidget
     | MachineDetailWidget
+    | ExternalWorkWidget
 )
 
 
@@ -454,6 +483,27 @@ def parse_widget(raw: Mapping[str, Any], where: str = "widget") -> InfoscreenWid
                 where,
             ),
             show_overdue=_bool(raw, "show_overdue", False, where),
+        )
+    if widget_type == InfoscreenWidgetType.EXTERNAL_WORK.value:
+        return ExternalWorkWidget(
+            title=title,
+            horizon_days=_int(
+                raw,
+                "horizon_days",
+                7,
+                (EXTERNAL_WORK_HORIZON_MIN, EXTERNAL_WORK_HORIZON_MAX),
+                where,
+            ),
+            show_overdue=_bool(raw, "show_overdue", True, where),
+            fabrication_method_ids=_ids(raw, "fabrication_method_ids", where),
+            only_with_supplier=_bool(raw, "only_with_supplier", False, where),
+            layout=_choice(
+                raw,
+                "layout",
+                InfoscreenExternalWorkLayout.values(),
+                InfoscreenExternalWorkLayout.DAYS.value,
+                where,
+            ),
         )
     if widget_type == InfoscreenWidgetType.MESSAGE.value:
         text = raw.get("text", "")

@@ -124,6 +124,9 @@ from src.modules.fulfillment.domain.services.scheduling.walk_context import (
     refresh_predecessor_readiness,
 )
 from src.modules.fulfillment.domain.services.scheduling.walk_context import (
+    resolve_chain_external_forecasts,
+)
+from src.modules.fulfillment.domain.services.scheduling.walk_context import (
     resolve_external_forecast,
 )
 from src.modules.fulfillment.domain.services.scheduling.walk_context import (
@@ -179,6 +182,7 @@ __all__ = [
     "resolve_algorithm_strategies",
     "resolve_best_machine",
     "resolve_best_pool",
+    "resolve_chain_external_forecasts",
     "resolve_eligible_machine_ids",
     "resolve_eligible_pool_ids",
     "resolve_external_forecast",

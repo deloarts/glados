@@ -189,6 +189,7 @@ class LotReadModelMixin:
         position.order_id = order_item.order_id
         position.order_number = order_item.order.order_number if order_item.order else ""
         position.supplier_name = order_item.supplier_name or ""
+        position.order_item_supplier_id = order_item.supplier_id
         position.order_item_supplier_external_lead_time_days = (
             order_item.supplier.external_lead_time_days if order_item.supplier else None
         )

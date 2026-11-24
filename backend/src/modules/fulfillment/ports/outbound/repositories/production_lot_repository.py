@@ -21,6 +21,47 @@ from src.modules.fulfillment.domain.services.scheduling import ExternalForecast
 
 
 @dataclass
+class ExternalWorkFilterDto:
+    """The filters of the procurement list of external work. `today` is the
+    tenant's day, against which an overdue send-out is judged."""
+
+    today: date
+    skip: int | None = None
+    limit: int | None = None
+    search: str | None = None
+    fabrication_method_id: int | None = None
+    # Any of these methods, for the infoscreen widget.
+    fabrication_method_ids: list[int] | None = None
+    # The supplier of the live line, or for a position without one the
+    # default supplier of its outsourced method.
+    supplier_id: int | None = None
+    # Matched against the part number and the article name.
+    part: str | None = None
+    # Any of these lots, projects or products; the three filters AND.
+    lot_ids: list[int] | None = None
+    project_ids: list[int] | None = None
+    product_ids: list[int] | None = None
+    # Any of these stages and alerts, the values of
+    # scheduling.external_work.ExternalWorkStage and ExternalWorkAlert.
+    stages: list[str] | None = None
+    alerts: list[str] | None = None
+    # The forecast pickup, when the pieces can go out.
+    ready_from: date | None = None
+    ready_to: date | None = None
+    latest_pickup_from: date | None = None
+    latest_pickup_to: date | None = None
+    # The day it is back: the supplier's date on the line, else the latest
+    # delivery the walk counted.
+    back_by_from: date | None = None
+    back_by_to: date | None = None
+    # Only positions already given to a supplier, a line of an order.
+    only_with_supplier: bool = False
+    # Only positions that cannot be ready by their latest pickup, or whose
+    # latest pickup has passed while nothing was handed over.
+    only_critical: bool = False
+
+
+@dataclass
 class LotFilterDto:
     skip: int | None = None
     limit: int | None = None
@@ -137,6 +178,19 @@ class IProductionLotRepository(Protocol):
     async def get_ids_after(self, after_id: int, limit: int) -> list[int]:
         """Up to `limit` lot ids above `after_id`, ascending, for walking
         every lot in pages."""
+        ...
+
+    async def get_ids_with_external_work(self) -> list[int]:
+        """The ids of every lot that is not terminal and has an open
+        position of external work (scheduling.external_work), ascending."""
+        ...
+
+    async def get_external_work_page(
+        self, filters: ExternalWorkFilterDto
+    ) -> tuple[int, list[tuple[int, int]]]:
+        """How many positions of external work match, and one page of them
+        as (position id, lot id), by latest pickup, then forecast pickup,
+        undated last."""
         ...
 
     async def get_multi(self, filters: LotFilterDto) -> tuple[int, list[ProductionLot]]: ...

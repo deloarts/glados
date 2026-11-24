@@ -124,8 +124,10 @@ _seq = itertools.count(1)
 # parametrization exceed them.
 _WALK_INPUT_STATEMENTS = 97
 _BOARD_STATEMENTS = 128
-_RECOMPUTE_STATEMENTS = 122
-_AUTO_PLAN_STATEMENTS = 309
+# The recompute, and Auto-Plan through it, also reads the ids of the lots
+# with external work; their rows come with the walk's own batch reads.
+_RECOMPUTE_STATEMENTS = 123
+_AUTO_PLAN_STATEMENTS = 310
 
 
 @pytest.fixture(autouse=True)

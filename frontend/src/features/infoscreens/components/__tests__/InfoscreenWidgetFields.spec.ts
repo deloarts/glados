@@ -13,6 +13,13 @@ const searchWeatherPlaces = vi.hoisted(() =>
 )
 
 vi.mock('../../api/infoscreensApi', () => ({ searchWeatherPlaces }))
+vi.mock('@/features/fabrication-methods', () => ({
+  useFabricationMethodsStore: () => ({
+    items: [{ id: 6 }],
+    activeItems: [{ id: 6, name: { enGB: 'Hardening' } }],
+    refresh: vi.fn<() => Promise<void>>(),
+  }),
+}))
 
 const ZELL_AM_SEE: WeatherPlace = {
   name: 'Zell am See',
@@ -92,5 +99,29 @@ describe('machine view fields', () => {
     const w = mountFields(defaultWidget('machine_detail'), true)
     expect(w.text()).toContain('Pick a machine.')
     expect(w.find('[data-testid="widget-machine-drawing"]').exists()).toBe(true)
+  })
+})
+
+
+describe('external work fields', () => {
+  it('offers the layouts, the methods and the two switches', () => {
+    const w = mountFields(defaultWidget('external_work'))
+
+    expect(w.find('[data-testid="widget-external-work-layout"]').exists()).toBe(true)
+    expect(w.find('[data-testid="widget-external-work-methods"]').exists()).toBe(true)
+    expect(w.find('[data-testid="widget-external-work-overdue"]').exists()).toBe(true)
+    expect(w.find('[data-testid="widget-external-work-only-with-supplier"]').exists()).toBe(true)
+  })
+
+  it('starts as a week by day with the overdue parts, like the server', () => {
+    expect(defaultWidget('external_work')).toEqual({
+      type: 'external_work',
+      title: null,
+      horizon_days: 7,
+      show_overdue: true,
+      fabrication_method_ids: [],
+      only_with_supplier: false,
+      layout: 'days',
+    })
   })
 })

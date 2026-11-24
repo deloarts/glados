@@ -27,6 +27,7 @@ class ProductionSettingsMapper:
             default_weekly_hours=weekly_hours_to_dto(e.default_weekly_hours),
             default_external_lead_days=e.default_external_lead_days,
             response_time_days=e.response_time_days,
+            external_safety_margin_days=e.external_safety_margin_days,
             require_qa=e.require_qa,
             frozen_window_hours=e.frozen_window_hours,
             default_inspection_method_id=e.default_inspection_method_id,

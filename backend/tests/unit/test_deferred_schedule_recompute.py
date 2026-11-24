@@ -90,9 +90,15 @@ class _Orders:
         return []
 
 
+class _Lots:
+    async def get_ids_with_external_work(self) -> list[int]:
+        return []
+
+
 class _Repos:
     def __init__(self) -> None:
         self.orders = _Orders()
+        self.lots = _Lots()
 
 
 def _recompute(**kwargs: Any) -> RecomputeMachineSchedule:

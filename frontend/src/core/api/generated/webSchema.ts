@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-19T14:07:15.193Z
+ * Generated: 2026-11-24T09:58:29.754Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -3489,6 +3489,23 @@ export interface paths {
         };
         /** Get Data Import Profile */
         get: operations["get_data_import_profile_api_v1_web_data_import_profiles__import_type__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/web/external-work/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read External Work */
+        get: operations["read_external_work_api_v1_web_external_work__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12441,6 +12458,8 @@ export interface components {
             };
             /** Example */
             example: string;
+            /** External Safety Margin Days */
+            external_safety_margin_days: number;
             /** Frozen Window Hours */
             frozen_window_hours: number;
             /** Id */
@@ -15619,6 +15638,33 @@ export interface components {
          */
         DateFormat: "iso" | "dmy_dot" | "dmy_slash" | "mdy_slash" | "d_mon_y";
         /**
+         * DateTermKind
+         * @description One line of a date's explanation.
+         * @enum {string}
+         */
+        DateTermKind: "after_step" | "raw_material" | "response_time" | "target_lot" | "target_demand" | "safety_margin" | "later_step" | "back_by" | "lead_time" | "latest_pickup" | "supplier_date" | "result";
+        /**
+         * DateTermResult
+         * @description One line of how a date comes about (external_work_explanation).
+         */
+        DateTermResult: {
+            /** Date */
+            date: string | null;
+            /** Days */
+            days: number | null;
+            kind: components["schemas"]["DateTermKind"];
+            /** Methods */
+            methods: {
+                [key: string]: string;
+            }[];
+            /** Minutes */
+            minutes: number | null;
+            /** Reference */
+            reference: string;
+            /** Source */
+            source: ("supplier" | "method" | "default") | null;
+        };
+        /**
          * DefaultMailTemplateResponse
          * @description The admin default template for one supplier mail kind. It is resolved,
          *     not stored, so when nothing is configured the answer is a 200 with
@@ -16174,6 +16220,162 @@ export interface components {
          * @enum {string}
          */
         ExportColumnSource: "tag_name" | "tag_table" | "data_type" | "address" | "comment" | "device_name" | "device_name_ascii" | "signal_type" | "safety" | "constant";
+        /**
+         * ExternalWorkAlert
+         * @description Why a position of external work needs attention in the procurement
+         *     list. NOT_READY_IN_TIME and OVERDUE are critical, NO_TARGET_DATE only
+         *     explains a missing latest pickup.
+         * @enum {string}
+         */
+        ExternalWorkAlert: "not_ready_in_time" | "overdue" | "no_target_date";
+        /** ExternalWorkMethodResult */
+        ExternalWorkMethodResult: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * ExternalWorkRowResult
+         * @description One position of external work with what purchasing needs to send it
+         *     out: what, from which lot, by when, to whom and where it stands.
+         */
+        ExternalWorkRowResult: {
+            alert: components["schemas"]["ExternalWorkAlert"] | null;
+            /** Article Name */
+            article_name: string;
+            /** Back By Date */
+            back_by_date: string | null;
+            /** Back By Source */
+            back_by_source: ("supplier" | "latest_pickup") | null;
+            /** Back By Terms */
+            back_by_terms: components["schemas"]["DateTermResult"][];
+            /** Expected Pickup Date */
+            expected_pickup_date: string | null;
+            /** Explanation Stale */
+            explanation_stale: boolean;
+            /** Fabrication Methods */
+            fabrication_methods: components["schemas"]["ExternalWorkMethodResult"][];
+            /** Handed Over Quantity */
+            handed_over_quantity: number;
+            kind: components["schemas"]["LotPositionKind"];
+            /** Latest Pickup Date */
+            latest_pickup_date: string | null;
+            /** Latest Pickup Terms */
+            latest_pickup_terms: components["schemas"]["DateTermResult"][];
+            /** Lead Days */
+            lead_days: number;
+            /** Lot Id */
+            lot_id: number;
+            /** Lot Number */
+            lot_number: string;
+            /**
+             * Lot Public Id
+             * Format: uuid
+             */
+            lot_public_id: string;
+            /** Made Item Id */
+            made_item_id: number;
+            /** Made Item Public Id */
+            made_item_public_id: string | null;
+            /** Order Id */
+            order_id: number | null;
+            /** Order Item Id */
+            order_item_id: number | null;
+            order_item_status: components["schemas"]["OrderItemStatus"] | null;
+            /** Order Number */
+            order_number: string;
+            /** Part Number */
+            part_number: string;
+            /** Planned Delivery Date */
+            planned_delivery_date: string | null;
+            /** Planned Pickup Date */
+            planned_pickup_date: string | null;
+            /** Position Id */
+            position_id: number;
+            /** Position Sequence */
+            position_sequence: number;
+            position_status: components["schemas"]["LotPositionStatus"];
+            /** Product Id */
+            product_id: number | null;
+            /** Product Number */
+            product_number: string | null;
+            /** Project Id */
+            project_id: number;
+            /** Project Number */
+            project_number: string;
+            /** Quantity */
+            quantity: number;
+            /** Ready For Pickup Date */
+            ready_for_pickup_date: string | null;
+            /** Ready From Terms */
+            ready_from_terms: components["schemas"]["DateTermResult"][];
+            /** Ready Now */
+            ready_now: boolean;
+            /** Revision */
+            revision: string;
+            /** Suggested Supplier Id */
+            suggested_supplier_id: number | null;
+            /** Suggested Supplier Name */
+            suggested_supplier_name: string;
+            /** Supplier Id */
+            supplier_id: number | null;
+            /** Supplier Name */
+            supplier_name: string;
+        };
+        /**
+         * ExternalWorkStage
+         * @description Where a position of external work stands with its supplier, as the
+         *     procurement list filters it. Pieces handed over put it at the supplier
+         *     until some come back.
+         * @enum {string}
+         */
+        ExternalWorkStage: "unassigned" | "pending" | "requested" | "ordered" | "at_supplier" | "partially_back";
+        /** ExternalWorkWidgetConfig */
+        ExternalWorkWidgetConfig: {
+            /** Fabrication Method Ids */
+            fabrication_method_ids?: number[];
+            /**
+             * Horizon Days
+             * @default 7
+             */
+            horizon_days: number;
+            /**
+             * Layout
+             * @default days
+             * @enum {string}
+             */
+            layout: "days" | "suppliers";
+            /**
+             * Only With Supplier
+             * @default false
+             */
+            only_with_supplier: boolean;
+            /**
+             * Show Overdue
+             * @default true
+             */
+            show_overdue: boolean;
+            /** Title */
+            title?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "external_work";
+        };
+        /** ExternalWorkWidgetData */
+        ExternalWorkWidgetData: {
+            /** Rows */
+            rows: components["schemas"]["InfoscreenExternalWorkRow"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "external_work";
+        };
         /**
          * ExtraCostKind
          * @enum {string}
@@ -16798,6 +17000,41 @@ export interface components {
             /** Start */
             start: string;
         };
+        /**
+         * InfoscreenExternalWorkRow
+         * @description A part that goes to a supplier for an outside process. No persons
+         *     and no customer: the lot, the item, the methods and a company.
+         */
+        InfoscreenExternalWorkRow: {
+            /** Alert */
+            alert: ("not_ready_in_time" | "overdue") | null;
+            /** Days Late */
+            days_late: number | null;
+            /** Due Back Date */
+            due_back_date: string | null;
+            /** Item Name */
+            item_name: string | null;
+            /** Latest Pickup Date */
+            latest_pickup_date: string | null;
+            /** Lot Number */
+            lot_number: string;
+            /** Methods */
+            methods: string[];
+            /** Part Number */
+            part_number: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Ready From */
+            ready_from: string | null;
+            /** Ready Now */
+            ready_now: boolean;
+            /** Supplier Name */
+            supplier_name: string | null;
+            /** Supplier Suggested */
+            supplier_suggested: boolean;
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+        };
         /** InfoscreenFeedBanner */
         InfoscreenFeedBanner: {
             /** Severity */
@@ -16825,7 +17062,7 @@ export interface components {
             /** Timezone */
             timezone: string;
             /** Widgets */
-            widgets: ((components["schemas"]["MachineBoardWidgetData"] | components["schemas"]["LotsDueWidgetData"] | components["schemas"]["LateLotsWidgetData"] | components["schemas"]["QaQueueWidgetData"] | components["schemas"]["DeliveriesExpectedWidgetData"] | components["schemas"]["MessageWidgetData"] | components["schemas"]["ClockWidgetData"] | components["schemas"]["WeatherWidgetData"] | components["schemas"]["ProductsWidgetData"] | components["schemas"]["ProjectsWidgetData"] | components["schemas"]["MachineDetailWidgetData"]) | null)[][];
+            widgets: ((components["schemas"]["MachineBoardWidgetData"] | components["schemas"]["LotsDueWidgetData"] | components["schemas"]["LateLotsWidgetData"] | components["schemas"]["QaQueueWidgetData"] | components["schemas"]["DeliveriesExpectedWidgetData"] | components["schemas"]["MessageWidgetData"] | components["schemas"]["ClockWidgetData"] | components["schemas"]["WeatherWidgetData"] | components["schemas"]["ProductsWidgetData"] | components["schemas"]["ProjectsWidgetData"] | components["schemas"]["MachineDetailWidgetData"] | components["schemas"]["ExternalWorkWidgetData"]) | null)[][];
         };
         /** InfoscreenFeedScreen */
         InfoscreenFeedScreen: {
@@ -16973,7 +17210,7 @@ export interface components {
              */
             layout: "full" | "two_columns" | "main_side" | "grid_2x2" | "two_rows" | "three_rows" | "grid_2x3" | "grid_3x2";
             /** Slots */
-            slots: ((components["schemas"]["MachineBoardWidgetConfig"] | components["schemas"]["LotsDueWidgetConfig"] | components["schemas"]["LateLotsWidgetConfig"] | components["schemas"]["QaQueueWidgetConfig"] | components["schemas"]["DeliveriesExpectedWidgetConfig"] | components["schemas"]["MessageWidgetConfig"] | components["schemas"]["ClockWidgetConfig"] | components["schemas"]["WeatherWidgetConfig"] | components["schemas"]["ProductsWidgetConfig"] | components["schemas"]["ProjectsWidgetConfig"] | components["schemas"]["MachineDetailWidgetConfig"]) | null)[];
+            slots: ((components["schemas"]["MachineBoardWidgetConfig"] | components["schemas"]["LotsDueWidgetConfig"] | components["schemas"]["LateLotsWidgetConfig"] | components["schemas"]["QaQueueWidgetConfig"] | components["schemas"]["DeliveriesExpectedWidgetConfig"] | components["schemas"]["MessageWidgetConfig"] | components["schemas"]["ClockWidgetConfig"] | components["schemas"]["WeatherWidgetConfig"] | components["schemas"]["ProductsWidgetConfig"] | components["schemas"]["ProjectsWidgetConfig"] | components["schemas"]["MachineDetailWidgetConfig"] | components["schemas"]["ExternalWorkWidgetConfig"]) | null)[];
         };
         /** InfoscreenProductRow */
         InfoscreenProductRow: {
@@ -21966,6 +22203,17 @@ export interface components {
         PageResponse_DemandItemResponse_: {
             /** Items */
             items: components["schemas"]["DemandItemResponse"][];
+            /** Limit */
+            limit: number | null;
+            /** Skip */
+            skip: number;
+            /** Total */
+            total: number;
+        };
+        /** PageResponse[ExternalWorkRowResult] */
+        PageResponse_ExternalWorkRowResult_: {
+            /** Items */
+            items: components["schemas"]["ExternalWorkRowResult"][];
             /** Limit */
             limit: number | null;
             /** Skip */
@@ -30135,6 +30383,8 @@ export interface components {
             default_weekly_hours?: {
                 [key: string]: components["schemas"]["WorkIntervalSchema"][];
             } | null;
+            /** External Safety Margin Days */
+            external_safety_margin_days?: number | null;
             /** Frozen Window Hours */
             frozen_window_hours?: number | null;
             /** Overwrite Item Material On Approval */
@@ -37981,6 +38231,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataImportProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_external_work_api_v1_web_external_work__get: {
+        parameters: {
+            query?: {
+                /** @description Rows to skip; 0 when omitted. */
+                skip?: number | null;
+                /** @description Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match. */
+                limit?: number | null;
+                /** @description Lot, part number, article or project */
+                search?: string | null;
+                fabrication_method_id?: number | null;
+                /** @description The line's supplier, or without a line the method's default supplier */
+                supplier_id?: number | null;
+                /** @description Part number or article name */
+                part?: string | null;
+                lot_ids?: number[] | null;
+                project_ids?: number[] | null;
+                product_ids?: number[] | null;
+                stages?: components["schemas"]["ExternalWorkStage"][] | null;
+                alerts?: components["schemas"]["ExternalWorkAlert"][] | null;
+                ready_from?: string | null;
+                ready_to?: string | null;
+                latest_pickup_from?: string | null;
+                latest_pickup_to?: string | null;
+                back_by_from?: string | null;
+                back_by_to?: string | null;
+                /** @description Only positions already on a supplier's order */
+                only_with_supplier?: boolean;
+                /** @description Only positions not ready by their latest pickup, or overdue */
+                only_critical?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse_ExternalWorkRowResult_"];
                 };
             };
             /** @description Validation Error */

@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+
+import { useFabricationMethodsStore } from '@/features/fabrication-methods'
+import { useLocalizedText } from '@/shared/composables/useLocalizedText'
 
 import type { MachinePoolResponse, ProductionMachineResponse } from '@/features/production-machines'
 import InfoscreenAlignPicker from './InfoscreenAlignPicker.vue'
@@ -9,6 +12,8 @@ import {
   CLOCK_STYLES,
   DELIVERIES_HORIZON_DAYS,
   DETAIL_NEXT_COUNT,
+  EXTERNAL_WORK_HORIZON_DAYS,
+  EXTERNAL_WORK_LAYOUTS,
   LOTS_DUE_HORIZON_DAYS,
   MESSAGE_SEVERITIES,
   MESSAGE_TEXT_MAX_LENGTH,
@@ -45,6 +50,27 @@ const lotsDue = computed(() => (widget.value.type === 'lots_due' ? widget.value 
 const lateLots = computed(() => (widget.value.type === 'late_lots' ? widget.value : null))
 const deliveries = computed(() =>
   widget.value.type === 'deliveries_expected' ? widget.value : null,
+)
+const externalWork = computed(() => (widget.value.type === 'external_work' ? widget.value : null))
+
+// The methods load the first time an external work widget is edited.
+const methodsStore = useFabricationMethodsStore()
+const { localize } = useLocalizedText()
+watch(
+  externalWork,
+  (current) => {
+    if (current && methodsStore.items.length === 0) void methodsStore.refresh()
+  },
+  { immediate: true },
+)
+const methodOptions = computed(() =>
+  methodsStore.activeItems.map((method) => ({ value: method.id, label: localize(method.name) })),
+)
+const externalWorkLayoutOptions = computed(() =>
+  EXTERNAL_WORK_LAYOUTS.map((value) => ({
+    value,
+    label: t(`infoscreens.externalWorkLayouts.${value}`),
+  })),
 )
 const message = computed(() => (widget.value.type === 'message' ? widget.value : null))
 const clock = computed(() => (widget.value.type === 'clock' ? widget.value : null))
@@ -209,6 +235,78 @@ const severityOptions = computed(() =>
           @update:model-value="patch({ show_overdue: $event })"
         />
         {{ t('infoscreens.widgetFields.showOverdue') }}
+      </label>
+    </template>
+
+    <template v-else-if="externalWork">
+      <div class="field">
+        <label :id="`${idPrefix}-layout-label`" :for="`${idPrefix}-layout`">
+          {{ t('infoscreens.widgetFields.externalWorkLayout') }}
+        </label>
+        <Select
+          :model-value="externalWork.layout ?? 'days'"
+          :input-id="`${idPrefix}-layout`"
+          :aria-labelledby="`${idPrefix}-layout-label`"
+          :options="externalWorkLayoutOptions"
+          option-label="label"
+          option-value="value"
+          size="small"
+          fluid
+          data-testid="widget-external-work-layout"
+          @update:model-value="patch({ layout: $event })"
+        />
+      </div>
+      <div class="field">
+        <label :for="`${idPrefix}-horizon`">{{ t('infoscreens.widgetFields.horizonDays') }}</label>
+        <InputNumber
+          :model-value="externalWork.horizon_days"
+          :input-id="`${idPrefix}-horizon`"
+          :min="EXTERNAL_WORK_HORIZON_DAYS.min"
+          :max="EXTERNAL_WORK_HORIZON_DAYS.max"
+          show-buttons
+          size="small"
+          fluid
+          @update:model-value="patch({ horizon_days: $event ?? EXTERNAL_WORK_HORIZON_DAYS.default })"
+        />
+        <small class="hint">{{ t('infoscreens.widgetFields.externalWorkHint') }}</small>
+      </div>
+      <div class="field">
+        <label :id="`${idPrefix}-methods-label`" :for="`${idPrefix}-methods`">
+          {{ t('infoscreens.widgetFields.methods') }}
+        </label>
+        <MultiSelect
+          :model-value="externalWork.fabrication_method_ids"
+          :input-id="`${idPrefix}-methods`"
+          :aria-labelledby="`${idPrefix}-methods-label`"
+          :options="methodOptions"
+          option-label="label"
+          option-value="value"
+          :placeholder="t('infoscreens.widgetFields.allMethods')"
+          display="chip"
+          filter
+          fluid
+          size="small"
+          data-testid="widget-external-work-methods"
+          @update:model-value="patch({ fabrication_method_ids: $event })"
+        />
+      </div>
+      <label class="check-row">
+        <Checkbox
+          :model-value="externalWork.show_overdue ?? true"
+          binary
+          data-testid="widget-external-work-overdue"
+          @update:model-value="patch({ show_overdue: $event })"
+        />
+        {{ t('infoscreens.widgetFields.showOverdueSendOut') }}
+      </label>
+      <label class="check-row">
+        <Checkbox
+          :model-value="externalWork.only_with_supplier ?? false"
+          binary
+          data-testid="widget-external-work-only-with-supplier"
+          @update:model-value="patch({ only_with_supplier: $event })"
+        />
+        {{ t('infoscreens.widgetFields.onlyWithSupplier') }}
       </label>
     </template>
 

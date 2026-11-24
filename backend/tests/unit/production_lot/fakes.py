@@ -54,6 +54,7 @@ from src.modules.fulfillment.ports.outbound.repositories.made_item_demand_reposi
 from src.modules.fulfillment.ports.outbound.repositories.order_repository import OrderFilterDto
 from src.modules.platform.domain.value_objects.localized_text import LocalizedText
 from src.modules.workspace.domain.entities.project import Project
+from tests.unit._external_work import external_work_lot_ids
 from tests.unit._tenant_settings import TenantSettings
 from tests.unit.production_lot._helpers import make_inspection_method
 from tests.unit.production_order.fakes import FakeProductionOrderInterruptionRepository
@@ -124,6 +125,9 @@ class FakeProductionLotRepository:
     async def get_by_id_for_update(self, id: int) -> ProductionLot | None:
         self.for_update_calls.append(id)
         return await self.get_by_id(id)
+
+    async def get_ids_with_external_work(self) -> list[int]:
+        return external_work_lot_ids(await self.get_by_ids(sorted(self._lots)))
 
     async def get_by_ids(self, ids: list[int], *, refresh: bool = False) -> list[ProductionLot]:
         return [self._hydrate(self._lots[i]) for i in ids if i in self._lots]

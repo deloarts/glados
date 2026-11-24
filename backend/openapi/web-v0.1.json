@@ -1644,6 +1644,10 @@
             "title": "Example",
             "type": "string"
           },
+          "external_safety_margin_days": {
+            "title": "External Safety Margin Days",
+            "type": "integer"
+          },
           "frozen_window_hours": {
             "title": "Frozen Window Hours",
             "type": "integer"
@@ -1685,6 +1689,7 @@
           "default_weekly_hours",
           "default_external_lead_days",
           "response_time_days",
+          "external_safety_margin_days",
           "require_qa",
           "frozen_window_hours",
           "default_inspection_method_id",
@@ -11897,6 +11902,108 @@
         "title": "DateFormat",
         "type": "string"
       },
+      "DateTermKind": {
+        "description": "One line of a date's explanation.",
+        "enum": [
+          "after_step",
+          "raw_material",
+          "response_time",
+          "target_lot",
+          "target_demand",
+          "safety_margin",
+          "later_step",
+          "back_by",
+          "lead_time",
+          "latest_pickup",
+          "supplier_date",
+          "result"
+        ],
+        "title": "DateTermKind",
+        "type": "string"
+      },
+      "DateTermResult": {
+        "description": "One line of how a date comes about (external_work_explanation).",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DateTermKind"
+          },
+          "methods": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Methods",
+            "type": "array"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "supplier",
+                  "method",
+                  "default"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "kind",
+          "date",
+          "days",
+          "minutes",
+          "methods",
+          "source",
+          "reference"
+        ],
+        "title": "DateTermResult",
+        "type": "object"
+      },
       "DefaultMailTemplateResponse": {
         "description": "The admin default template for one supplier mail kind. It is resolved,\nnot stored, so when nothing is configured the answer is a 200 with\n`configured` false and an empty subject and body, not a 404.",
         "properties": {
@@ -13560,6 +13667,479 @@
         "title": "ExportColumnSource",
         "type": "string"
       },
+      "ExternalWorkAlert": {
+        "description": "Why a position of external work needs attention in the procurement\nlist. NOT_READY_IN_TIME and OVERDUE are critical, NO_TARGET_DATE only\nexplains a missing latest pickup.",
+        "enum": [
+          "not_ready_in_time",
+          "overdue",
+          "no_target_date"
+        ],
+        "title": "ExternalWorkAlert",
+        "type": "string"
+      },
+      "ExternalWorkMethodResult": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Name",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ExternalWorkMethodResult",
+        "type": "object"
+      },
+      "ExternalWorkRowResult": {
+        "description": "One position of external work with what purchasing needs to send it\nout: what, from which lot, by when, to whom and where it stands.",
+        "properties": {
+          "alert": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalWorkAlert"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "article_name": {
+            "title": "Article Name",
+            "type": "string"
+          },
+          "back_by_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Back By Date"
+          },
+          "back_by_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "supplier",
+                  "latest_pickup"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Back By Source"
+          },
+          "back_by_terms": {
+            "items": {
+              "$ref": "#/components/schemas/DateTermResult"
+            },
+            "title": "Back By Terms",
+            "type": "array"
+          },
+          "expected_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Pickup Date"
+          },
+          "explanation_stale": {
+            "title": "Explanation Stale",
+            "type": "boolean"
+          },
+          "fabrication_methods": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalWorkMethodResult"
+            },
+            "title": "Fabrication Methods",
+            "type": "array"
+          },
+          "handed_over_quantity": {
+            "title": "Handed Over Quantity",
+            "type": "number"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LotPositionKind"
+          },
+          "latest_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Pickup Date"
+          },
+          "latest_pickup_terms": {
+            "items": {
+              "$ref": "#/components/schemas/DateTermResult"
+            },
+            "title": "Latest Pickup Terms",
+            "type": "array"
+          },
+          "lead_days": {
+            "title": "Lead Days",
+            "type": "integer"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "lot_public_id": {
+            "format": "uuid",
+            "title": "Lot Public Id",
+            "type": "string"
+          },
+          "made_item_id": {
+            "title": "Made Item Id",
+            "type": "integer"
+          },
+          "made_item_public_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Made Item Public Id"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "order_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Item Id"
+          },
+          "order_item_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "part_number": {
+            "title": "Part Number",
+            "type": "string"
+          },
+          "planned_delivery_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Delivery Date"
+          },
+          "planned_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Pickup Date"
+          },
+          "position_id": {
+            "title": "Position Id",
+            "type": "integer"
+          },
+          "position_sequence": {
+            "title": "Position Sequence",
+            "type": "integer"
+          },
+          "position_status": {
+            "$ref": "#/components/schemas/LotPositionStatus"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Number"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "project_number": {
+            "title": "Project Number",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "number"
+          },
+          "ready_for_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready For Pickup Date"
+          },
+          "ready_from_terms": {
+            "items": {
+              "$ref": "#/components/schemas/DateTermResult"
+            },
+            "title": "Ready From Terms",
+            "type": "array"
+          },
+          "ready_now": {
+            "title": "Ready Now",
+            "type": "boolean"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "suggested_supplier_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Supplier Id"
+          },
+          "suggested_supplier_name": {
+            "title": "Suggested Supplier Name",
+            "type": "string"
+          },
+          "supplier_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier Id"
+          },
+          "supplier_name": {
+            "title": "Supplier Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "position_id",
+          "position_sequence",
+          "kind",
+          "position_status",
+          "lot_id",
+          "lot_public_id",
+          "lot_number",
+          "project_id",
+          "project_number",
+          "product_id",
+          "product_number",
+          "made_item_id",
+          "made_item_public_id",
+          "part_number",
+          "article_name",
+          "revision",
+          "quantity",
+          "handed_over_quantity",
+          "fabrication_methods",
+          "lead_days",
+          "ready_now",
+          "planned_pickup_date",
+          "planned_delivery_date",
+          "latest_pickup_date",
+          "back_by_date",
+          "back_by_source",
+          "expected_pickup_date",
+          "ready_for_pickup_date",
+          "order_item_id",
+          "order_id",
+          "order_number",
+          "order_item_status",
+          "supplier_id",
+          "supplier_name",
+          "suggested_supplier_id",
+          "suggested_supplier_name",
+          "alert",
+          "ready_from_terms",
+          "latest_pickup_terms",
+          "back_by_terms",
+          "explanation_stale"
+        ],
+        "title": "ExternalWorkRowResult",
+        "type": "object"
+      },
+      "ExternalWorkStage": {
+        "description": "Where a position of external work stands with its supplier, as the\nprocurement list filters it. Pieces handed over put it at the supplier\nuntil some come back.",
+        "enum": [
+          "unassigned",
+          "pending",
+          "requested",
+          "ordered",
+          "at_supplier",
+          "partially_back"
+        ],
+        "title": "ExternalWorkStage",
+        "type": "string"
+      },
+      "ExternalWorkWidgetConfig": {
+        "properties": {
+          "fabrication_method_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Fabrication Method Ids",
+            "type": "array"
+          },
+          "horizon_days": {
+            "default": 7,
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "layout": {
+            "default": "days",
+            "enum": [
+              "days",
+              "suppliers"
+            ],
+            "title": "Layout",
+            "type": "string"
+          },
+          "only_with_supplier": {
+            "default": false,
+            "title": "Only With Supplier",
+            "type": "boolean"
+          },
+          "show_overdue": {
+            "default": true,
+            "title": "Show Overdue",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "const": "external_work",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExternalWorkWidgetConfig",
+        "type": "object"
+      },
+      "ExternalWorkWidgetData": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/InfoscreenExternalWorkRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "type": {
+            "const": "external_work",
+            "default": "external_work",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "rows"
+        ],
+        "title": "ExternalWorkWidgetData",
+        "type": "object"
+      },
       "ExtraCostKind": {
         "enum": [
           "shipping",
@@ -15188,6 +15768,158 @@
         "title": "InfoscreenDisplayWindow",
         "type": "object"
       },
+      "InfoscreenExternalWorkRow": {
+        "description": "A part that goes to a supplier for an outside process. No persons\nand no customer: the lot, the item, the methods and a company.",
+        "properties": {
+          "alert": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_ready_in_time",
+                  "overdue"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert"
+          },
+          "days_late": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Late"
+          },
+          "due_back_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Back Date"
+          },
+          "item_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Name"
+          },
+          "latest_pickup_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Pickup Date"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Methods",
+            "type": "array"
+          },
+          "part_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Part Number"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "number"
+          },
+          "ready_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready From"
+          },
+          "ready_now": {
+            "title": "Ready Now",
+            "type": "boolean"
+          },
+          "supplier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier Name"
+          },
+          "supplier_suggested": {
+            "title": "Supplier Suggested",
+            "type": "boolean"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          }
+        },
+        "required": [
+          "lot_number",
+          "part_number",
+          "item_name",
+          "quantity",
+          "methods",
+          "supplier_name",
+          "supplier_suggested",
+          "latest_pickup_date",
+          "ready_from",
+          "ready_now",
+          "due_back_date",
+          "alert",
+          "days_late",
+          "thumbnail_url"
+        ],
+        "title": "InfoscreenExternalWorkRow",
+        "type": "object"
+      },
       "InfoscreenFeedBanner": {
         "properties": {
           "severity": {
@@ -15267,6 +15999,7 @@
                       "mapping": {
                         "clock": "#/components/schemas/ClockWidgetData",
                         "deliveries_expected": "#/components/schemas/DeliveriesExpectedWidgetData",
+                        "external_work": "#/components/schemas/ExternalWorkWidgetData",
                         "late_lots": "#/components/schemas/LateLotsWidgetData",
                         "lots_due": "#/components/schemas/LotsDueWidgetData",
                         "machine_board": "#/components/schemas/MachineBoardWidgetData",
@@ -15312,6 +16045,9 @@
                       },
                       {
                         "$ref": "#/components/schemas/MachineDetailWidgetData"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ExternalWorkWidgetData"
                       }
                     ]
                   },
@@ -15910,6 +16646,7 @@
                     "mapping": {
                       "clock": "#/components/schemas/ClockWidgetConfig",
                       "deliveries_expected": "#/components/schemas/DeliveriesExpectedWidgetConfig",
+                      "external_work": "#/components/schemas/ExternalWorkWidgetConfig",
                       "late_lots": "#/components/schemas/LateLotsWidgetConfig",
                       "lots_due": "#/components/schemas/LotsDueWidgetConfig",
                       "machine_board": "#/components/schemas/MachineBoardWidgetConfig",
@@ -15955,6 +16692,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/MachineDetailWidgetConfig"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ExternalWorkWidgetConfig"
                     }
                   ]
                 },
@@ -32243,6 +32983,44 @@
           "skip"
         ],
         "title": "PageResponse[DemandItemResponse]",
+        "type": "object"
+      },
+      "PageResponse_ExternalWorkRowResult_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalWorkRowResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "skip": {
+            "title": "Skip",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "skip"
+        ],
+        "title": "PageResponse[ExternalWorkRowResult]",
         "type": "object"
       },
       "PageResponse_FabricationMethodResponse_": {
@@ -58307,6 +59085,18 @@
             ],
             "title": "Default Weekly Hours"
           },
+          "external_safety_margin_days": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Safety Margin Days"
+          },
           "frozen_window_hours": {
             "anyOf": [
               {
@@ -74325,6 +75115,377 @@
         "summary": "Get Data Import Profile",
         "tags": [
           "web/data-import"
+        ]
+      }
+    },
+    "/api/v1/web/external-work/": {
+      "get": {
+        "operationId": "read_external_work_api_v1_web_external_work__get",
+        "parameters": [
+          {
+            "description": "Rows to skip; 0 when omitted.",
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows to skip; 0 when omitted.",
+              "title": "Skip"
+            }
+          },
+          {
+            "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Lot, part number, article or project",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Lot, part number, article or project",
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fabrication_method_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fabrication Method Id"
+            }
+          },
+          {
+            "description": "The line's supplier, or without a line the method's default supplier",
+            "in": "query",
+            "name": "supplier_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The line's supplier, or without a line the method's default supplier",
+              "title": "Supplier Id"
+            }
+          },
+          {
+            "description": "Part number or article name",
+            "in": "query",
+            "name": "part",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Part number or article name",
+              "title": "Part"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lot_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lot Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "product_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stages",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalWorkStage"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stages"
+            }
+          },
+          {
+            "in": "query",
+            "name": "alerts",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalWorkAlert"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Alerts"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ready_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ready From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ready_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ready To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "latest_pickup_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Latest Pickup From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "latest_pickup_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Latest Pickup To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "back_by_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Back By From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "back_by_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Back By To"
+            }
+          },
+          {
+            "description": "Only positions already on a supplier's order",
+            "in": "query",
+            "name": "only_with_supplier",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only positions already on a supplier's order",
+              "title": "Only With Supplier",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Only positions not ready by their latest pickup, or overdue",
+            "in": "query",
+            "name": "only_critical",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only positions not ready by their latest pickup, or overdue",
+              "title": "Only Critical",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse_ExternalWorkRowResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read External Work",
+        "tags": [
+          "web/external-work"
         ]
       }
     },

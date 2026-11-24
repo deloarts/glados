@@ -459,6 +459,7 @@ ADMIN_SETTINGS_SEEDS: tuple[AdminSettingsSeed[Any], ...] = (
             default_weekly_hours={0: 480, 1: 480, 2: 480, 3: 480, 4: 480, 5: 0, 6: 0},
             default_external_lead_days=0,
             response_time_days=1,
+            external_safety_margin_days=2,
             require_qa=False,
             frozen_window_hours=0,
             require_source_item_approval=False,

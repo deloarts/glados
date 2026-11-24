@@ -24,6 +24,7 @@ from src.modules.catalogue.adapters.inbound.api.deps.repositories import get_ite
 from src.modules.catalogue.adapters.inbound.api.deps.repositories import get_made_item_file_repo
 from src.modules.catalogue.adapters.inbound.api.deps.repositories import get_made_item_repo
 from src.modules.catalogue.adapters.inbound.api.deps.repositories import get_source_item_repo
+from src.modules.catalogue.adapters.inbound.api.deps.repositories import get_supplier_repo
 from src.modules.external_data.adapters.outbound.external.pdm.factory import create_pdm_gateway
 from src.modules.external_data.adapters.outbound.external.stock_service.factory import (
     create_stock_service,
@@ -90,6 +91,7 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories.order_re
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_machine_repository import (
     SqlAlchemyProductionMachineRepository,
 )
+from src.modules.fulfillment.application.facade.external_work import GetExternalWork
 from src.modules.operations.adapters.inbound.api.deps import bindings as operations
 from src.modules.operations.adapters.outbound.external.time_tracking_service.factory import (
     create_time_tracking_provider,
@@ -245,4 +247,19 @@ def build_infoscreen_feed(db: AsyncSession) -> BuildInfoscreenFeed:
         made_item_repo=get_made_item_repo(db),
         made_item_file_repo=get_made_item_file_repo(db),
         weather=get_weather_service(),
+        external_work=GetExternalWork(
+            get_production_lot_repo(db),
+            get_supplier_repo(db),
+            settings_repo,
+            get_scheduling_repos(
+                order_repo=get_production_order_repo(db),
+                lot_repo=get_production_lot_repo(db),
+                order_item_repo=get_order_item_repo(db),
+                source_item_demand_repo=get_source_item_demand_repo(db),
+                source_item_allocation_repo=get_source_item_allocation_repo(db),
+                made_item_allocation_repo=get_made_item_allocation_repo(db),
+                made_item_demand_repo=get_made_item_demand_repo(db),
+                settings_repo=settings_repo,
+            ),
+        ),
     )

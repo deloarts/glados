@@ -54,6 +54,8 @@ class ScheduleWalkInputs:
     manual_calendar: MachineCalendar
     unassigned: list[OrderSchedulingContext]
     orders_by_id: dict[int, ProductionOrder]
+    # Everything the contexts were built from, the extra lots included.
+    prefetch: SchedulingPrefetch
 
 
 def _freeze(
@@ -85,6 +87,7 @@ async def build_schedule_walk_inputs(
     extra_machine_ids: Iterable[int] = (),
     downtime_repo: IMachineDowntimeRepository | None = None,
     now: datetime | None = None,
+    extra_lot_ids: Iterable[int] = (),
     *,
     zone: tzinfo,
 ) -> ScheduleWalkInputs:
@@ -99,7 +102,9 @@ async def build_schedule_walk_inputs(
     orders_by_id = {o.id: o for o in orders}
     machine_orders, machineless_orders = _group_orders_by_machine(orders)
     down_machine_ids = await _resolve_down_machine_ids(downtime_repo, machine_orders, now)
-    prefetch = await prefetch_scheduling_data(orders, repos, pool_repo, zone=zone)
+    prefetch = await prefetch_scheduling_data(
+        orders, repos, pool_repo, extra_lot_ids=extra_lot_ids, zone=zone
+    )
 
     machine_queues = await _build_machine_queues(
         machine_orders,
@@ -154,6 +159,7 @@ async def build_schedule_walk_inputs(
         manual_calendar=manual_calendar,
         unassigned=unassigned,
         orders_by_id=orders_by_id,
+        prefetch=prefetch,
     )
 
 
