@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T09:58:29.754Z
+ * Generated: 2026-11-24T13:07:30.271Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -27802,7 +27802,7 @@ export interface components {
          * SourceApprovalStatus
          * @enum {string}
          */
-        SourceApprovalStatus: "not_required" | "pending" | "approved" | "rejected";
+        SourceApprovalStatus: "not_required" | "pending" | "approved" | "rejected" | "awaiting_first_step" | "supplier_sourced";
         /** SourceDemandStatusCountResponse */
         SourceDemandStatusCountResponse: {
             /** Count */

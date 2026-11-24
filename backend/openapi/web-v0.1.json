@@ -50612,7 +50612,9 @@
           "not_required",
           "pending",
           "approved",
-          "rejected"
+          "rejected",
+          "awaiting_first_step",
+          "supplier_sourced"
         ],
         "title": "SourceApprovalStatus",
         "type": "string"

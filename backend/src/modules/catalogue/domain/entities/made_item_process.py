@@ -39,5 +39,8 @@ class MadeItemProcess(Entity):
 
     # ── Denormalized (read-only, populated by repository mapper) ──────
     fabrication_method_name: LocalizedText = field(default_factory=LocalizedText)
+    # Denormalized from FabricationMethod.required_external, so a new lot can
+    # tell from its routing whether a supplier does its first position.
+    fabrication_method_required_external: bool = False
     # Denormalized from InspectionMethod, only set when role == "inspection".
     inspection_method_name: LocalizedText | None = None
