@@ -4,7 +4,7 @@ external_first_step_needs_no_material is turned off. A lot awaiting its first
 step, or sourced by the supplier of that step, then needs our material again
 and starts over as a new lot would: pending while its source item waits for
 approval, otherwise with a demand for what it still lacks
-(lot_material_demand.missing_material).
+(lot_material_demand.demand_missing_material).
 
 The demand restores the lot's own material need, which it had before the
 setting took it away, so it is not new work and needs no active project.
@@ -15,10 +15,7 @@ again, and the reconciler derives the new demands; the caller commits.
 from datetime import datetime
 
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
-from src.modules.fulfillment.application.services.lot_material_demand import missing_material
-from src.modules.fulfillment.application.services.source_item_demand_factory import (
-    build_source_item_demand,
-)
+from src.modules.fulfillment.application.services.lot_material_demand import demand_missing_material
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.services.lot_material_rules import MaterialSupply
 from src.modules.fulfillment.domain.services.lot_material_rules import initial_status
@@ -41,7 +38,6 @@ from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repo
     ISourceItemDemandRepository,
 )
 from src.modules.platform.domain.entities.user import User
-from src.modules.platform.domain.services.quantities import quantity_gt
 from src.shared_kernel.domain.services.changelog_service import append_changelog
 
 RESTORE_REASON = "external first step no longer brings the material"
@@ -106,29 +102,11 @@ class RestoreLotMaterial:
         await self._lots.save(lot)
 
     async def _demand_what_is_missing(self, actor: User, lot: ProductionLot) -> None:
-        quantity, unit, items_per_unit = await missing_material(
-            lot, self._demands, self._allocations
-        )
-        if not quantity_gt(quantity, 0.0):
-            return
-        demand = await self._demands.save(
-            build_source_item_demand(
-                lot,
-                actor,
-                quantity=quantity,
-                unit=unit,
-                items_per_unit=items_per_unit,
-                high_priority=False,
-                notify_on_delivery=False,
-                note=None,
-                desired_delivery_date=None,
+        demand = await demand_missing_material(actor, lot, self._demands, self._allocations)
+        if demand is not None:
+            self._reconciler.touch_demands(
+                LifecycleAggregate.SOURCE_DEMANDS, [demand.id], created=True
             )
-        )
-        self._reconciler.touch_demands(LifecycleAggregate.SOURCE_DEMANDS, [demand.id], created=True)
-        lot.input_demand_id = demand.id
-        lot.changes = append_changelog(
-            lot.changes, actor.full_name, f"Linked source item demand #{demand.id}."
-        )
 
 
 def _restorable(lot: ProductionLot) -> bool:

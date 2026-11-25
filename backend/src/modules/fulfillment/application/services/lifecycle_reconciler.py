@@ -30,10 +30,23 @@ removed. So the lock step notes which lines of the quote requests it locks
 hold a live award, and the run writes a changelog line on the request for
 each of them it finds voided, also where the request's status stays, as on
 a closed request.
+
+A run can end with a material follow-up (lot_material_followup.py), which
+the request's reconciler has and the repair job's has not. When the run
+moved who does a lot's first position, the follow-up moves the lot's source
+approval status and settles, resizes or creates its raw material demand,
+and a second pass derives the demands it wrote. That demand and its lines
+sort before rows a use case may hold by the end of its run, so the lock
+step locks them with the use case's locks whenever the touched rows reach
+a first position whose lot waits for material: the position, a line of it
+or a production order of it. Where that would break the lock order, they
+are left out, and the follow-up locks them late when it acts on them. The
+second pass changes no position, so it never needs another follow-up.
 """
 
 from collections.abc import Iterable
 from collections.abc import Mapping
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -162,6 +175,58 @@ class ReconcileResult:
         schedule walk after its commit unconditionally, which costs one
         outbox row since the walk runs in the background."""
         return any((c.aggregate, c.field) in _SCHEDULE_FIELDS for c in self.changes)
+
+
+@dataclass(frozen=True)
+class FollowUpTouches:
+    """The source demands a material follow-up changed or created and the
+    order lines whose allocations it wrote, which the run derives in a
+    second pass."""
+
+    demands: frozenset[int] = frozenset()
+    created: frozenset[int] = frozenset()
+    lines: frozenset[int] = frozenset()
+
+    def is_empty(self) -> bool:
+        return not (self.demands or self.created or self.lines)
+
+
+class MaterialFollowUp(Protocol):
+    """What a run does to lots' raw material when it moves who does their
+    first position; see the module docstring."""
+
+    def lock_demands(self, snapshot: LifecycleSnapshot, touched: AggregateIds) -> frozenset[int]:
+        """The raw material demands the lock step locks with the touched
+        rows, from what it read."""
+        ...
+
+    async def apply(
+        self,
+        actor: User,
+        now: datetime,
+        *,
+        changes: Sequence[FieldChange],
+        snapshot: LifecycleSnapshot,
+        derivation: SnapshotDerivation,
+        touched: AggregateIds,
+        lock_plan: LockPlan,
+    ) -> FollowUpTouches:
+        """Writes what the run's changes mean for the lots' material and
+        returns the rows the second pass derives."""
+        ...
+
+
+# The aggregates a material follow-up reads or writes.
+_MATERIAL_AGGREGATES = frozenset({_A.LOT_POSITIONS, _A.LOTS, _A.ORDER_ITEMS, _A.SOURCE_DEMANDS})
+
+
+@dataclass(frozen=True)
+class _Pass:
+    """What one derivation pass of a run wrote, and the facts it read."""
+
+    changes: list[FieldChange]
+    snapshot: LifecycleSnapshot
+    derivation: SnapshotDerivation
 
 
 class _LoggedAt(Protocol):
@@ -363,11 +428,15 @@ class LifecycleReconciler:
         *,
         aggregates: Iterable[LifecycleAggregate] | None = None,
         lock_plan: LockPlan | None = None,
+        material_followup: MaterialFollowUp | None = None,
     ) -> None:
         self._repositories = repositories
         self._bus = bus
         self._aggregates = frozenset(RECONCILED_AGGREGATES if aggregates is None else aggregates)
         assert_reconcilable(self._aggregates)
+        if material_followup is not None and not self._aggregates >= _MATERIAL_AGGREGATES:
+            raise ValueError("A material follow-up needs the positions, lots, lines and demands.")
+        self._material = material_followup
         self._lock_plan = lock_plan or LockPlan(repositories)
         self._lockable = self._aggregates & frozenset(LOCK_ORDER)
         self._touched: dict[LifecycleAggregate, set[int]] = {}
@@ -467,7 +536,7 @@ class LifecycleReconciler:
         ):
             await self._lock_plan.acquire(also)
             return
-        _, targets = await self._lock_targets(touched, also=also)
+        _, targets = await self._lock_targets(touched, also=also, allocated_on=self._allocated_on)
         # What was locked as a target stays one, so the run derives it even
         # where the edge that led to it is gone by then, as when the use case
         # deletes the allocation that tied a demand to the others on its line.
@@ -492,25 +561,81 @@ class LifecycleReconciler:
         self, actor: User, now: datetime, *, reason: str = DEFAULT_REASON
     ) -> ReconcileResult:
         """Recomputes the targets of everything touched since the last run,
-        writes what differs and publishes the events; see the module
-        docstring. `reason` closes every changelog line it writes."""
+        writes what differs and publishes the events, followed by the
+        material follow-up and its second pass; see the module docstring.
+        `reason` closes every changelog line it writes."""
         touched = AggregateIds.of(self._touched)
         kept = self._locked_targets
         live_awards = self._live_awards
+        allocated_on = self._allocated_on
         self._touched = {}
         self._locked_targets = AggregateIds()
         self._live_awards = {}
-        if not self._aggregates or touched.is_empty():
-            self._allocated_on = AggregateIds()
-            return ReconcileResult()
-        loader, targets = await self._lock_targets(touched)
         self._allocated_on = AggregateIds()
-        targets = targets.union(kept.restricted_to(self._aggregates))
-        if targets.is_empty():
+        if not self._aggregates or touched.is_empty():
             return ReconcileResult()
+        first = await self._pass(
+            actor,
+            now,
+            reason,
+            touched,
+            kept=kept,
+            allocated_on=allocated_on,
+            live_awards=live_awards,
+        )
+        if first is None:
+            return ReconcileResult()
+        changes = list(first.changes)
+        if self._material is not None:
+            follow = await self._material.apply(
+                actor,
+                now,
+                changes=first.changes,
+                snapshot=first.snapshot,
+                derivation=first.derivation,
+                touched=touched,
+                lock_plan=self._lock_plan,
+            )
+            if not follow.is_empty():
+                self._lock_plan.record_created(AggregateIds.of({_A.SOURCE_DEMANDS: follow.created}))
+                second = await self._pass(
+                    actor,
+                    now,
+                    reason,
+                    AggregateIds.of({_A.SOURCE_DEMANDS: follow.demands | follow.created}),
+                    allocated_on=AggregateIds.of({_A.ORDER_ITEMS: follow.lines}),
+                    late=True,
+                )
+                if second is not None:
+                    changes += second.changes
+        return ReconcileResult(tuple(changes))
+
+    async def _pass(
+        self,
+        actor: User,
+        now: datetime,
+        reason: str,
+        touched: AggregateIds,
+        *,
+        kept: AggregateIds | None = None,
+        allocated_on: AggregateIds | None = None,
+        live_awards: Mapping[int, frozenset[int]] | None = None,
+        late: bool = False,
+    ) -> _Pass | None:
+        """Locks and derives the targets of `touched`, together with `kept`,
+        writes what differs and publishes the events. None when nothing was
+        a target. `late` locks what is not held yet late, as the follow-up's
+        second pass does."""
+        loader, targets = await self._lock_targets(touched, allocated_on=allocated_on, late=late)
+        if kept is not None:
+            targets = targets.union(kept.restricted_to(self._aggregates))
+        if targets.is_empty():
+            return None
         snapshot = await loader.load_facts(targets)
         derivation = derive_snapshot(snapshot)
-        writer = _Writer(self._repositories, snapshot, derivation, actor, now, reason, live_awards)
+        writer = _Writer(
+            self._repositories, snapshot, derivation, actor, now, reason, live_awards or {}
+        )
         changes: list[FieldChange] = []
         for aggregate in _WRITE_ORDER:
             for row_id in sorted(targets.get(aggregate)):
@@ -522,17 +647,22 @@ class LifecycleReconciler:
             await self._bus.publish(event)
         for lot_event in effects.lot_events:
             await self._repositories.lots.record_event(lot_event)
-        return ReconcileResult(tuple(changes))
+        return _Pass(changes, snapshot, derivation)
 
     async def _lock_targets(
-        self, touched: AggregateIds, *, also: AggregateIds | None = None
+        self,
+        touched: AggregateIds,
+        *,
+        also: AggregateIds | None = None,
+        allocated_on: AggregateIds | None = None,
+        late: bool = False,
     ) -> tuple[LifecycleLoader, AggregateIds]:
         """Widens the touched set, locks the targets this reconciler writes
         and widens again until a reading under the locks finds nothing new
         to lock. The first acquisition keeps the lock order with what the
-        plan holds; later ones lock what a concurrent change added. Returns
-        the loader of the last reading and the targets of the written
-        aggregates.
+        plan holds, unless `late`; later ones lock what a concurrent change
+        added. Returns the loader of the last reading and the targets of the
+        written aggregates.
 
         With `also`, the lock step of lock_touched, it locks `also` and the
         neighbours of every demand among the targets and in `also` besides,
@@ -540,22 +670,45 @@ class LifecycleReconciler:
         once it has written its facts, as a line cancel touches the demands
         it deallocates, and the run then widens it to those neighbours. A
         neighbour that sorts before a demand already held could not be
-        locked by then."""
+        locked by then. The lock step also locks the raw material demands
+        the material follow-up may act on, with their lines and neighbours,
+        where the lock order allows it; see the module docstring."""
         first = True
+        material_in_order = True
         while True:
             loader = LifecycleLoader(self._repositories, refresh=True)
             targets = await loader.widen(
-                touched, within=self._aggregates, allocated_on=self._allocated_on
+                touched, within=self._aggregates, allocated_on=allocated_on
             )
             to_lock = targets.restricted_to(self._lockable)
             if also is not None:
                 demands = targets.union(also).restricted_to(DEMAND_AGGREGATES)
                 neighbours = await loader.neighbours(demands, within=self._aggregates)
                 to_lock = to_lock.union(also).union(neighbours.restricted_to(self._lockable))
+                if material_in_order:
+                    material = await self._material_locks(loader, touched)
+                    if first and not self._lock_plan.in_order(to_lock.union(material)):
+                        material_in_order = False
+                    else:
+                        to_lock = to_lock.union(material)
             if to_lock.issubset(self._lock_plan.held):
                 return loader, targets
-            if first:
+            if first and not late:
                 await self._lock_plan.acquire(to_lock)
             else:
                 await self._lock_plan.acquire_late(to_lock)
             first = False
+
+    async def _material_locks(self, loader: LifecycleLoader, touched: AggregateIds) -> AggregateIds:
+        """The raw material demands the follow-up may act on, from what the
+        loader read, with the lines they are allocated on and their
+        neighbours."""
+        if self._material is None:
+            return AggregateIds()
+        demand_ids = self._material.lock_demands(loader.snapshot(), touched)
+        if not demand_ids:
+            return AggregateIds()
+        demands = AggregateIds.of({_A.SOURCE_DEMANDS: demand_ids})
+        neighbours = await loader.neighbours(demands, within=self._aggregates)
+        lines = AggregateIds.of({_A.ORDER_ITEMS: await loader.source_lines_of(demand_ids)})
+        return demands.union(neighbours).union(lines).restricted_to(self._lockable)

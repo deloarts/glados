@@ -17,13 +17,16 @@ reconciler and runs it, which derives the demand and its neighbours.
 
 `missing_material` says what a lot that gets a new demand still lacks, so an
 approval or a restored material need never demands again what a settled
-demand already brought.
+demand already brought; `demand_missing_material` creates that demand.
 """
 
 from datetime import datetime
 from typing import Protocol
 
 from src.modules.fulfillment.application.services.allocation_release import release_source_demand
+from src.modules.fulfillment.application.services.source_item_demand_factory import (
+    build_source_item_demand,
+)
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.source_item_demand_item import SourceItemDemandItem
 from src.modules.fulfillment.domain.services.lifecycle.demand import SOURCE_FILL_RANK
@@ -65,6 +68,43 @@ async def missing_material(
     settled = latest[0]
     arrived = sum(a.quantity for a in await allocations.get_by_demand_item_id(settled.id))
     return (max(settled.quantity - arrived, 0.0), settled.unit, settled.items_per_unit)
+
+
+async def demand_missing_material(
+    actor: User,
+    lot: ProductionLot,
+    demands: ISourceItemDemandRepository,
+    allocations: ISourceItemAllocationRepository,
+    *,
+    at_most: float | None = None,
+) -> SourceItemDemandItem | None:
+    """Creates and links a demand for what the lot still lacks
+    (missing_material), at most `at_most` of it, and returns it, or None when
+    nothing is missing. The caller saves the lot and touches the demand as
+    created."""
+    quantity, unit, items_per_unit = await missing_material(lot, demands, allocations)
+    if at_most is not None:
+        quantity = min(quantity, at_most)
+    if not quantity_gt(quantity, 0.0):
+        return None
+    demand = await demands.save(
+        build_source_item_demand(
+            lot,
+            actor,
+            quantity=quantity,
+            unit=unit,
+            items_per_unit=items_per_unit,
+            high_priority=False,
+            notify_on_delivery=False,
+            note=None,
+            desired_delivery_date=None,
+        )
+    )
+    lot.input_demand_id = demand.id
+    lot.changes = append_changelog(
+        lot.changes, actor.full_name, f"Linked source item demand #{demand.id}."
+    )
+    return demand
 
 
 class LineRelease(Protocol):

@@ -2,8 +2,10 @@
 A lot whose routing sends its first position to a supplier needs no material
 of ours: it starts awaiting its first step, with no source item demand and
 nothing to approve. Turning the production setting off gives such a lot its
-material need back, pending approval or with a demand at once. Runs through
-the HTTP API on the test database, with the drift check at the end.
+material need back, pending approval or with a demand at once. When the
+first position changes hands later, the lifecycle reconciler's material
+follow-up moves the status and settles, resizes or creates the demand. Runs
+through the HTTP API on the test database, with the drift check at the end.
 """
 
 from datetime import UTC
@@ -13,12 +15,20 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.order_repository.order import (
+    SqlAlchemyOrderRepository,
+)
+from src.modules.fulfillment.domain.entities.order import Order
+from src.modules.fulfillment.domain.value_objects.order_status import OrderStatus
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.domain.value_objects.permission import Permission
 from src.modules.workspace.adapters.outbound.persistence.repositories.project_repository import (
     SqlAlchemyProjectRepository,
 )
 from src.modules.workspace.domain.entities.project import Project
+from tests.integration.repository_reads._graph import Graph
+from tests.integration.repository_reads._graph import make
+from tests.integration.test_api_lot_source_approval import LOTS_BASE
 from tests.integration.test_api_lot_source_approval import _create_lot
 from tests.integration.test_api_lot_source_approval import _demands_for_lot
 from tests.integration.test_api_lot_source_approval import _get_lot
@@ -40,13 +50,16 @@ _PERMISSIONS = [
     Permission.MANAGE_LOTS,
     Permission.WRITE_MADE_ITEMS,
     Permission.WRITE_FABRICATION_METHODS,
+    Permission.WRITE_ORDERS,
+    Permission.MANAGE_ORDERS,
+    Permission.WRITE_PRODUCTION_ORDERS,
 ]
 
 
 async def _method(client: httpx.AsyncClient, name: str, *, external: bool) -> int:
     resp = await client.post(
         "/api/v1/web/fabrication-methods/",
-        json={"name": {"enGB": name}, "required_external": external},
+        json={"name": {"enGB": name}, "required_external": external, "requires_machine": False},
     )
     assert resp.status_code == 201, resp.text
     return int(resp.json()["id"])
@@ -167,3 +180,176 @@ class TestExternalFirstStepMaterial:
         unchanged = await _get_lot(client, lot["id"])
         assert unchanged["source_approval_status"] == "not_required"
         assert unchanged["input_demand_id"] == lot["input_demand_id"]
+
+
+# ── The first position changes hands ────────────────────────────────
+
+
+@pytest.fixture
+async def supplier_order_id(db: AsyncSession) -> int:
+    """A draft order of a supplier, which takes the lines a position is
+    assigned to."""
+    graph = await Graph.seed(db)
+    supplier = await graph.supplier()
+    order = await SqlAlchemyOrderRepository(db).save(
+        make(
+            Order,
+            order_number="O-EXT-1",
+            status=OrderStatus.DRAFT,
+            creator_id=graph.uid,
+            supplier_id=supplier.id,
+        )
+    )
+    await db.commit()
+    return order.id
+
+
+def _first_position_url(lot: dict) -> str:
+    position = min(lot["positions"], key=lambda p: p["sequence"])
+    return f"{LOTS_BASE}/{lot['id']}/positions/{position['id']}"
+
+
+async def _to_supplier(
+    client: httpx.AsyncClient, lot: dict, order_id: int, quantity: float | None = None
+) -> dict:
+    body: dict = {"order_id": order_id, "unit": "pcs"}
+    if quantity is not None:
+        body["quantity"] = quantity
+    resp = await client.post(f"{_first_position_url(lot)}/assign", json=body)
+    assert resp.status_code == 200, resp.text
+    return dict(resp.json())
+
+
+async def _in_house(client: httpx.AsyncClient, lot: dict, quantity: float) -> dict:
+    resp = await client.post(
+        f"{_first_position_url(lot)}/assign-internal", json={"orders": [{"quantity": quantity}]}
+    )
+    assert resp.status_code == 200, resp.text
+    return dict(resp.json())
+
+
+async def _demands(client: httpx.AsyncClient, lot_id: int) -> list[tuple[str, float]]:
+    items = (await _demands_for_lot(client, lot_id))["items"]
+    return sorted((d["status"], d["quantity"]) for d in items)
+
+
+class TestFirstPositionChangesHands:
+    async def test_a_supplier_taking_it_over_settles_the_demand(
+        self,
+        db: AsyncSession,
+        client: httpx.AsyncClient,
+        owner: User,
+        project_id: int,
+        supplier_order_id: int,
+    ) -> None:
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=False)
+        lot = await _create_lot(client, made_item_id, project_id)
+
+        assigned = await _to_supplier(client, await _get_lot(client, lot["id"]), supplier_order_id)
+
+        assert assigned["kind"] == "external"
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "supplier_sourced"
+        assert after["input_demand_id"] is None
+        assert await _demands(client, lot["id"]) == [("canceled", 5.0)]
+
+    async def test_its_supplier_line_going_away_demands_the_material_again(
+        self,
+        db: AsyncSession,
+        client: httpx.AsyncClient,
+        owner: User,
+        project_id: int,
+        supplier_order_id: int,
+    ) -> None:
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=False)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+        await _to_supplier(client, lot, supplier_order_id)
+
+        resp = await client.delete(f"{_first_position_url(lot)}/assign")
+
+        assert resp.status_code == 204, resp.text
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "not_required"
+        assert after["input_demand_id"] is not None
+        assert await _demands(client, lot["id"]) == [("canceled", 5.0), ("open", 5.0)]
+
+    async def test_an_awaited_first_step_made_in_house_demands_the_material(
+        self, db: AsyncSession, client: httpx.AsyncClient, owner: User, project_id: int
+    ) -> None:
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=True)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+
+        await _in_house(client, lot, 5.0)
+
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "not_required"
+        assert await _demands(client, lot["id"]) == [("open", 5.0)]
+
+    async def test_with_approval_on_it_waits_for_the_approval_instead(
+        self, db: AsyncSession, client: httpx.AsyncClient, owner: User, project_id: int
+    ) -> None:
+        await _set_require_source_item_approval(client, True)
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=True)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+
+        await _in_house(client, lot, 5.0)
+
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "pending"
+        assert after["input_demand_id"] is None
+        assert await _demands(client, lot["id"]) == []
+
+    async def test_an_awaited_first_step_given_to_a_supplier_needs_no_material(
+        self,
+        db: AsyncSession,
+        client: httpx.AsyncClient,
+        owner: User,
+        project_id: int,
+        supplier_order_id: int,
+    ) -> None:
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=True)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+
+        await _to_supplier(client, lot, supplier_order_id)
+
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "supplier_sourced"
+        assert await _demands(client, lot["id"]) == []
+
+    async def test_a_shared_first_position_demands_the_in_house_share(
+        self,
+        db: AsyncSession,
+        client: httpx.AsyncClient,
+        owner: User,
+        project_id: int,
+        supplier_order_id: int,
+    ) -> None:
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=False)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+        await _in_house(client, lot, 3.0)
+
+        assigned = await _to_supplier(client, lot, supplier_order_id, quantity=2.0)
+
+        assert assigned["kind"] == "mixed"
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "not_required"
+        assert await _demands(client, lot["id"]) == [("open", 3.0)]
+
+    async def test_with_the_setting_off_the_demand_stays(
+        self,
+        db: AsyncSession,
+        client: httpx.AsyncClient,
+        owner: User,
+        project_id: int,
+        supplier_order_id: int,
+    ) -> None:
+        await _set_first_step_rule(client, False)
+        made_item_id = await _routed_made_item(db, client, owner.id, first_external=False)
+        lot = await _get_lot(client, (await _create_lot(client, made_item_id, project_id))["id"])
+
+        await _to_supplier(client, lot, supplier_order_id)
+
+        after = await _get_lot(client, lot["id"])
+        assert after["source_approval_status"] == "not_required"
+        assert after["input_demand_id"] == lot["input_demand_id"]
+        assert await _demands(client, lot["id"]) == [("open", 5.0)]
