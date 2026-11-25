@@ -142,7 +142,7 @@ export default {
       'Standardmäßig aktiviert: ein Auftrag, der bereits für heute geplant ist, bleibt unangetastet, auch wenn er noch nicht begonnen hat, so wird die Warteschlange der Werkstatt für heute nicht durcheinandergebracht. Deaktivieren, um auch die heutige Warteschlange neu zu planen.',
     responseTimeDays: 'Reaktionszeit für geplanten Start (Tage)',
     responseTimeDaysHint:
-      'Puffer, der auf das Fertigstellungsdatum eines vorherigen Schritts und auf das Ankunftsdatum von Rohmaterial aufgeschlagen wird, bevor eines von beiden den frühesten Start des nächsten Schritts einschränken kann. Wird aus der Admin-Einstellung vorbefüllt; eine Änderung hier gilt nur für diesen Durchlauf.',
+      'Puffer, der auf die Ankunft eines Fremdbearbeitungsschritts und von Rohmaterial aufgeschlagen wird, bevor eines davon den frühesten Start des nächsten Schritts einschränken kann. Wird aus der Admin-Einstellung vorbefüllt; eine Änderung hier gilt nur für diesen Durchlauf.',
     run: 'Auto-Plan ausführen',
     before: 'Vorher',
     after: 'Nachher',

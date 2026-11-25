@@ -41,6 +41,7 @@ function makeProductionSettings(
     default_weekly_hours: {},
     default_external_lead_days: 3,
     response_time_days: 1,
+    internal_handoff_minutes: 0,
     external_safety_margin_days: 2,
     example: 'PO-1',
     require_qa: false,

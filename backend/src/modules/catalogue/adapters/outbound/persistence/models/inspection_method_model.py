@@ -62,6 +62,9 @@ class InspectionMethodOrmModel(ChangedByColumns, Base):
     description: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False, default=dict)
     default_setup_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     default_minutes_per_piece: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Clock minutes the pieces wait after the check, such as for a lab
+    # result; None waits nothing.
+    wait_after_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     requires_evidence: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )

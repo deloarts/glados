@@ -97,6 +97,11 @@ class UpdateProductionSettings:
             if cmd.response_time_days is not None
             else current.response_time_days
         )
+        internal_handoff_minutes = (
+            cmd.internal_handoff_minutes
+            if cmd.internal_handoff_minutes is not None
+            else current.internal_handoff_minutes
+        )
         external_safety_margin_days = (
             cmd.external_safety_margin_days
             if cmd.external_safety_margin_days is not None
@@ -159,6 +164,7 @@ class UpdateProductionSettings:
             default_weekly_hours=default_weekly_hours,
             default_external_lead_days=default_external_lead_days,
             response_time_days=response_time_days,
+            internal_handoff_minutes=internal_handoff_minutes,
             external_safety_margin_days=external_safety_margin_days,
             require_qa=require_qa,
             default_inspection_method_id=default_inspection_method_id,

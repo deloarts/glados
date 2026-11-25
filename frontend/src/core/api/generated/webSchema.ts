@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-25T11:49:25.712Z
+ * Generated: 2026-11-25T12:02:00.712Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -12466,6 +12466,8 @@ export interface components {
             frozen_window_hours: number;
             /** Id */
             id: number;
+            /** Internal Handoff Minutes */
+            internal_handoff_minutes: number;
             /** Overwrite Item Material On Approval */
             overwrite_item_material_on_approval: boolean;
             /** Production Order Number Format */
@@ -30391,6 +30393,8 @@ export interface components {
             external_safety_margin_days?: number | null;
             /** Frozen Window Hours */
             frozen_window_hours?: number | null;
+            /** Internal Handoff Minutes */
+            internal_handoff_minutes?: number | null;
             /** Overwrite Item Material On Approval */
             overwrite_item_material_on_approval?: boolean | null;
             /** Production Order Number Format */

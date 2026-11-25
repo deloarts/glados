@@ -76,6 +76,9 @@ class FabricationMethodOrmModel(ChangedByColumns, Base):
         index=True,
     )
     lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Clock minutes the pieces wait after the step, such as curing; None
+    # waits nothing.
+    wait_after_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     default_for_assemblies: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )

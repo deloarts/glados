@@ -1660,6 +1660,10 @@
             "title": "Id",
             "type": "integer"
           },
+          "internal_handoff_minutes": {
+            "title": "Internal Handoff Minutes",
+            "type": "integer"
+          },
           "overwrite_item_material_on_approval": {
             "title": "Overwrite Item Material On Approval",
             "type": "boolean"
@@ -1693,6 +1697,7 @@
           "default_weekly_hours",
           "default_external_lead_days",
           "response_time_days",
+          "internal_handoff_minutes",
           "external_safety_margin_days",
           "require_qa",
           "frozen_window_hours",
@@ -59128,6 +59133,18 @@
               }
             ],
             "title": "Frozen Window Hours"
+          },
+          "internal_handoff_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Handoff Minutes"
           },
           "overwrite_item_material_on_approval": {
             "anyOf": [

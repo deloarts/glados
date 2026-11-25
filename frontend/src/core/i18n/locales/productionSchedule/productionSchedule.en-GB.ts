@@ -137,7 +137,7 @@ export default {
       "On by default: an order already planned to run today is left untouched, even if it hasn't started yet, so the shop floor's queue for today doesn't get reshuffled. Turn off to let Auto-Plan reconsider today's queue too.",
     responseTimeDays: 'Response time for planned start (days)',
     responseTimeDaysHint:
-      "Buffer added on top of a predecessor step's finish date and a raw material's arrival date before either can gate the next step's earliest start. Pre-filled from the admin setting; changing it here applies to this run only.",
+      "Buffer added to an external step's arrival and a raw material's arrival before either can gate the next step's earliest start. Pre-filled from the admin setting; changing it here applies to this run only.",
     run: 'Run Auto-Plan',
     before: 'Before',
     after: 'After',

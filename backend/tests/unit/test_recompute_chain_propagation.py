@@ -345,9 +345,9 @@ def _build_reference_scenario() -> tuple[
 
 async def test_one_recompute_moves_the_qa_order_with_its_predecessor(monkeypatch):
     """The core case: one execute_all() call must place the QA
-    order (position 3) the day after position 1's own freshly recomputed
-    end, governed by position 1's INTERNAL chain rather than left at its
-    old stale date or governed by position 2's much earlier EXTERNAL typed
+    order (position 3) right at position 1's own freshly recomputed end,
+    governed by position 1's INTERNAL chain rather than left at its old stale
+    date or governed by position 2's much earlier EXTERNAL typed
     date. Without in-run propagation this would need a second recompute
     to catch up."""
     pin_scheduling_clock(monkeypatch, _BEFORE_THE_FIXTURES)
@@ -366,10 +366,8 @@ async def test_one_recompute_moves_the_qa_order_with_its_predecessor(monkeypatch
         MONDAY, time(8), tzinfo=UTC
     ) + timedelta(minutes=200)
 
-    predecessor_end_date = position_1_order.planned_end.date()
-    expected_qa_start = datetime.combine(
-        predecessor_end_date + timedelta(days=1), time(8), tzinfo=UTC
-    )
+    # An in-house predecessor adds no response time.
+    expected_qa_start = position_1_order.planned_end
     assert qa_order.planned_start == expected_qa_start
     assert qa_order.planned_end == expected_qa_start + timedelta(minutes=20)
 

@@ -182,7 +182,11 @@ class OrderSchedulingContext:
     # sequence 1 or a caller not wired for propagation, in which case
     # refresh_predecessor_readiness leaves the context unchanged.
     predecessor_positions: tuple[PredecessorPosition, ...] = ()
+    # Added to an external predecessor's or the raw material's ready day.
     response_time_days: int = 0
+    # Added to the moment the in-house predecessors end
+    # (predecessor_ready_moment).
+    internal_handoff_minutes: int = 0
     # This is the first INTERNAL or MIXED position after an EXTERNAL or
     # MIXED position whose typed date is earlier than the chain feeding it.
     stale_external_predecessor: bool = False
@@ -236,31 +240,52 @@ def position_ready_at_in_run(
     return None
 
 
-def _predecessor_ready_at_with_forecast(
+def _predecessor_shares_with_forecast(
     pred: PredecessorPosition,
     placed_end_by_position: dict[int, date | None],
     chain_end_before: date | None,
     response_time_days: int,
-) -> tuple[date | None, ExternalForecast | None]:
-    """Like position_ready_at_in_run, but an EXTERNAL/MIXED predecessor
-    without a typed or actual date falls back to its forecast instead of
-    leaving the chain unknown. The forecast is returned even when a typed
-    date wins, because it is persisted regardless. An outsourced UNASSIGNED
-    position is forecast as well, but contributes nothing to the chain,
-    exactly as before it had a forecast."""
+) -> tuple[date | None, date | None, ExternalForecast | None]:
+    """The ready days of a predecessor's external and in-house shares, as
+    position_ready_at_in_run reads them, except that an EXTERNAL/MIXED
+    predecessor without a typed or actual date falls back to its forecast
+    instead of leaving the chain unknown. The forecast is returned even when
+    a typed date wins, because it is persisted regardless. An outsourced
+    UNASSIGNED position is forecast as well, but contributes nothing to the
+    chain, exactly as before it had a forecast."""
     if pred.kind == LotPositionKind.UNASSIGNED and pred.outsourced_unassigned:
-        return None, resolve_external_forecast(pred, chain_end_before, response_time_days)
+        return None, None, resolve_external_forecast(pred, chain_end_before, response_time_days)
     if pred.kind == LotPositionKind.EXTERNAL:
         forecast = resolve_external_forecast(pred, chain_end_before, response_time_days)
-        return pred.external_ready_at or forecast.planned_delivery_date, forecast
+        return pred.external_ready_at or forecast.planned_delivery_date, None, forecast
     if pred.kind == LotPositionKind.MIXED:
         forecast = resolve_external_forecast(pred, chain_end_before, response_time_days)
         internal_ready_at = placed_end_by_position.get(
             pred.position_id, pred.stored_internal_ready_at
         )
-        external_ready_at = pred.external_ready_at or forecast.planned_delivery_date
-        return resolve_mixed_predecessor_ready_at(external_ready_at, internal_ready_at), forecast
-    return position_ready_at_in_run(pred, placed_end_by_position), None
+        return (
+            pred.external_ready_at or forecast.planned_delivery_date,
+            internal_ready_at,
+            forecast,
+        )
+    return None, position_ready_at_in_run(pred, placed_end_by_position), None
+
+
+def buffered_ready_day(
+    external_ready_at: date | None, internal_ready_at: date | None, response_time_days: int
+) -> date | None:
+    """When a predecessor's pieces are ready for the next step, as a day:
+    the external share's arrival plus the response time, since pieces that
+    arrive on a day are not ready for the next step that day, and the
+    in-house share's own end day, whose handoff counts in minutes on the
+    moment (predecessor_ready_moment). The later of both when both are
+    known."""
+    buffered_external = (
+        external_ready_at + timedelta(days=response_time_days)
+        if external_ready_at is not None
+        else None
+    )
+    return resolve_mixed_predecessor_ready_at(buffered_external, internal_ready_at)
 
 
 def stale_external_predecessor(
@@ -303,26 +328,31 @@ def _walk_predecessor_positions(
     response_time_days: int,
 ) -> tuple[date | None, bool, dict[int, ExternalForecast]]:
     """Walks the predecessors in sequence order so each forecast can use
-    the chain before it. Returns the unbuffered latest ready date (the
-    caller adds the response-time buffer once), whether any predecessor
-    contributed nothing, and the forecasts by position id."""
+    the chain before it. Returns the latest ready day with the response
+    time added to every arrival (buffered_ready_day), whether any
+    predecessor contributed nothing, and the forecasts by position id. The
+    chain a forecast builds on is unbuffered, since the forecast pickup adds
+    the response time itself."""
     contributed: list[date] = []
     chain_unknown = False
     chain_end_so_far: date | None = None
     forecasts: dict[int, ExternalForecast] = {}
     for pred in sorted(predecessor_positions, key=lambda p: p.sequence):
-        ready_at, forecast = _predecessor_ready_at_with_forecast(
+        external_ready_at, internal_ready_at, forecast = _predecessor_shares_with_forecast(
             pred, placed_end_by_position, chain_end_so_far, response_time_days
         )
         if forecast is not None:
             forecasts[pred.position_id] = forecast
+        ready_at = resolve_mixed_predecessor_ready_at(external_ready_at, internal_ready_at)
         if ready_at is None:
             chain_unknown = True
-        else:
-            contributed.append(ready_at)
-            chain_end_so_far = (
-                max(chain_end_so_far, ready_at) if chain_end_so_far is not None else ready_at
-            )
+            continue
+        buffered = buffered_ready_day(external_ready_at, internal_ready_at, response_time_days)
+        assert buffered is not None  # a known share gives a known buffered day
+        contributed.append(buffered)
+        chain_end_so_far = (
+            max(chain_end_so_far, ready_at) if chain_end_so_far is not None else ready_at
+        )
     predecessor_ready_at = max(contributed) if contributed else None
     return predecessor_ready_at, chain_unknown, forecasts
 
@@ -330,12 +360,14 @@ def _walk_predecessor_positions(
 def predecessor_ready_moment(
     predecessor_positions: tuple[PredecessorPosition, ...],
     placed_moment_by_position: dict[int, datetime | None] | None,
+    handoff_minutes: int = 0,
 ) -> datetime | None:
-    """When the internal work of the earlier positions ends: each internal
-    or mixed position's latest planned end in this run, or its stored one
-    when the position has no order in the run. None when none of them is
-    dated. External shares, and the response-time buffer in whole days,
-    count through predecessor_ready_at."""
+    """When the pieces of the earlier positions' internal work are ready
+    for the next order: each internal or mixed position's latest planned
+    end in this run, or its stored one when the position has no order in
+    the run, plus the handoff minutes. None when none of them is dated.
+    External shares, and the response time after them in whole days, count
+    through predecessor_ready_at."""
     placed = placed_moment_by_position or {}
     ends: list[datetime] = []
     for pred in predecessor_positions:
@@ -345,7 +377,7 @@ def predecessor_ready_moment(
         end = placed.get(pred.position_id, pred.stored_internal_ready_moment)
         if end is not None:
             ends.append(as_utc(end))
-    return max(ends) if ends else None
+    return max(ends) + timedelta(minutes=handoff_minutes) if ends else None
 
 
 def refresh_predecessor_readiness(
@@ -362,8 +394,6 @@ def refresh_predecessor_readiness(
     predecessor_ready_at, chain_unknown, _forecasts = _walk_predecessor_positions(
         ctx.predecessor_positions, placed_end_by_position, ctx.response_time_days
     )
-    if predecessor_ready_at is not None:
-        predecessor_ready_at += timedelta(days=ctx.response_time_days)
     return replace(
         ctx,
         predecessor_ready_at=predecessor_ready_at,
@@ -372,7 +402,7 @@ def refresh_predecessor_readiness(
             ctx.predecessor_positions, placed_end_by_position
         ),
         predecessor_ready_moment=predecessor_ready_moment(
-            ctx.predecessor_positions, placed_moment_by_position
+            ctx.predecessor_positions, placed_moment_by_position, ctx.internal_handoff_minutes
         ),
     )
 

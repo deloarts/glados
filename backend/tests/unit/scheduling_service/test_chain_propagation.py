@@ -114,10 +114,10 @@ def test_manual_successor_uses_the_in_run_predecessor_end_not_a_stale_stored_dat
 
     successor = result.manual[0]
     assert successor.planned_start is not None
-    # response_time_days=1 buffers the successor a calendar day past the
-    # predecessor's in-run end, not the 30-day-stale value the context
-    # started with.
-    assert successor.planned_start.date() == MONDAY + timedelta(days=1)
+    # The successor starts right at the predecessor's in-run end, not from
+    # the 30-day-stale value the context started with. An in-house
+    # predecessor adds no response time.
+    assert successor.planned_start == predecessor_end
     assert passes > 1  # the stale value only self-heals once a refresh pass ran
 
 
@@ -835,8 +835,9 @@ def test_external_predecessor_typed_date_still_wins_over_its_own_forecast():
     assert successor_result.planned_start is not None
     # Governed by position 1's own fresh end (the max over both
     # predecessors), not by the much-earlier typed date and not by the
-    # forecast. Position 1 ends Monday, +1 day response time.
-    assert successor_result.planned_start.date() == MONDAY + timedelta(days=1)
+    # forecast. An in-house predecessor adds no response time, so the
+    # successor starts right when position 1 ends.
+    assert successor_result.planned_start == result.by_machine[1][0].planned_end
 
 
 def test_external_predecessor_unknown_chain_gives_no_forecast():
@@ -938,7 +939,8 @@ def _chain_step(order_id: int, sequence: int, queue_sequence: int = 1, **overrid
 def test_a_chain_longer_than_any_fixed_pass_count_settles_completely():
     """Nine positions on nine machines: every pass settles one more link,
     so the walk needs more passes than a small fixed cap would allow, and
-    still ends with each step a day after the one before it."""
+    still ends with each step starting no earlier than the one before it
+    ends."""
     calendar = _calendar()
     steps = [_chain_step(order_id=n, sequence=n) for n in range(1, 10)]
 
@@ -955,10 +957,12 @@ def test_a_chain_longer_than_any_fixed_pass_count_settles_completely():
 
     assert passes > 6
     assert result.unsettled_order_ids == frozenset()
-    starts = [result.by_machine[n][0].planned_start for n in range(1, 10)]
-    assert all(start is not None for start in starts)
-    days = [start.date() for start in starts if start is not None]
-    assert all(later > earlier for earlier, later in pairwise(days))
+    placed = [result.by_machine[n][0] for n in range(1, 10)]
+    assert all(p.planned_start is not None and p.planned_end is not None for p in placed)
+    assert all(
+        later.planned_start >= earlier.planned_end  # type: ignore[operator]
+        for earlier, later in pairwise(placed)
+    )
 
 
 def _walk(machine_queues, **queues):

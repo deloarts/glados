@@ -248,6 +248,7 @@ async def _build_machine_queues(
             default_external_lead_days=settings.default_external_lead_days,
             down_machine_ids=down_machine_ids,
             prefetch=prefetch,
+            internal_handoff_minutes=settings.internal_handoff_minutes,
             zone=zone,
         )
     return machine_queues
@@ -276,6 +277,7 @@ async def _split_machineless_contexts(
         pool_repo=pool_repo,
         default_external_lead_days=settings.default_external_lead_days,
         prefetch=prefetch,
+        internal_handoff_minutes=settings.internal_handoff_minutes,
         zone=zone,
     )
     manual_queue = [c for c in machineless_contexts if c.is_manual_step]

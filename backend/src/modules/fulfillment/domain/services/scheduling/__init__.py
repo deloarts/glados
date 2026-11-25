@@ -118,6 +118,7 @@ from src.modules.fulfillment.domain.services.scheduling.walk_context import Lead
 from src.modules.fulfillment.domain.services.scheduling.walk_context import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling.walk_context import PredecessorPosition
 from src.modules.fulfillment.domain.services.scheduling.walk_context import ScheduledOrder
+from src.modules.fulfillment.domain.services.scheduling.walk_context import buffered_ready_day
 from src.modules.fulfillment.domain.services.scheduling.walk_context import position_ready_at_in_run
 from src.modules.fulfillment.domain.services.scheduling.walk_context import predecessor_ready_moment
 from src.modules.fulfillment.domain.services.scheduling.walk_context import (
@@ -163,6 +164,7 @@ __all__ = [
     "advance_machine_queue",
     "apply_downtimes",
     "as_utc",
+    "buffered_ready_day",
     "build_machine_calendar",
     "compute_daily_capacity",
     "compute_earliest_start",

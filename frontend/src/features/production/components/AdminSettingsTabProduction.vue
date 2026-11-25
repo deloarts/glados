@@ -39,6 +39,7 @@ onMounted(() => {
 interface ProductionForm {
   default_external_lead_days: number
   response_time_days: number
+  internal_handoff_minutes: number
   external_safety_margin_days: number
   frozen_window_hours: number
   require_qa: boolean
@@ -54,6 +55,7 @@ interface ProductionForm {
 const form = reactive<ProductionForm>({
   default_external_lead_days: 0,
   response_time_days: 1,
+  internal_handoff_minutes: 0,
   external_safety_margin_days: 2,
   frozen_window_hours: 0,
   require_qa: false,
@@ -72,6 +74,7 @@ watch(
     if (!s) return
     form.default_external_lead_days = s.default_external_lead_days
     form.response_time_days = s.response_time_days
+    form.internal_handoff_minutes = s.internal_handoff_minutes
     form.external_safety_margin_days = s.external_safety_margin_days
     form.frozen_window_hours = s.frozen_window_hours
     form.require_qa = s.require_qa
@@ -100,6 +103,7 @@ const { saving, onSave } = useSettingsSave(async () => {
   await store.saveProduction({
     default_external_lead_days: form.default_external_lead_days,
     response_time_days: form.response_time_days,
+    internal_handoff_minutes: form.internal_handoff_minutes,
     external_safety_margin_days: form.external_safety_margin_days,
     frozen_window_hours: form.frozen_window_hours,
     require_qa: form.require_qa,
@@ -162,6 +166,20 @@ const { saving, onSave } = useSettingsSave(async () => {
         <InputNumber
           v-model="form.response_time_days"
           :input-id="`${uid}-response-time-days`"
+          :disabled="!canWrite"
+          :min="0"
+          :use-grouping="false"
+        />
+      </div>
+
+      <div class="field-row">
+        <label :for="`${uid}-internal-handoff-minutes`">
+          {{ t('adminSettings.production.internalHandoffMinutes') }}
+          <span class="hint">{{ t('adminSettings.production.internalHandoffMinutesHint') }}</span>
+        </label>
+        <InputNumber
+          v-model="form.internal_handoff_minutes"
+          :input-id="`${uid}-internal-handoff-minutes`"
           :disabled="!canWrite"
           :min="0"
           :use-grouping="false"

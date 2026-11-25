@@ -686,6 +686,7 @@ class AutoPlan:
                 pool_repo=self._pools,
                 down_machine_ids=state.down_machine_ids,
                 prefetch=prefetch,
+                internal_handoff_minutes=state.settings.internal_handoff_minutes,
                 zone=state.zone,
             ):
                 contexts_by_order_id[ctx.order_id] = ctx

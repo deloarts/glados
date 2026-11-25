@@ -51,6 +51,7 @@ from src.modules.fulfillment.domain.services.scheduling import MachineCalendar
 from src.modules.fulfillment.domain.services.scheduling import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling import PredecessorPosition
 from src.modules.fulfillment.domain.services.scheduling import apply_downtimes
+from src.modules.fulfillment.domain.services.scheduling import buffered_ready_day
 from src.modules.fulfillment.domain.services.scheduling import build_machine_calendar
 from src.modules.fulfillment.domain.services.scheduling import compute_order_conflicts
 from src.modules.fulfillment.domain.services.scheduling import explain_earliest_start
@@ -58,7 +59,6 @@ from src.modules.fulfillment.domain.services.scheduling import predecessor_ready
 from src.modules.fulfillment.domain.services.scheduling import resolve_external_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_input_material_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_internal_predecessor_ready_at
-from src.modules.fulfillment.domain.services.scheduling import resolve_mixed_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_position_lead_days
 from src.modules.fulfillment.domain.services.scheduling import stale_external_predecessor
 from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkChain
@@ -302,7 +302,7 @@ _TERMINAL_POSITION_STATUSES = {
 }
 
 
-async def _position_ready_at(
+async def _position_ready_shares(
     position: LotPosition,
     repos: SchedulingRepos,
     sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
@@ -310,23 +310,21 @@ async def _position_ready_at(
     *,
     zone: tzinfo,
     today: date,
-) -> date | None:
-    """One open position's own ready date, per position kind."""
+) -> tuple[date | None, date | None]:
+    """One open position's external and in-house ready days, per position
+    kind, each None where the kind has no such share or it is undated."""
     kind = position.kind
-    if kind == LotPositionKind.EXTERNAL:
-        return await _external_ready_at(
+    external = None
+    internal = None
+    if kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
+        external = await _external_ready_at(
             position.id, repos, order_items_by_position, zone=zone, today=today
         )
-    if kind == LotPositionKind.INTERNAL:
-        return await _internal_ready_at(position.id, repos, sibling_orders_by_position, zone=zone)
-    if kind == LotPositionKind.MIXED:
-        return resolve_mixed_predecessor_ready_at(
-            await _external_ready_at(
-                position.id, repos, order_items_by_position, zone=zone, today=today
-            ),
-            await _internal_ready_at(position.id, repos, sibling_orders_by_position, zone=zone),
+    if kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
+        internal = await _internal_ready_at(
+            position.id, repos, sibling_orders_by_position, zone=zone
         )
-    return None
+    return external, internal
 
 
 async def resolve_predecessor_ready_at(
@@ -338,11 +336,14 @@ async def resolve_predecessor_ready_at(
     *,
     zone: tzinfo,
     today: date | None = None,
+    response_time_days: int = 0,
 ) -> tuple[date | None, bool]:
     """Readiness over every earlier position of the lot, so an undated
     position in the middle of the chain cannot be seen through. `today` is
     the day of `zone` a passed expected delivery counts as, the current one
-    unless the caller walks against its own clock.
+    unless the caller walks against its own clock. `response_time_days` is
+    added to every external arrival, not to an in-house end
+    (buffered_ready_day).
 
     Returns the latest day in `zone` contributed by open earlier positions
     and whether any open earlier position had no date signal at all.
@@ -355,7 +356,7 @@ async def resolve_predecessor_ready_at(
     for earlier in earlier_positions:
         if earlier.status in _TERMINAL_POSITION_STATUSES:
             continue
-        ready_at = await _position_ready_at(
+        external, internal = await _position_ready_shares(
             earlier,
             repos,
             sibling_orders_by_position,
@@ -363,6 +364,7 @@ async def resolve_predecessor_ready_at(
             zone=zone,
             today=today if today is not None else today_in(zone),
         )
+        ready_at = buffered_ready_day(external, internal, response_time_days)
         if ready_at is None:
             chain_unknown = True
             continue
@@ -900,8 +902,9 @@ async def _resolve_position_ready_dates(
     zone: tzinfo,
     today: date,
 ) -> tuple[date | None, bool, tuple[PredecessorPosition, ...], date | None]:
-    """The buffered predecessor and material ready days in `zone`, plus the
-    predecessor snapshot for the propagated walk."""
+    """The predecessor and material ready days in `zone`, with the response
+    time added to every arrival, plus the predecessor snapshot for the
+    propagated walk."""
     predecessor_ready_at = None
     predecessor_chain_unknown = False
     predecessor_positions: tuple[PredecessorPosition, ...] = ()
@@ -914,6 +917,7 @@ async def _resolve_position_ready_dates(
             order_items_by_position,
             zone=zone,
             today=today,
+            response_time_days=response_time_days,
         )
         predecessor_positions = await describe_predecessor_positions(
             position,
@@ -926,8 +930,6 @@ async def _resolve_position_ready_dates(
             zone=zone,
             today=today,
         )
-    if predecessor_ready_at is not None:
-        predecessor_ready_at += timedelta(days=response_time_days)
 
     material_ready_at = None
     if position is not None and position.sequence == 1:
@@ -1022,6 +1024,7 @@ async def build_order_context(
     default_external_lead_days: int = 0,
     material_ready_at_cache: dict[int, date | None] | None = None,
     machine_down: bool = False,
+    internal_handoff_minutes: int = 0,
     *,
     zone: tzinfo,
     today: date | None = None,
@@ -1031,8 +1034,10 @@ async def build_order_context(
     counts as `today`, the current day unless the caller walks against its
     own clock.
 
-    response_time_days buffers the predecessor and material dates but never
-    not_before, a deliberate planner override; read-only callers pass 0.
+    response_time_days buffers an external predecessor's and the raw
+    material's arrival but never not_before, a deliberate planner override,
+    and internal_handoff_minutes the end of an in-house predecessor;
+    read-only callers pass 0 for both.
     Without `pool`, a pool-assigned order's capability goes unchecked."""
     position = next((p for p in lot.positions if p.id == order.lot_position_id), None)
     steps = position.steps if position else []
@@ -1095,9 +1100,12 @@ async def build_order_context(
         lot_position_id=position.id if position is not None else None,
         predecessor_positions=predecessor_positions,
         response_time_days=response_time_days,
+        internal_handoff_minutes=internal_handoff_minutes,
         # From persisted dates; the propagated walk re-derives it every pass.
         stale_external_predecessor=stale_external_predecessor(predecessor_positions, None),
-        predecessor_ready_moment=predecessor_ready_moment(predecessor_positions, None),
+        predecessor_ready_moment=predecessor_ready_moment(
+            predecessor_positions, None, internal_handoff_minutes
+        ),
         machine_down=machine_down,
         last_resumed_at=last_resumed_at(order.interruptions),
         zone=zone,
@@ -1127,6 +1135,7 @@ async def build_contexts(
     default_external_lead_days: int = 0,
     down_machine_ids: set[int] | None = None,
     prefetch: SchedulingPrefetch | None = None,
+    internal_handoff_minutes: int = 0,
     *,
     zone: tzinfo,
     today: date | None = None,
@@ -1167,6 +1176,7 @@ async def build_contexts(
                 default_external_lead_days=default_external_lead_days,
                 material_ready_at_cache=material_ready_at_cache,
                 machine_down=order.machine_id in down_ids,
+                internal_handoff_minutes=internal_handoff_minutes,
                 zone=zone,
                 today=today if today is not None else prefetch.today,
             )
