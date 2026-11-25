@@ -14,12 +14,17 @@ of its line allocations beyond the new quantity, newest lines first.
 The caller holds the demand and the order lines it is allocated on locked
 (`line_ids`), and touches the demand and those lines with its lifecycle
 reconciler and runs it, which derives the demand and its neighbours.
+
+`missing_material` says what a lot that gets a new demand still lacks, so an
+approval or a restored material need never demands again what a settled
+demand already brought.
 """
 
 from datetime import datetime
 from typing import Protocol
 
 from src.modules.fulfillment.application.services.allocation_release import release_source_demand
+from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.source_item_demand_item import SourceItemDemandItem
 from src.modules.fulfillment.domain.services.lifecycle.demand import SOURCE_FILL_RANK
 from src.modules.fulfillment.domain.value_objects.source_item_demand_status import (
@@ -31,10 +36,35 @@ from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repo
 from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repository import (
     ISourceItemDemandRepository,
 )
+from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repository import (
+    SourceItemDemandFilterDto,
+)
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.domain.services.quantities import quantity_eq
 from src.modules.platform.domain.services.quantities import quantity_gt
 from src.shared_kernel.domain.services.changelog_service import append_changelog
+
+
+async def missing_material(
+    lot: ProductionLot,
+    demands: ISourceItemDemandRepository,
+    allocations: ISourceItemAllocationRepository,
+) -> tuple[float, str, float]:
+    """What a new demand of the lot still has to bring, as (quantity, unit,
+    items per unit). The lot's latest demand that was not canceled is one a
+    settle ended at what arrived, whose allocations it cut down to those
+    pieces, so the rest of it is what is missing. Without one, nothing
+    arrived yet and the whole lot is."""
+    _, latest = await demands.get_multi(
+        SourceItemDemandFilterDto(
+            lot_id=[lot.id], ignore_canceled=True, order_by="id", order_dir="desc", limit=1
+        )
+    )
+    if not latest:
+        return (lot.quantity, "pcs", 1.0)
+    settled = latest[0]
+    arrived = sum(a.quantity for a in await allocations.get_by_demand_item_id(settled.id))
+    return (max(settled.quantity - arrived, 0.0), settled.unit, settled.items_per_unit)
 
 
 class LineRelease(Protocol):

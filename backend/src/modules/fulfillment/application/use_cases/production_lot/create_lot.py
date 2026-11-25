@@ -12,8 +12,15 @@ inspection position with its queued order is INTERNAL and the lot past
 DRAFT. The made demands a lot is linked to are locked and registered with
 the reconciler too, which derives them from the lot's derived status;
 create_no_commit leaves the run to its caller.
+
+A lot with a bought or source item as its material source demands it at
+once, unless its source item waits for approval or its routing says a
+supplier does its first position, who then brings the material
+(lot_material_rules.py): such a lot starts awaiting its first step, with no
+demand.
 """
 
+import itertools
 from collections.abc import Iterable
 from datetime import datetime
 
@@ -48,6 +55,9 @@ from src.modules.fulfillment.domain.errors import DemandItemNotFoundError
 from src.modules.fulfillment.domain.errors import LotAlterationSourceConflictError
 from src.modules.fulfillment.domain.events.lot_events import LotCreated
 from src.modules.fulfillment.domain.services.lot_event_service import build_lot_event
+from src.modules.fulfillment.domain.services.lot_material_rules import MaterialSupply
+from src.modules.fulfillment.domain.services.lot_material_rules import initial_status
+from src.modules.fulfillment.domain.services.lot_material_rules import predicts_supplier_material
 from src.modules.fulfillment.domain.services.lot_rules import LotRules
 from src.modules.fulfillment.domain.services.made_item_demand_rules import MadeItemAllocationRules
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
@@ -94,6 +104,16 @@ from src.modules.workspace.domain.policies.project_activity import assert_projec
 from src.modules.workspace.ports.outbound.workspace_queries import IProjectQueries
 from src.shared_kernel.domain.services.changelog_service import append_changelog
 from src.shared_kernel.domain.services.clock import now_utc
+
+
+def _first_process_group(processes: Iterable[MadeItemProcess]) -> list[MadeItemProcess]:
+    """The processes that become the lot's first position: the first run of
+    equal group_index, as _snapshot_routing groups them."""
+    ordered = sorted(processes, key=lambda p: p.position)
+    if not ordered:
+        return []
+    first = ordered[0].group_index
+    return list(itertools.takewhile(lambda p: p.group_index == first, ordered))
 
 
 class CreateLot:
@@ -232,14 +252,13 @@ class CreateLot:
         )
 
         effective_source_item_id = None if alteration_source_id else made_item.source_item_id
-        # Only a source-item source is gated, and only while the toggle is on.
-        source_approval_status = (
-            SourceApprovalStatus.PENDING
-            if (
-                (await self._settings.get_production()).require_source_item_approval
-                and effective_source_item_id is not None
-            )
-            else SourceApprovalStatus.NOT_REQUIRED
+        effective_bought_item_id = None if alteration_source_id else made_item.bought_item_id
+        source_approval_status = await self._initial_source_status(
+            made_item,
+            has_material_source=(
+                effective_source_item_id is not None or effective_bought_item_id is not None
+            ),
+            source_is_item=effective_source_item_id is not None,
         )
 
         lot = ProductionLot(
@@ -257,7 +276,7 @@ class CreateLot:
             made_item_id=cmd.made_item_id,
             project_id=cmd.project_id,
             input_demand_id=None,
-            source_bought_item_id=None if alteration_source_id else made_item.bought_item_id,
+            source_bought_item_id=effective_bought_item_id,
             source_item_id=effective_source_item_id,
             source_made_item_id=alteration_source_id,
             origin_lot_id=origin_lot_id,
@@ -278,14 +297,16 @@ class CreateLot:
             )
         )
 
-        # While pending, approval creates the demand later.
+        # While pending, approval creates the demand later, and a lot awaiting
+        # its first step demands it only once that step is made in house.
         has_material_source = (
             saved_lot.source_bought_item_id is not None or saved_lot.source_item_id is not None
         )
         if (
             create_source_item_demand
             and has_material_source
-            and saved_lot.source_approval_status != SourceApprovalStatus.PENDING
+            and saved_lot.source_approval_status
+            not in (SourceApprovalStatus.PENDING, SourceApprovalStatus.AWAITING_FIRST_STEP)
         ):
             await self._create_source_item_demand(actor, saved_lot, now)
 
@@ -295,6 +316,27 @@ class CreateLot:
             await self._link_demand_allocation(actor, saved_lot, allocation_input)
 
         return saved_lot
+
+    async def _initial_source_status(
+        self, made_item: MadeItem, *, has_material_source: bool, source_is_item: bool
+    ) -> SourceApprovalStatus:
+        """The lot's first source approval status. Only a source item is
+        approved, and only while the setting asks for it; a lot without a
+        bought or source item has nothing to approve or demand."""
+        settings = await self._settings.get_production()
+        if not has_material_source:
+            return SourceApprovalStatus.NOT_REQUIRED
+        supply = (
+            MaterialSupply.SUPPLIER_EXPECTED
+            if settings.external_first_step_needs_no_material
+            and predicts_supplier_material(_first_process_group(made_item.processes))
+            else MaterialSupply.OURS
+        )
+        return initial_status(
+            supply,
+            approval_required=settings.require_source_item_approval,
+            source_is_item=source_is_item,
+        )
 
     async def _assert_project_active(self, project_id: int) -> None:
         if self._projects is None:

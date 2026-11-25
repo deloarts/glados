@@ -22,10 +22,12 @@ from enum import Enum
 from typing import Protocol
 
 from src.modules.catalogue.domain.value_objects.step_role import StepRole
+from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.services.lifecycle.facts import LotPositionFacts
 from src.modules.fulfillment.domain.services.lifecycle.lot_position import live_lines
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
+from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
 from src.modules.fulfillment.domain.value_objects.source_approval_status import (
     SUPPLIER_MATERIAL_STATUSES,
 )
@@ -187,3 +189,39 @@ def decide_material(
     if quantity_eq(live_demand_quantity, need):
         return MaterialDecision(status)
     return MaterialDecision(status, DemandAction.RESIZE, need)
+
+
+def first_position(lot: ProductionLot) -> LotPosition | None:
+    """The lot's position with the lowest sequence, None without positions."""
+    return min(lot.positions, key=lambda p: p.sequence, default=None)
+
+
+def position_supplier_share(position: LotPosition) -> float:
+    """supplier_share for a loaded position, from the live line and the
+    lines closed short that the repository joins onto it."""
+    live = position.order_item_status not in (None, OrderItemStatus.CANCELED)
+    on_live_line = (position.order_item_quantity or 0.0) if live else 0.0
+    return on_live_line + position.closed_lines_quantity
+
+
+def lot_supply(lot: ProductionLot, *, enabled: bool) -> MaterialSupply:
+    """Who brings the material of the lot's first position, from its stored
+    kind and steps. With the setting off, or for a lot whose material these
+    rules leave alone, it is always ours."""
+    position = first_position(lot)
+    if not enabled or position is None or not tracks_material(lot):
+        return MaterialSupply.OURS
+    return first_position_supply(
+        position.kind, predicted=predicts_supplier_material(position.steps)
+    )
+
+
+def capped_to_in_house(lot: ProductionLot, supply: MaterialSupply, quantity: float) -> float:
+    """`quantity` of material, cut down to what a MIXED first position makes
+    in house. Any other supply leaves it as it is, so a lot made in house
+    keeps demanding what it always did."""
+    position = first_position(lot)
+    if supply != MaterialSupply.SHARED or position is None:
+        return quantity
+    need = in_house_need(supply, position.quantity, position_supplier_share(position))
+    return min(quantity, need)

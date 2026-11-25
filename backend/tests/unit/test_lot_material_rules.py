@@ -11,20 +11,26 @@ from datetime import datetime
 import pytest
 
 from src.modules.catalogue.domain.value_objects.step_role import StepRole
+from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.services.lifecycle.facts import LotPositionFacts
 from src.modules.fulfillment.domain.services.lifecycle.facts import PositionLineFacts
 from src.modules.fulfillment.domain.services.lot_material_rules import DemandAction
 from src.modules.fulfillment.domain.services.lot_material_rules import MaterialDecision
 from src.modules.fulfillment.domain.services.lot_material_rules import MaterialSupply
+from src.modules.fulfillment.domain.services.lot_material_rules import capped_to_in_house
 from src.modules.fulfillment.domain.services.lot_material_rules import decide_material
+from src.modules.fulfillment.domain.services.lot_material_rules import first_position
 from src.modules.fulfillment.domain.services.lot_material_rules import first_position_supply
 from src.modules.fulfillment.domain.services.lot_material_rules import in_house_need
 from src.modules.fulfillment.domain.services.lot_material_rules import initial_status
+from src.modules.fulfillment.domain.services.lot_material_rules import lot_supply
+from src.modules.fulfillment.domain.services.lot_material_rules import position_supplier_share
 from src.modules.fulfillment.domain.services.lot_material_rules import predicts_supplier_material
 from src.modules.fulfillment.domain.services.lot_material_rules import supplier_share
 from src.modules.fulfillment.domain.services.lot_material_rules import tracks_material
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
+from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
 from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
 from src.modules.fulfillment.domain.value_objects.production_status import UrgencyClass
@@ -256,3 +262,94 @@ class TestDecideMaterial:
     def test_nothing_left_in_house_settles(self) -> None:
         decision = _decide(MaterialSupply.SHARED, _S.NOT_REQUIRED, 10.0, 0.0)
         assert decision == MaterialDecision(_S.NOT_REQUIRED, DemandAction.SETTLE)
+
+
+def _position(
+    sequence: int,
+    kind: LotPositionKind,
+    *,
+    steps: list[_Step] | None = None,
+    line: tuple[OrderItemStatus, float] | None = None,
+    closed: float = 0.0,
+) -> LotPosition:
+    position = LotPosition(
+        id=sequence,
+        created=datetime(2026, 1, 1, tzinfo=UTC),
+        changed=None,
+        changes=[],
+        sequence=sequence,
+        kind=kind,
+        status=LotPositionStatus.PENDING,
+        quantity=10.0,
+        quantity_completed=0.0,
+        note=None,
+        creator_id=1,
+        lot_id=1,
+    )
+    position.steps = steps or []  # type: ignore[assignment]
+    if line is not None:
+        position.order_item_status, position.order_item_quantity = line
+    position.closed_lines_quantity = closed
+    return position
+
+
+def _lot_with(*positions: LotPosition) -> ProductionLot:
+    lot = _lot(source_item_id=3)
+    lot.positions = list(positions)
+    return lot
+
+
+class TestFirstPosition:
+    def test_lowest_sequence(self) -> None:
+        lot = _lot_with(
+            _position(2, LotPositionKind.INTERNAL), _position(1, LotPositionKind.EXTERNAL)
+        )
+        assert first_position(lot).sequence == 1  # type: ignore[union-attr]
+
+    def test_none_without_positions(self) -> None:
+        assert first_position(_lot_with()) is None
+
+
+class TestPositionSupplierShare:
+    def test_live_line_and_closed_lines(self) -> None:
+        position = _position(
+            1, LotPositionKind.MIXED, line=(OrderItemStatus.ORDERED, 4.0), closed=2.0
+        )
+        assert position_supplier_share(position) == pytest.approx(6.0)
+
+    def test_canceled_line_holds_nothing(self) -> None:
+        position = _position(1, LotPositionKind.MIXED, line=(OrderItemStatus.CANCELED, 4.0))
+        assert position_supplier_share(position) == 0.0
+
+
+class TestLotSupply:
+    def test_external_first_position(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.EXTERNAL))
+        assert lot_supply(lot, enabled=True) is MaterialSupply.SUPPLIER
+
+    def test_predicted_from_the_steps_while_unassigned(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.UNASSIGNED, steps=[_external()]))
+        assert lot_supply(lot, enabled=True) is MaterialSupply.SUPPLIER_EXPECTED
+
+    def test_setting_off_is_always_ours(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.EXTERNAL))
+        assert lot_supply(lot, enabled=False) is MaterialSupply.OURS
+
+    def test_rework_lot_is_ours(self) -> None:
+        lot = _lot(source_made_item_id=3)
+        lot.positions = [_position(1, LotPositionKind.EXTERNAL)]
+        assert lot_supply(lot, enabled=True) is MaterialSupply.OURS
+
+
+class TestCappedToInHouse:
+    def test_mixed_caps_to_the_in_house_share(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.MIXED, line=(OrderItemStatus.ORDERED, 4.0)))
+        assert capped_to_in_house(lot, MaterialSupply.SHARED, 10.0) == pytest.approx(6.0)
+
+    def test_ours_keeps_the_quantity(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.INTERNAL))
+        assert capped_to_in_house(lot, MaterialSupply.OURS, 12.0) == 12.0
+
+    def test_a_smaller_quantity_stays(self) -> None:
+        lot = _lot_with(_position(1, LotPositionKind.MIXED, line=(OrderItemStatus.ORDERED, 4.0)))
+        assert capped_to_in_house(lot, MaterialSupply.SHARED, 3.0) == 3.0
