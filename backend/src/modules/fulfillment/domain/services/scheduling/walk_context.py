@@ -207,6 +207,12 @@ class OrderSchedulingContext:
     # added to its planned end where a successor or the lot's target date
     # reads it.
     wait_after_minutes: int = 0
+    # A running order's progress: its pieces, the pieces it processed so far
+    # (accepted and rejected, a reversal netted out) and the minutes one
+    # more piece takes, so an overrun stretches its planned end.
+    quantity: float = 0.0
+    pieces_processed: float = 0.0
+    minutes_per_piece: float = 0.0
     # This is the first INTERNAL or MIXED position after an EXTERNAL or
     # MIXED position whose typed date is earlier than the chain feeding it.
     stale_external_predecessor: bool = False

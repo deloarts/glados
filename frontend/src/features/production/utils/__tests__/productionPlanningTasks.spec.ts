@@ -45,6 +45,16 @@ function projectedStart(order: ProductionOrderResponse): Date | undefined {
   }).get(order.id)?.start
 }
 
+function projectedEnd(order: ProductionOrderResponse): Date | undefined {
+  return computeProductionSchedule({
+    machines: [{ id: 1, internal_name: 'Machine 1' }],
+    orders: [order],
+    lots: [],
+    orderedDateByPositionId: new Map(),
+    now: NOW,
+  }).get(order.id)?.end
+}
+
 describe('computeProductionSchedule for a started order', () => {
   it('projects a resumed order from its latest resume, not its first start', () => {
     expect(projectedStart(resumedOrder())).toEqual(localDayStart('2026-03-04T09:00:00Z'))
@@ -60,6 +70,28 @@ describe('computeProductionSchedule for a started order', () => {
     })
 
     expect(projectedStart(order)).toEqual(localDayStart('2026-03-04T09:00:00Z'))
+  })
+
+  it('ends a running order at its stretched planned end once it overruns', () => {
+    const order = makeOrder({
+      status: 'in_progress',
+      actual_start: '2026-03-02T08:00:00Z',
+      planned_end: '2026-03-06T15:00:00Z',
+    })
+
+    expect(projectedEnd(order)).toEqual(localDayStart('2026-03-06T15:00:00Z'))
+  })
+
+  it('keeps the estimate when the planned end is earlier', () => {
+    const order = makeOrder({
+      status: 'in_progress',
+      actual_start: '2026-03-02T08:00:00Z',
+      planned_end: '2026-03-02T09:00:00Z',
+    })
+
+    expect(projectedEnd(order)!.getTime()).toBeGreaterThan(
+      localDayStart('2026-03-02T09:00:00Z').getTime(),
+    )
   })
 
   it('projects an order that was never paused from its actual start', () => {

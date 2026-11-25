@@ -1100,6 +1100,11 @@ async def build_order_context(
             if position is not None
             else 0
         ),
+        quantity=order.quantity,
+        pieces_processed=order.pieces_processed,
+        minutes_per_piece=sum(
+            production_order_rules.resolve_effective_per_piece_minutes(step)[0] for step in steps
+        ),
         # From persisted dates; the propagated walk re-derives it every pass.
         stale_external_predecessor=stale_external_predecessor(predecessor_positions, None),
         predecessor_ready_moment=predecessor_ready_moment(

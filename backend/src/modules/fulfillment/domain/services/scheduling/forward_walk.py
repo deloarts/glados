@@ -298,7 +298,8 @@ def place_on_queue(
     """Places one order against an already-known cursor.
 
     PAUSED orders consume no capacity. A running order anchors at its
-    latest start or resume, which may lie in the past, and a pinned or
+    latest start or resume, which may lie in the past, and ends no earlier
+    than its progress forecasts (_running_window), and a pinned or
     frozen order keeps its window, and so does a running order its anchor;
     neither moves the cursor backwards, and one that starts before the
     cursor is flagged as an overlap. An order whose predecessor chain is unknown (with nothing
@@ -316,9 +317,7 @@ def place_on_queue(
     running_since = _running_since(ctx)
     if ctx.status == ProductionOrderStatus.IN_PROGRESS and running_since is not None:
         try:
-            planned_start, planned_end = place(
-                running_since, ctx.estimated_duration_minutes, calendar
-            )
+            planned_start, planned_end = _running_window(ctx, running_since, calendar, now)
         except NoWorkingTimeError:
             return QueuePlacement(None, None, cursor, no_working_time=True)
         if cursor is None:
@@ -370,6 +369,31 @@ def place_on_queue(
     except NoWorkingTimeError:
         return QueuePlacement(None, None, cursor, no_working_time=True)
     return QueuePlacement(planned_start, planned_end, planned_end)
+
+
+def _running_window(
+    ctx: OrderSchedulingContext, running_since: datetime, calendar: MachineCalendar, now: datetime
+) -> tuple[datetime, datetime]:
+    """A running order's window on its calendar: from its latest start or
+    resume to the later of its original end and the end its progress
+    forecasts, so an order that overruns pushes the steps after it.
+
+    The original end is the start plus the estimate, or after a resume with
+    pieces already processed, the resume plus the pieces left, so a pause
+    does not count the whole estimate again. With pieces processed the
+    forecast is now plus the pieces left, without setup, since the machine
+    is set up already. Without any processed, or without minutes per piece,
+    the progress is unknown and the forecast is now, so an order that
+    reports only at its end is not pushed while it is on time."""
+    left = max(ctx.quantity - ctx.pieces_processed, 0.0)
+    progress = ctx.pieces_processed > 0 and ctx.minutes_per_piece > 0
+    left_minutes = round(left * ctx.minutes_per_piece) if progress else 0
+    if progress and ctx.last_resumed_at is not None:
+        planned_start, original_end = place(running_since, left_minutes, calendar)
+    else:
+        planned_start, original_end = place(running_since, ctx.estimated_duration_minutes, calendar)
+    _forecast_start, forecast_end = place(now, left_minutes, calendar)
+    return planned_start, max(original_end, forecast_end)
 
 
 def _predecessor_ready(ctx: OrderSchedulingContext) -> datetime | None:

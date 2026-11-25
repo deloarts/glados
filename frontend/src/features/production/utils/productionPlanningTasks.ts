@@ -209,7 +209,10 @@ function buildScheduleGraph(params: ProductionScheduleParams) {
 
       if (runningStart) {
         const start = toLocalDayStart(runningStart.toISOString())
-        span = { start, end: new Date(start.getTime() + durationMs) }
+        const estimatedEnd = new Date(start.getTime() + durationMs)
+        // The walk stretches the planned end of an order that overruns.
+        const plannedEnd = order.planned_end ? toLocalDayStart(order.planned_end) : null
+        span = { start, end: plannedEnd && plannedEnd > estimatedEnd ? plannedEnd : estimatedEnd }
       } else if (order.planned_start) {
         // The backend's schedule is authoritative whenever it exists.
         const start = toLocalDayStart(order.planned_start)
