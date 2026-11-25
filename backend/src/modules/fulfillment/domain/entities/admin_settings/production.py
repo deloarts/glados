@@ -38,6 +38,11 @@ class AdminProductionSettings(Entity):
     # Whether that write-back may replace a different source item already
     # set on the made item; an empty slot is always filled.
     overwrite_item_material_on_approval: bool = False
+    # A supplier who does a lot's first position brings the material, so such
+    # a lot gets no raw material demand and needs no approval
+    # (lot_material_rules.py). Off, every lot with a material source demands
+    # its material whoever does position 1.
+    external_first_step_needs_no_material: bool = True
     # Required while require_qa is on, so QA is never skipped for want of
     # a configured method.
     default_inspection_method_id: int | None = None

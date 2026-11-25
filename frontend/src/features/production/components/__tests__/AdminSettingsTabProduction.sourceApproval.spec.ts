@@ -48,6 +48,7 @@ function makeProductionSettings(
     require_source_item_approval: false,
     assign_approved_material_to_item: false,
     overwrite_item_material_on_approval: false,
+    external_first_step_needs_no_material: true,
     ...overrides,
   }
 }

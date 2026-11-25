@@ -63,11 +63,15 @@ class UnarrivedLineRelease(Generic[L]):
             if allocation.order_item_id is not None
         }
 
-    async def release(self, rank: int, demand_id: int) -> float:
+    async def release(self, rank: int, demand_id: int, *, limit: float | None = None) -> float:
         """Cuts each of the demand's line allocations down to the pieces that
         reached it and returns the quantity released. `rank` is the family's
-        place in the fill of a line."""
+        place in the fill of a line. With `limit`, it releases no more than
+        that, on the newest lines first, for a demand that shrinks rather
+        than ends."""
         held = await self._on_lines(demand_id)
+        if limit is not None:
+            held.sort(key=lambda a: a.order_item_id or 0, reverse=True)
         fills = await line_fill(
             [a.order_item_id for a in held if a.order_item_id is not None],
             bought=self._fill.bought,
@@ -84,6 +88,8 @@ class UnarrivedLineRelease(Generic[L]):
             )
             ahead = pieces_ahead(fills.get(allocation.order_item_id, []), rank, demand_id)
             reached = min(max(arrived - ahead, 0.0), allocation.quantity)
+            if limit is not None:
+                reached = max(reached, allocation.quantity - max(limit - released, 0.0))
             if not quantity_gt(allocation.quantity, reached):
                 continue
             released += allocation.quantity - reached

@@ -24,6 +24,17 @@ class SourceItemDemandStatus(StrValueEnum):
         return cls.OPEN
 
 
+# The statuses of a demand that still waits for material, which a settle or a
+# resize can act on; a fulfilled or canceled demand has ended.
+LIVE_SOURCE_DEMAND_STATUSES: frozenset[SourceItemDemandStatus] = frozenset(
+    {
+        SourceItemDemandStatus.OPEN,
+        SourceItemDemandStatus.ALLOCATED,
+        SourceItemDemandStatus.ORDERED,
+    }
+)
+
+
 @unique
 class SourceItemAllocationSource(str, Enum):
     """Where a SourceItemDemandAllocation's quantity comes from."""

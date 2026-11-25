@@ -5,7 +5,10 @@ of existing lots, and that backfill must land together with the settings
 row or not at all: a row that says "on" next to a half-applied backfill
 would leave some lots demandable that should be pending. The backfill, the
 settings save and the audit entry therefore share the request's session
-and commit once at the end.
+and commit once at the end. Turning external_first_step_needs_no_material
+off gives the lots whose first step's supplier was to bring the material
+their need back (lot_material_restore.py) in the same transaction; turning
+it on touches no lot.
 """
 
 from src.modules.catalogue.domain.errors import InspectionMethodConfigurationError
@@ -22,6 +25,7 @@ from src.modules.fulfillment.application.mappers.admin_settings_mapper.productio
 from src.modules.fulfillment.application.mappers.machine_calendar_mapper import (
     weekly_hours_from_dto,
 )
+from src.modules.fulfillment.application.services.lot_material_restore import RestoreLotMaterial
 from src.modules.fulfillment.domain.entities.admin_settings.production import (
     AdminProductionSettings,
 )
@@ -43,6 +47,7 @@ from src.modules.platform.domain.services.numbering_format import validate_numbe
 from src.modules.platform.domain.services.settings_rules import SettingsRules
 from src.modules.platform.infrastructure.logging.logger import log
 from src.modules.platform.ports.outbound.unit_of_work_port import IUnitOfWork
+from src.shared_kernel.domain.services.clock import now_utc
 from src.shared_kernel.domain.services.clock import today_in
 
 
@@ -55,12 +60,16 @@ class UpdateProductionSettings:
         *,
         uow: IUnitOfWork,
         recompute_schedule: ScheduleRecompute | None = None,
+        material_restore: RestoreLotMaterial | None = None,
     ) -> None:
+        """`material_restore` is None only for unit tests that never turn
+        external_first_step_needs_no_material off."""
         self._repo = repo
         self._inspection_methods = inspection_method_repo
         self._lots = lot_repo
         self._uow = uow
         self._recompute = recompute_schedule
+        self._material_restore = material_restore
 
     async def execute(
         self, actor: User, cmd: UpdateProductionSettingsCommand
@@ -119,6 +128,11 @@ class UpdateProductionSettings:
             if cmd.overwrite_item_material_on_approval is not None
             else current.overwrite_item_material_on_approval
         )
+        external_first_step_needs_no_material = (
+            cmd.external_first_step_needs_no_material
+            if cmd.external_first_step_needs_no_material is not None
+            else current.external_first_step_needs_no_material
+        )
         validate_numbering_format(production_order_number_format)
         validate_weekly_hours(default_weekly_hours)
 
@@ -151,6 +165,7 @@ class UpdateProductionSettings:
             require_source_item_approval=require_source_item_approval,
             assign_approved_material_to_item=assign_approved_material_to_item,
             overwrite_item_material_on_approval=overwrite_item_material_on_approval,
+            external_first_step_needs_no_material=external_first_step_needs_no_material,
             frozen_window_hours=frozen_window_hours,
         )
 
@@ -165,6 +180,11 @@ class UpdateProductionSettings:
                 f"require_source_item_approval flipped to {require_source_item_approval}; "
                 f"backfilled {updated} lot(s)."
             )
+
+        if current.external_first_step_needs_no_material and not (
+            external_first_step_needs_no_material
+        ):
+            await self._restore_material(actor, approval_required=require_source_item_approval)
 
         saved = await self._repo.save_production(settings)
 
@@ -184,4 +204,17 @@ class UpdateProductionSettings:
         log.info("Updated production settings.")
         return ProductionSettingsMapper.production_to_result(
             saved, today=today_in(await tenant_zone(self._repo))
+        )
+
+    async def _restore_material(self, actor: User, *, approval_required: bool) -> None:
+        if self._material_restore is None:
+            raise RuntimeError(
+                "Turning external_first_step_needs_no_material off needs RestoreLotMaterial."
+            )
+        restored = await self._material_restore.restore(
+            actor, now_utc(), approval_required=approval_required
+        )
+        log.info(
+            f"external_first_step_needs_no_material turned off; restored the material need of "
+            f"{restored} lot(s)."
         )

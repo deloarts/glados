@@ -5,6 +5,9 @@ from fastapi import Depends
 from src.modules.fulfillment.adapters.inbound.api.deps.repositories import get_allocation_repo
 from src.modules.fulfillment.adapters.inbound.api.deps.repositories import get_demand_item_repo
 from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
+    get_fulfillment_settings_repo,
+)
+from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
     get_made_item_allocation_repo,
 )
 from src.modules.fulfillment.adapters.inbound.api.deps.repositories import get_made_item_demand_repo
@@ -22,9 +25,17 @@ from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
 from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
     get_source_item_demand_repo,
 )
+from src.modules.fulfillment.application.services.allocation_fill import LineFillRepos
 from src.modules.fulfillment.application.services.lifecycle_loader import LifecycleRepositories
 from src.modules.fulfillment.application.services.lifecycle_lock_plan import LockPlan
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
+from src.modules.fulfillment.application.services.lot_material_followup import LotMaterialFollowUp
+from src.modules.fulfillment.application.use_cases._demand_family.unarrived_release import (
+    UnarrivedLineRelease,
+)
+from src.modules.fulfillment.ports.outbound.fulfillment_settings_repository import (
+    IFulfillmentSettingsRepository,
+)
 from src.modules.fulfillment.ports.outbound.repositories.bought_item_demand_repository import (
     IBoughtItemAllocationRepository,
 )
@@ -109,8 +120,24 @@ def get_lifecycle_reconciler(
     repositories: LifecycleRepositories = Depends(get_lifecycle_repositories),
     lock_plan: LockPlan = Depends(get_lifecycle_lock_plan),
     bus: IEventBus = Depends(get_transactional_event_bus),
+    settings: IFulfillmentSettingsRepository = Depends(get_fulfillment_settings_repo),
 ) -> LifecycleReconciler:
     """One reconciler per request, on the request's session, lock plan and
     transactional bus, so its locks follow the use case's and its writes and
-    events commit with the use case."""
-    return LifecycleReconciler(repositories, bus, lock_plan=lock_plan)
+    events commit with the use case. It carries the material follow-up,
+    which moves a lot's raw material demand when its first position changes
+    hands (lot_material_followup.py)."""
+    followup = LotMaterialFollowUp(
+        settings,
+        repositories.lots,
+        repositories.source_demands,
+        repositories.source_allocations,
+        UnarrivedLineRelease(
+            repositories.source_allocations,
+            LineFillRepos(
+                bought=repositories.bought_allocations, source=repositories.source_allocations
+            ),
+            repositories.order_items,
+        ),
+    )
+    return LifecycleReconciler(repositories, bus, lock_plan=lock_plan, material_followup=followup)

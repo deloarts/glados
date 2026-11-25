@@ -245,6 +245,16 @@ class LifecycleLoader:
         reconciler locks them before the use case reads what it checks."""
         return await self._sharing_demands(ids, frozenset(within))
 
+    async def source_lines_of(self, demand_ids: Iterable[int]) -> frozenset[int]:
+        """The order lines the source demands hold allocations on."""
+        demand_ids = set(demand_ids)
+        await self._ensure_demand_allocations(_A.SOURCE_DEMANDS, demand_ids)
+        return frozenset(
+            a.order_item_id
+            for a in self._source_allocations.values()
+            if a.demand_item_id in demand_ids and a.order_item_id is not None
+        )
+
     async def _sharing_demands(
         self, ids: AggregateIds, keep: frozenset[LifecycleAggregate]
     ) -> AggregateIds:

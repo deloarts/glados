@@ -23,7 +23,10 @@ source_approval_status.py): source_approval_status is always re-derived
 for the NEW source (pending if require_source_item_approval is on and the
 new source is a source item, not_required otherwise) and every decision
 field is cleared: an old approval/rejection was for the OLD source, it
-says nothing about this one.
+says nothing about this one. A lot whose first position a supplier does, or
+is expected to do, brings no material of ours and takes the matching status
+with no demand instead, and a MIXED first position demands only what it
+makes in house (lot_material_rules.py).
 """
 
 from datetime import datetime
@@ -44,9 +47,9 @@ from src.modules.fulfillment.application.dto.production_lot_dto import (
 )
 from src.modules.fulfillment.application.mappers.production_lot_mapper import LotMapper
 from src.modules.fulfillment.application.services.allocation_locks import lock_for_allocation
-from src.modules.fulfillment.application.services.allocation_release import release_source_demand
 from src.modules.fulfillment.application.services.lifecycle_loader import AggregateIds
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
+from src.modules.fulfillment.application.services.lot_material_demand import LotMaterialDemand
 from src.modules.fulfillment.application.services.source_item_demand_factory import (
     build_source_item_demand,
 )
@@ -62,8 +65,11 @@ from src.modules.fulfillment.domain.errors import LotHasOpenDemandError
 from src.modules.fulfillment.domain.errors import LotHasPlacedDemandError
 from src.modules.fulfillment.domain.errors import LotNotFoundError
 from src.modules.fulfillment.domain.errors import LotRawMaterialAlreadyLinkedError
-from src.modules.fulfillment.domain.services.lifecycle.demand import SOURCE_FILL_RANK
 from src.modules.fulfillment.domain.services.lot_event_service import build_lot_event
+from src.modules.fulfillment.domain.services.lot_material_rules import MaterialSupply
+from src.modules.fulfillment.domain.services.lot_material_rules import capped_to_in_house
+from src.modules.fulfillment.domain.services.lot_material_rules import initial_status
+from src.modules.fulfillment.domain.services.lot_material_rules import lot_supply
 from src.modules.fulfillment.domain.services.lot_rules import LotRules
 from src.modules.fulfillment.domain.services.lot_rules import assert_lot_action
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
@@ -102,6 +108,16 @@ from src.shared_kernel.domain.services.changelog_service import append_changelog
 from src.shared_kernel.domain.services.clock import now_utc
 from src.shared_kernel.domain.value_objects.lifecycle_action import LifecycleAction
 
+# The statuses in which the switch leaves the lot without a demand: approval
+# creates it later, or the supplier of the first position brings the material.
+_NO_DEMAND_YET = frozenset(
+    {
+        SourceApprovalStatus.PENDING,
+        SourceApprovalStatus.AWAITING_FIRST_STEP,
+        SourceApprovalStatus.SUPPLIER_SOURCED,
+    }
+)
+
 
 class SwitchLotMaterialSource:
     def __init__(
@@ -132,6 +148,9 @@ class SwitchLotMaterialSource:
         self._recompute = recompute_schedule
         self._projects = project_repo
         self._line_release = line_release
+        self._material = LotMaterialDemand(
+            source_item_demand_repo, source_item_allocation_repo, line_release
+        )
         self._uow = uow
         self._reconciler = reconciler
 
@@ -196,7 +215,6 @@ class SwitchLotMaterialSource:
         missing: tuple[float, str, float] | None = None
         if old_demand is not None:
             missing = await self._settle_old_demand(actor, old_demand, now)
-            await self._demands.save(old_demand)
 
         # A new source is a new approval decision, so a client still holding
         # the old one gets a 409 when it approves or rejects.
@@ -208,15 +226,15 @@ class SwitchLotMaterialSource:
         lot.changed = now
         lot.changes = append_changelog(lot.changes, actor.full_name, "Material source switched.")
 
-        await self._reset_source_approval(lot, cmd)
+        supply = await self._reset_source_approval(lot, cmd)
 
         if (
             (cmd.bought_item_id is not None or cmd.source_item_id is not None)
-            and lot.source_approval_status != SourceApprovalStatus.PENDING
+            and lot.source_approval_status not in _NO_DEMAND_YET
             and (missing is None or quantity_gt(missing[0], 0.0))
         ):
             await self._assert_project_active(lot)
-            await self._create_source_item_demand(actor, lot, now, missing)
+            await self._create_source_item_demand(actor, lot, now, missing, supply)
 
         await self._lots.save(lot)
         await self._lots.record_event(
@@ -281,29 +299,11 @@ class SwitchLotMaterialSource:
         self, actor: User, demand: SourceItemDemandItem, now: datetime
     ) -> tuple[float, str, float] | None:
         """Ends the old demand and returns what the new source still has to
-        bring as (quantity, unit, items per unit), or None for the whole lot.
-        A demand nothing reached yet is canceled. One that already received
-        pieces keeps them and is marked fulfilled, its allocations on lines
-        whose pieces have not arrived cut down to what did arrive, so the
-        lines stay with purchasing."""
-        if demand.status != SourceItemDemandStatus.OPEN:
-            released = await self._line_release.release(SOURCE_FILL_RANK, demand.id)
-            arrived = sum(
-                a.quantity for a in await self._allocations.get_by_demand_item_id(demand.id)
-            )
-            if quantity_gt(arrived, 0.0):
-                demand.fulfilled_manually_at = now
-                demand.changed = now
-                demand.changes = append_changelog(
-                    demand.changes,
-                    actor.full_name,
-                    f"Material source switched; kept the {arrived:.3f} {demand.unit} that "
-                    f"arrived and released {released:.3f} {demand.unit} that had not.",
-                )
-                return (max(demand.quantity - arrived, 0.0), demand.unit, demand.items_per_unit)
-        await release_source_demand(
-            demand, self._allocations, actor, now, "Demand canceled (source switched)."
-        )
+        bring as (quantity, unit, items per unit), or None for the whole lot
+        (lot_material_demand.py)."""
+        arrived = await self._material.settle(actor, demand, now, reason="source switched")
+        if quantity_gt(arrived, 0.0):
+            return (max(demand.quantity - arrived, 0.0), demand.unit, demand.items_per_unit)
         return None
 
     async def _assert_project_active(self, lot: ProductionLot) -> None:
@@ -344,15 +344,21 @@ class SwitchLotMaterialSource:
 
     async def _reset_source_approval(
         self, lot: ProductionLot, cmd: SwitchLotMaterialSourceCommand
-    ) -> None:
+    ) -> MaterialSupply:
         """A new source is a new approval decision. It is derived from
         scratch and every decision field is cleared, because an old approval
         or rejection was about the old source (see this module's
-        docstring)."""
-        require_approval = (await self._settings.get_production()).require_source_item_approval
+        docstring). Returns who brings the material of the lot's first
+        position, which the lot names its new source for already."""
+        settings = await self._settings.get_production()
+        supply = lot_supply(lot, enabled=settings.external_first_step_needs_no_material)
         lot.source_approval_status = (
-            SourceApprovalStatus.PENDING
-            if require_approval and cmd.source_item_id is not None
+            initial_status(
+                supply,
+                approval_required=settings.require_source_item_approval,
+                source_is_item=cmd.source_item_id is not None,
+            )
+            if cmd.bought_item_id is not None or cmd.source_item_id is not None
             else SourceApprovalStatus.NOT_REQUIRED
         )
         lot.source_approved_by_id = None
@@ -360,6 +366,7 @@ class SwitchLotMaterialSource:
         lot.source_rejected_by_id = None
         lot.source_rejected_date = None
         lot.source_rejection_reason = None
+        return supply
 
     async def _create_source_item_demand(
         self,
@@ -367,10 +374,15 @@ class SwitchLotMaterialSource:
         lot: ProductionLot,
         now: datetime,
         missing: tuple[float, str, float] | None,
+        supply: MaterialSupply,
     ) -> None:
         """The new source's demand: the whole lot, or with `missing` what the
-        replaced demand still lacked, in its unit."""
+        replaced demand still lacked, in its unit, never more than a MIXED
+        first position makes in house."""
         quantity, unit, items_per_unit = missing or (lot.quantity, "pcs", 1.0)
+        quantity = capped_to_in_house(lot, supply, quantity)
+        if not quantity_gt(quantity, 0.0):
+            return
         demand = build_source_item_demand(
             lot,
             actor,

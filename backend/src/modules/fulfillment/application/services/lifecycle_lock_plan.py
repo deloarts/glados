@@ -45,7 +45,9 @@ after its first reading, that target can only be locked late, possibly out of
 order; two transactions that then wait on each other are resolved by
 Postgres, which aborts one of them with a deadlock error; the server runs a
 request that committed nothing once more (LostRaceRetryMiddleware), and one
-that loses again answers a retryable 503.
+that loses again answers a retryable 503. The material follow-up of the
+reconciler's run (lot_material_followup.py) takes it too, for a lot's raw
+material demand and its lines that its lock step could not lock in order.
 """
 
 from collections.abc import Awaitable
@@ -129,6 +131,16 @@ class LockPlan:
         }
         return {aggregate: rows for aggregate, rows in new.items() if rows}
 
+    def in_order(self, ids: AggregateIds) -> bool:
+        """Whether acquire could lock the rows of `ids` without a
+        LockOrderError: none of those not held yet sorts before a row the
+        plan has locked."""
+        new = self._new_rows(ids)
+        held = [_rank(a, row_id) for a, rows in self._held.items() for row_id in rows]
+        if not new or not held:
+            return True
+        return min(_rank(a, rows[0]) for a, rows in new.items()) >= max(held)
+
     async def acquire(self, ids: AggregateIds) -> None:
         """Locks the rows of `ids` this plan does not hold yet, in the lock
         order. Raises LockOrderError when one of them sorts before a row the
@@ -136,9 +148,9 @@ class LockPlan:
         new = self._new_rows(ids)
         if not new:
             return
-        held = [_rank(a, row_id) for a, rows in self._held.items() for row_id in rows]
-        first = min(_rank(a, rows[0]) for a, rows in new.items())
-        if held and first < max(held):
+        if not self.in_order(ids):
+            held = [_rank(a, row_id) for a, rows in self._held.items() for row_id in rows]
+            first = min(_rank(a, rows[0]) for a, rows in new.items())
             raise LockOrderError(
                 "A lifecycle lock was requested after a row that sorts later in the lock "
                 f"order: {LOCK_ORDER[first[0]].value} #{first[1]} after "
@@ -151,7 +163,8 @@ class LockPlan:
         """Locks rows that a concurrent transaction added to the reconciler's
         targets after its first reading, in the lock order among themselves
         even where they sort before rows already held. Only the reconciler's
-        reading under its own locks calls it; see the module docstring."""
+        reading under its own locks and its material follow-up call it; see
+        the module docstring."""
         new = self._new_rows(ids)
         if new:
             await self._lock(new)

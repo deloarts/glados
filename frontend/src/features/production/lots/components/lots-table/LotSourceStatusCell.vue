@@ -6,7 +6,11 @@ import { Permission } from '@/core/auth/permissions'
 import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { hasAction } from '@/core/utils/lifecycleActions'
 import { useMissingPermission } from '@/shared/composables/useMissingPermission'
-import { isSourceApprovalPending, isSourceApprovalRejected } from '../../utils/lotSourceEligibility'
+import {
+  isSourceApprovalPending,
+  isSourceApprovalRejected,
+  supplierMaterialTag,
+} from '../../utils/lotSourceEligibility'
 
 import type { LotSummaryResponse } from '../../../types/productionLotsResponse'
 import { DEMAND_STATUS_SEVERITY } from '@/core/utils/demandStatus'
@@ -30,6 +34,7 @@ const { missing } = useMissingPermission()
 const canApproveNow = computed(() => hasAction(props.lot, 'approve_source'))
 const canRejectNow = computed(() => hasAction(props.lot, 'reject_source'))
 const decisionBlocked = computed(() => (props.canManage ? '' : missing(Permission.MANAGE_LOTS)))
+const supplierTag = computed(() => supplierMaterialTag(props.lot))
 
 function approve(): void {
   emit('approve', props.lot)
@@ -96,6 +101,13 @@ function reject(): void {
       v-if="lot.demand_status"
       :value="t(`sourceItems.demands.status.${lot.demand_status}`)"
       :severity="DEMAND_STATUS_SEVERITY[lot.demand_status]"
+    />
+    <Tag
+      v-else-if="supplierTag"
+      :value="t(supplierTag.labelKey)"
+      :severity="supplierTag.severity"
+      data-testid="supplier-material-tag"
+      v-tooltip.top="t(supplierTag.tooltipKey)"
     />
     <span v-else class="source-label">{{ getEmptyPlaceholder() }}</span>
   </template>

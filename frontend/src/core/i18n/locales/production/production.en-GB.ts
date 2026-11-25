@@ -91,6 +91,8 @@ export default {
         rejected: 'Rejected: {reason}',
         pending: 'Waiting for approval',
         notRequired: 'Not required',
+        awaitingFirstStep: 'Not required, the first step is expected at a supplier',
+        supplierSourced: 'Not required, the supplier of the first step brings the material',
       },
       inspection: {
         method: 'Method',
@@ -761,6 +763,12 @@ export default {
           approveSuccess: 'Source item approved, demand created.',
           rejectSuccess: 'Source item rejected.',
           noDemandUntilApproved: 'No demand is created until the source item is approved.',
+          awaitingFirstStep: 'Awaiting First Step',
+          awaitingFirstStepTooltip:
+            'The first position is expected to go to a supplier, who brings the material. A demand is created only if it is made in house.',
+          supplierSourced: 'Supplier Material',
+          supplierSourcedTooltip:
+            'A supplier makes the first position and brings the material, so no demand is needed.',
         },
         materialReceipts: {
           title: 'Material Receipts',

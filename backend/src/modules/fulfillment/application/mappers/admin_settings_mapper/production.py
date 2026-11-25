@@ -34,5 +34,6 @@ class ProductionSettingsMapper:
             require_source_item_approval=e.require_source_item_approval,
             assign_approved_material_to_item=e.assign_approved_material_to_item,
             overwrite_item_material_on_approval=e.overwrite_item_material_on_approval,
+            external_first_step_needs_no_material=e.external_first_step_needs_no_material,
             example=render_example(e.production_order_number_format, today=today),
         )

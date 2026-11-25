@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T09:58:29.754Z
+ * Generated: 2026-11-24T14:04:05.014Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -12458,6 +12458,8 @@ export interface components {
             };
             /** Example */
             example: string;
+            /** External First Step Needs No Material */
+            external_first_step_needs_no_material: boolean;
             /** External Safety Margin Days */
             external_safety_margin_days: number;
             /** Frozen Window Hours */
@@ -27802,7 +27804,7 @@ export interface components {
          * SourceApprovalStatus
          * @enum {string}
          */
-        SourceApprovalStatus: "not_required" | "pending" | "approved" | "rejected";
+        SourceApprovalStatus: "not_required" | "pending" | "approved" | "rejected" | "awaiting_first_step" | "supplier_sourced";
         /** SourceDemandStatusCountResponse */
         SourceDemandStatusCountResponse: {
             /** Count */
@@ -30383,6 +30385,8 @@ export interface components {
             default_weekly_hours?: {
                 [key: string]: components["schemas"]["WorkIntervalSchema"][];
             } | null;
+            /** External First Step Needs No Material */
+            external_first_step_needs_no_material?: boolean | null;
             /** External Safety Margin Days */
             external_safety_margin_days?: number | null;
             /** Frozen Window Hours */

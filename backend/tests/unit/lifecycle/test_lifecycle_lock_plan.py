@@ -142,3 +142,23 @@ async def test_positions_are_locked_through_their_lot_and_nothing_locks_for_noth
 
     assert world.lock_log == []
     assert plan.held.is_empty()
+
+
+async def test_in_order_says_whether_acquire_would_take_the_rows() -> None:
+    world = FakeWorld()
+    plan = LockPlan(world.repositories)
+    assert plan.in_order(AggregateIds.of({_A.ORDER_ITEMS: [9]}))
+    await plan.acquire(AggregateIds.of({_A.LOTS: [1], _A.ORDER_ITEMS: [5]}))
+
+    assert plan.in_order(AggregateIds.of({_A.ORDER_ITEMS: [5, 6], _A.SOURCE_DEMANDS: [2]}))
+    assert not plan.in_order(AggregateIds.of({_A.ORDER_ITEMS: [4]}))
+    assert world.lock_log == [(_A.LOTS, (1,)), (_A.ORDER_ITEMS, (5,))]
+
+
+async def test_in_order_takes_held_and_created_rows_as_taken() -> None:
+    world = FakeWorld()
+    plan = LockPlan(world.repositories)
+    plan.record_created(AggregateIds.of({_A.LOTS: [8]}))
+    await plan.acquire(AggregateIds.of({_A.ORDER_ITEMS: [5]}))
+
+    assert plan.in_order(AggregateIds.of({_A.LOTS: [8], _A.ORDER_ITEMS: [5]}))

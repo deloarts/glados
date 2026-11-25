@@ -1,6 +1,10 @@
 import { hasAction } from '@/core/utils/lifecycleActions'
 
-import type { LotResponse, LotSummaryResponse } from '../../types/productionLotsResponse'
+import type {
+  LotResponse,
+  LotSummaryResponse,
+  SourceApprovalStatus,
+} from '../../types/productionLotsResponse'
 
 type LotSourceFields = Pick<
   LotResponse | LotSummaryResponse,
@@ -15,6 +19,32 @@ export function isSourceApprovalPending(lot: LotApprovalFields): boolean {
 
 export function isSourceApprovalRejected(lot: LotApprovalFields): boolean {
   return lot.source_approval_status === 'rejected'
+}
+
+export interface SupplierMaterialTag {
+  labelKey: string
+  tooltipKey: string
+  severity: 'info' | 'secondary'
+}
+
+const SUPPLIER_MATERIAL_TAGS: Partial<Record<SourceApprovalStatus, SupplierMaterialTag>> = {
+  awaiting_first_step: {
+    labelKey: 'production.lots.detail.record.sourceApproval.awaitingFirstStep',
+    tooltipKey: 'production.lots.detail.record.sourceApproval.awaitingFirstStepTooltip',
+    severity: 'info',
+  },
+  supplier_sourced: {
+    labelKey: 'production.lots.detail.record.sourceApproval.supplierSourced',
+    tooltipKey: 'production.lots.detail.record.sourceApproval.supplierSourcedTooltip',
+    severity: 'secondary',
+  },
+}
+
+// A lot whose first position goes, or is expected to go, to a supplier needs
+// none of our material, which is why it has no demand. Null for any other
+// lot.
+export function supplierMaterialTag(lot: LotApprovalFields): SupplierMaterialTag | null {
+  return SUPPLIER_MATERIAL_TAGS[lot.source_approval_status] ?? null
 }
 
 // A pending or rejected approval must be approved first, as the backend

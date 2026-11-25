@@ -46,6 +46,7 @@ interface ProductionForm {
   require_source_item_approval: boolean
   assign_approved_material_to_item: boolean
   overwrite_item_material_on_approval: boolean
+  external_first_step_needs_no_material: boolean
   over_delivery_tolerance_percent: number
   under_delivery_tolerance_percent: number
 }
@@ -60,6 +61,7 @@ const form = reactive<ProductionForm>({
   require_source_item_approval: false,
   assign_approved_material_to_item: false,
   overwrite_item_material_on_approval: false,
+  external_first_step_needs_no_material: true,
   over_delivery_tolerance_percent: 0,
   under_delivery_tolerance_percent: 0,
 })
@@ -77,6 +79,7 @@ watch(
     form.require_source_item_approval = s.require_source_item_approval
     form.assign_approved_material_to_item = s.assign_approved_material_to_item
     form.overwrite_item_material_on_approval = s.overwrite_item_material_on_approval
+    form.external_first_step_needs_no_material = s.external_first_step_needs_no_material
   },
   { immediate: true },
 )
@@ -104,6 +107,7 @@ const { saving, onSave } = useSettingsSave(async () => {
     require_source_item_approval: form.require_source_item_approval,
     assign_approved_material_to_item: form.assign_approved_material_to_item,
     overwrite_item_material_on_approval: form.overwrite_item_material_on_approval,
+    external_first_step_needs_no_material: form.external_first_step_needs_no_material,
   })
   // Only once the order settings were read, so a failed read never resets
   // the tolerances to the form's defaults.
@@ -245,6 +249,18 @@ const { saving, onSave } = useSettingsSave(async () => {
           :disabled="!canWrite"
         />
         <small class="hint">{{ t('adminSettings.production.requireSourceItemApprovalHint') }}</small>
+      </div>
+
+      <div class="field-row field-row--toggle">
+        <label :for="`${uid}-external-first-step-needs-no-material`">
+          {{ t('adminSettings.production.externalFirstStepNeedsNoMaterial') }}
+        </label>
+        <ToggleSwitch
+          v-model="form.external_first_step_needs_no_material"
+          :input-id="`${uid}-external-first-step-needs-no-material`"
+          :disabled="!canWrite"
+        />
+        <small class="hint">{{ t('adminSettings.production.externalFirstStepNeedsNoMaterialHint') }}</small>
       </div>
 
       <div class="field-row field-row--toggle">

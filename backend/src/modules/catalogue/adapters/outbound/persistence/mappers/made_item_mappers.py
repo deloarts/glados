@@ -221,6 +221,9 @@ def process_orm_to_entity(orm: MadeItemProcessOrmModel) -> MadeItemProcess:
             if orm.fabrication_method
             else LocalizedText()
         ),
+        fabrication_method_required_external=(
+            orm.fabrication_method.required_external if orm.fabrication_method else False
+        ),
         inspection_method_name=(
             LocalizedText(values=dict(orm.inspection_method.name or {}))
             if orm.inspection_method

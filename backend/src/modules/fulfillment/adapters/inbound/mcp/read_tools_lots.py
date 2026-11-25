@@ -122,6 +122,17 @@ def _hints(lot: LotSummaryResult) -> list[str]:
             "The lot's material source waits for approval by someone with manage:lots. Until "
             "then no raw material demand exists and the lot is not planned; this is by design."
         )
+    elif lot.source_approval_status == SourceApprovalStatus.AWAITING_FIRST_STEP:
+        hints.append(
+            "The lot's first position is expected to go to a supplier, who brings the material, "
+            "so the lot has no raw material demand. If the position is made in house instead, "
+            "the lot demands its material then; this is by design."
+        )
+    elif lot.source_approval_status == SourceApprovalStatus.SUPPLIER_SOURCED:
+        hints.append(
+            "A supplier does the lot's first position and brings the material, so the lot has "
+            "no raw material demand and nothing to approve; this is by design."
+        )
     elif lot.source_approval_status == SourceApprovalStatus.REJECTED:
         reason = lot.source_rejection_reason or "no reason given"
         hints.append(

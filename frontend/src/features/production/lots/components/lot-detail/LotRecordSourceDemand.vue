@@ -30,6 +30,7 @@ import {
   canDemandSourceItem,
   isSourceApprovalPending,
   isSourceApprovalRejected,
+  supplierMaterialTag,
 } from '../../utils/lotSourceEligibility'
 
 import type { LotResponse } from '../../../types/productionLotsResponse'
@@ -86,6 +87,9 @@ const canDemand = computed(() => canDemandSourceItem(props.lot))
 const isPending = computed(() => isSourceApprovalPending(props.lot))
 const isRejected = computed(() => isSourceApprovalRejected(props.lot))
 const isApproved = computed(() => props.lot.source_approval_status === 'approved')
+// A supplier brings the first position's material, which is why there is no
+// demand; one can still be created by hand for material we send along.
+const supplierTag = computed(() => supplierMaterialTag(props.lot))
 
 // The server offers a decision only while the lot and its source allow it;
 // without manage:lots the offered buttons stay visible but disabled.
@@ -165,6 +169,16 @@ const rejectedTooltip = computed(() =>
             }}</span>
           </div>
         </div>
+      </template>
+
+      <template v-else-if="supplierTag">
+        <Tag
+          class="approval-tag"
+          :value="t(supplierTag.labelKey)"
+          :severity="supplierTag.severity"
+          data-testid="supplier-material-tag"
+        />
+        <div class="hint">{{ t(supplierTag.tooltipKey) }}</div>
       </template>
 
       <!-- Approved without a demand: the demand was canceled after approval. -->

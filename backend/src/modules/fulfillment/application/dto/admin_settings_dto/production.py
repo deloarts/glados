@@ -32,6 +32,10 @@ class UpdateProductionSettingsCommand(BaseModel):
     assign_approved_material_to_item: bool | None = None
     # None = leave unchanged, like every field above.
     overwrite_item_material_on_approval: bool | None = None
+    # None = leave unchanged. Turning it off gives the lots whose supplier
+    # was to bring the material their demand or their approval again (see
+    # UpdateProductionSettings).
+    external_first_step_needs_no_material: bool | None = None
 
 
 class AdminProductionSettingsResult(ResultBase):
@@ -46,4 +50,5 @@ class AdminProductionSettingsResult(ResultBase):
     require_source_item_approval: bool
     assign_approved_material_to_item: bool
     overwrite_item_material_on_approval: bool
+    external_first_step_needs_no_material: bool
     example: str

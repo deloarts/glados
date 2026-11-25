@@ -405,6 +405,7 @@ def _expected_fresh_install() -> dict[str, dict[str, Any] | None]:
             "require_source_item_approval": False,
             "assign_approved_material_to_item": False,
             "overwrite_item_material_on_approval": False,
+            "external_first_step_needs_no_material": True,
             "default_inspection_method_id": None,
             "frozen_window_hours": 0,
         },

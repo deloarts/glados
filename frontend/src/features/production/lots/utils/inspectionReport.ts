@@ -239,6 +239,10 @@ function materialSection(data: InspectionReportData, f: Format): Content {
         return t(`${R}.material.rejected`, { reason: orDash(lot.source_rejection_reason) })
       case 'pending':
         return t(`${R}.material.pending`)
+      case 'awaiting_first_step':
+        return t(`${R}.material.awaitingFirstStep`)
+      case 'supplier_sourced':
+        return t(`${R}.material.supplierSourced`)
       default:
         return t(`${R}.material.notRequired`)
     }

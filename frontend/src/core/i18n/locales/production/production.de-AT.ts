@@ -91,6 +91,8 @@ export default {
         rejected: 'Abgelehnt: {reason}',
         pending: 'Wartet auf Freigabe',
         notRequired: 'Nicht nötig',
+        awaitingFirstStep: 'Nicht nötig, der erste Schritt geht voraussichtlich an einen Lieferanten',
+        supplierSourced: 'Nicht nötig, der Lieferant des ersten Schritts bringt das Material mit',
       },
       inspection: {
         method: 'Methode',
@@ -770,6 +772,12 @@ export default {
           rejectSuccess: 'Rohblock abgelehnt.',
           noDemandUntilApproved:
             'Es wird erst nach Freigabe des Rohblocks ein Bedarf angelegt.',
+          awaitingFirstStep: 'Wartet auf ersten Schritt',
+          awaitingFirstStepTooltip:
+            'Die erste Position geht voraussichtlich an einen Lieferanten, der das Material mitbringt. Ein Bedarf entsteht erst, wenn sie im Haus gefertigt wird.',
+          supplierSourced: 'Material vom Lieferanten',
+          supplierSourcedTooltip:
+            'Ein Lieferant fertigt die erste Position und bringt das Material mit, daher ist kein Bedarf nötig.',
         },
         materialReceipts: {
           title: 'Materialeingänge',

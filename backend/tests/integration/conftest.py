@@ -332,6 +332,9 @@ def _seed_admin_settings(_clean_tables: None) -> None:
     from src.modules.external_data.adapters.outbound.persistence.models.admin_settings_model.pdm import (
         AdminPdmSettingsOrmModel,
     )
+    from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings_model.production import (
+        AdminProductionSettingsOrmModel,
+    )
     from src.modules.platform.adapters.outbound.persistence.models.admin_settings_model.banner import (
         AdminBannerSettingsOrmModel,
     )
@@ -415,6 +418,18 @@ def _seed_admin_settings(_clean_tables: None) -> None:
         # configuration" rule.
         if not session.scalar(select(AdminPdmSettingsOrmModel).filter_by(id=1).limit(1)):
             session.add(AdminPdmSettingsOrmModel(id=1, enabled=False))
+        # Read by the lifecycle reconciler of every request whose run moves
+        # who does a lot's first position (lot_material_followup.py). The
+        # number format has only a server default, so it is written, and the
+        # rule it reads is written explicitly for the SQLite reason above.
+        if not session.scalar(select(AdminProductionSettingsOrmModel).filter_by(id=1).limit(1)):
+            session.add(
+                AdminProductionSettingsOrmModel(
+                    id=1,
+                    production_order_number_format="PO-{seq:04d}",
+                    external_first_step_needs_no_material=True,
+                )
+            )
         session.commit()
     finally:
         session.close()

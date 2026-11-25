@@ -11,7 +11,8 @@ quantity, unit="pcs", items_per_unit=1.0). A lot that switched away from an
 ordered source kept what arrived there, on the old demand the switch marked
 fulfilled, so only the rest is demanded, in that demand's unit, as the
 switch itself demands it without approval; with nothing left, no demand is
-created.
+created. A lot whose first position is MIXED demands only what that position
+makes in house, the rest coming from its supplier (lot_material_rules.py).
 
 The demand it creates is new work, so the lot's project must be active and
 the source item one that new work may still name; otherwise the planner
@@ -39,6 +40,7 @@ from src.modules.fulfillment.application.dto.production_lot_dto import LotResult
 from src.modules.fulfillment.application.mappers.production_lot_mapper import LotMapper
 from src.modules.fulfillment.application.services.lifecycle_loader import AggregateIds
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
+from src.modules.fulfillment.application.services.lot_material_demand import missing_material
 from src.modules.fulfillment.application.services.source_item_demand_factory import (
     build_source_item_demand,
 )
@@ -49,6 +51,9 @@ from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.errors import LotNotFoundError
 from src.modules.fulfillment.domain.errors import LotRawMaterialAlreadyLinkedError
 from src.modules.fulfillment.domain.services.lot_event_service import build_lot_event
+from src.modules.fulfillment.domain.services.lot_material_rules import MaterialSupply
+from src.modules.fulfillment.domain.services.lot_material_rules import capped_to_in_house
+from src.modules.fulfillment.domain.services.lot_material_rules import lot_supply
 from src.modules.fulfillment.domain.services.lot_rules import LotRules
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.domain.value_objects.lot_event_type import LotEventType
@@ -64,9 +69,6 @@ from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repo
 )
 from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repository import (
     ISourceItemDemandRepository,
-)
-from src.modules.fulfillment.ports.outbound.repositories.source_item_demand_repository import (
-    SourceItemDemandFilterDto,
 )
 from src.modules.platform.application.services.lookup import found_or_raise
 from src.modules.platform.application.services.schedule_recompute_port import (
@@ -220,6 +222,7 @@ class ApproveLotSource:
             )
 
         quantity, unit, items_per_unit = await self._missing_material(lot)
+        quantity = capped_to_in_house(lot, await self._material_supply(lot), quantity)
         saved_demand = None
         if quantity_gt(quantity, 0.0):
             demand = build_source_item_demand(
@@ -279,22 +282,17 @@ class ApproveLotSource:
         assert result_lot is not None
         return LotMapper.to_result(result_lot)
 
+    async def _material_supply(self, lot: ProductionLot) -> MaterialSupply:
+        """Who brings the material of the lot's first position; ours when
+        the settings are not wired (pre-existing unit tests)."""
+        if self._settings is None:
+            return MaterialSupply.OURS
+        settings = await self._settings.get_production()
+        return lot_supply(lot, enabled=settings.external_first_step_needs_no_material)
+
     async def _missing_material(self, lot: ProductionLot) -> tuple[float, str, float]:
-        """What the approved source still has to bring, as (quantity, unit,
-        items per unit). The lot's latest demand that was not canceled is the
-        one a source switch settled at what arrived, whose allocations the
-        switch cut down to those pieces, so the rest of it is what is
-        missing. Without one, nothing arrived yet and the whole lot is."""
-        _, latest = await self._demands.get_multi(
-            SourceItemDemandFilterDto(
-                lot_id=[lot.id], ignore_canceled=True, order_by="id", order_dir="desc", limit=1
-            )
-        )
-        if not latest:
-            return (lot.quantity, "pcs", 1.0)
-        settled = latest[0]
-        arrived = sum(a.quantity for a in await self._allocations.get_by_demand_item_id(settled.id))
-        return (max(settled.quantity - arrived, 0.0), settled.unit, settled.items_per_unit)
+        """What the approved source still has to bring (lot_material_demand.py)."""
+        return await missing_material(lot, self._demands, self._allocations)
 
     async def _assert_new_work_allowed(self, lot: ProductionLot) -> None:
         """The demand an approval creates is new work: the lot's project must
