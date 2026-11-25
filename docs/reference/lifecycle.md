@@ -55,6 +55,7 @@ A use case that changes facts or intents follows these steps in order.
 - The one lock order is lots, production orders, orders, order lines, bought, made and source demands, and quote requests last, ascending id within each.
 - With them it locks the neighbours of every demand among them and in `also`, so a demand the use case touches only after writing its facts, as a line cancel touches the demands it deallocates, widens to nothing unlocked.
 - It then reads the dependents again under those locks and locks late what a concurrent change added meanwhile, such as a demand allocated to the line, so everything the use case reads next is locked.
+- When the touched rows reach a lot's first position (the position, a line of it or a production order of it) and the lot has a live raw material demand, the lock step locks that demand, its lines and its neighbours in the same acquisition, for the run's material follow-up (section 2.7). Where that would break the lock order, it leaves them out, and the follow-up locks them late only when it settles or resizes the demand.
 - Locking a row that sorts before one already held raises `LockOrderError`.
 - The row locks are FOR NO KEY UPDATE, so they serialize the lifecycle writers without blocking the foreign key check of a row that references a locked one.
 - A FOR UPDATE lock on a lot would make a writer that updates the lot's source demand twice wait for the lot's writer, which may be waiting for that demand.
@@ -89,6 +90,8 @@ A use case that changes facts or intents follows these steps in order.
 - The use case calls `await reconciler.run(actor, now, reason=...)` after its last write and before it publishes its own events and commits.
 - The reconciler writes only the fields that differ, one changelog line each ending in the reason, and publishes the status events.
 - The run also notes on a quote request every award it finds voided that the lock step saw live, even when the request's status stays. A use case that cancels or removes an awarded order line therefore locks it through `lock_touched` first.
+- The run of a request's reconciler ends with the material follow-up (`lot_material_followup.py`). When the run changed the kind of a lot's first position, or touched a line of a MIXED one, it moves the lot's source approval status and settles, resizes or creates its raw material demand ([domain-rules.md section 6](domain-rules.md#6-source-approval)). A second pass then derives the demands it wrote. The pass changes no position, so no further follow-up runs, and the repair job's reconciler has no follow-up at all.
+- A run that changes no first position reads nothing more. Only on such a change does the follow-up read the production setting, which turns it off when the rule is off.
 - A use case must not save an entity it read before `run` afterwards, because that would write the old status back.
 - `test_lifecycle_use_cases_reconcile_before_commit` checks the order of the calls in every application module that uses a reconciled aggregate's repository. Each commit needs a run since the previous commit, and each run a touch before it, made in the use case or in a helper the reconciler is handed to.
 - Commit once where the work allows it, because the server retries a lost race only for a request that committed nothing before it (section 6).
