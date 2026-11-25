@@ -16,6 +16,7 @@ import type { LotChangelogEntry } from '../../types/lotChangelogResponse'
 import type { SourceItemDemandStatus } from '@/features/source-items'
 import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { DEMAND_STATUS_SEVERITY } from '@/core/utils/demandStatus'
+import { supplierMaterialTag } from '../../utils/lotSourceEligibility'
 
 const props = withDefaults(
   defineProps<{
@@ -49,6 +50,7 @@ const demandStatus = computed(() =>
   props.lot.demand_status ? (props.lot.demand_status as SourceItemDemandStatus) : null,
 )
 
+const supplierTag = computed(() => supplierMaterialTag(props.lot))
 const remaining = computed(() => props.lot.quantity - props.lot.quantity_completed)
 const quantityScrapped = computed(() => props.lot.quantity_scrapped ?? 0)
 </script>
@@ -128,6 +130,13 @@ const quantityScrapped = computed(() => props.lot.quantity_scrapped ?? 0)
               v-else-if="lot.source_approval_status === 'pending'"
               :value="t('production.lots.detail.record.lot.approvalPending')"
               severity="warn"
+            />
+            <!-- A supplier brings the material of the first position. -->
+            <Tag
+              v-else-if="supplierTag"
+              :value="t(supplierTag.labelKey)"
+              :severity="supplierTag.severity"
+              v-tooltip.top="t(supplierTag.tooltipKey)"
             />
             <span v-else class="field-value">{{
               t('production.lots.detail.record.lot.noDemand')
