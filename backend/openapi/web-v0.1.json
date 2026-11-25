@@ -14276,6 +14276,18 @@
             ],
             "default": true,
             "title": "Requires Machine"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14539,6 +14551,17 @@
           "sort_order": {
             "title": "Sort Order",
             "type": "integer"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14558,6 +14581,7 @@
           "required_external",
           "default_supplier_id",
           "lead_time_days",
+          "wait_after_minutes",
           "default_for_assemblies",
           "archived",
           "sort_order"
@@ -14674,6 +14698,18 @@
             ],
             "default": true,
             "title": "Requires Machine"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14683,7 +14719,7 @@
         "type": "object"
       },
       "FabricationMethodWebResponse": {
-        "description": "The web shape: `name` and `description` as language maps, plus\nlead_time_days, which feeds the scheduler's external lead-time forecast\nand has no pat use (the SolidWorks add-in never reads or sets it).",
+        "description": "The web shape: `name` and `description` as language maps, plus\nlead_time_days, which feeds the scheduler's external lead-time forecast,\nand wait_after_minutes, the wait the scheduler adds after a step of the\nmethod. Neither has a pat use (the SolidWorks add-in never reads or sets\nthem).",
         "properties": {
           "archived": {
             "default": false,
@@ -14802,6 +14838,17 @@
             "default": true,
             "title": "Requires Machine",
             "type": "boolean"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14822,7 +14869,8 @@
           "default_supplier_id",
           "default_for_assemblies",
           "archived",
-          "lead_time_days"
+          "lead_time_days",
+          "wait_after_minutes"
         ],
         "title": "FabricationMethodWebResponse",
         "type": "object"
@@ -17703,6 +17751,18 @@
             ],
             "default": false,
             "title": "Requires Evidence"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -17964,6 +18024,18 @@
             ],
             "default": false,
             "title": "Requires Evidence"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -17973,7 +18045,7 @@
         "type": "object"
       },
       "InspectionMethodWebResponse": {
-        "description": "The web shape: `name` and `description` as language maps.",
+        "description": "The web shape: `name` and `description` as language maps, plus\nwait_after_minutes, the wait the scheduler adds after a check of the\nmethod, which has no pat use.",
         "properties": {
           "archived": {
             "default": false,
@@ -18104,6 +18176,17 @@
             "default": false,
             "title": "Requires Evidence",
             "type": "boolean"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -18124,7 +18207,8 @@
           "requires_evidence",
           "archived",
           "default_machine_id",
-          "default_machine_name"
+          "default_machine_name",
+          "wait_after_minutes"
         ],
         "title": "InspectionMethodWebResponse",
         "type": "object"

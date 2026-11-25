@@ -93,13 +93,15 @@ class UpdateFabricationMethod:
         entity.required_external = cmd.required_external
         entity.default_supplier_id = cmd.default_supplier_id
         entity.lead_time_days = cmd.lead_time_days
+        entity.wait_after_minutes = cmd.wait_after_minutes
         entity.default_for_assemblies = cmd.default_for_assemblies
         entity.changed = now_utc()
         entity.changes = append_changelog(entity.changes, actor.full_name, changelog_entry)
 
         saved = await self._fabrication_methods.save(entity)
         await self._uow.commit()
-        # Its lead time dates the external steps that use it.
+        # Its lead time dates the external steps that use it, and its wait
+        # the steps after them.
         await recompute_schedule_after_commit(
             self._recompute, after="changing a fabrication method; the change itself is committed."
         )

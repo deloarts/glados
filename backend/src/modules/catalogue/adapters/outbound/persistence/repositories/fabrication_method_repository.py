@@ -57,6 +57,7 @@ class SqlAlchemyFabricationMethodRepository(
             "required_external": entity.required_external,
             "default_supplier_id": entity.default_supplier_id,
             "lead_time_days": entity.lead_time_days,
+            "wait_after_minutes": entity.wait_after_minutes,
             "default_for_assemblies": entity.default_for_assemblies,
             "archived": entity.archived,
             "sort_order": entity.sort_order,

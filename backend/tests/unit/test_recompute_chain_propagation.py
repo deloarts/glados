@@ -372,10 +372,15 @@ async def test_one_recompute_moves_the_qa_order_with_its_predecessor(monkeypatch
     assert qa_order.planned_end == expected_qa_start + timedelta(minutes=20)
 
 
-async def test_schedule_board_reports_the_same_qa_order_dates_as_the_persisted_recompute():
+async def test_schedule_board_reports_the_same_qa_order_dates_as_the_persisted_recompute(
+    monkeypatch,
+):
     """GetScheduleBoard re-runs the identical propagated walk without
     persisting; its report for the QA order must match exactly what
-    execute_all() just wrote, board and recompute must never disagree."""
+    execute_all() just wrote, board and recompute must never disagree. Both
+    walks read the same pinned clock, since the QA order starts at the
+    moment its predecessor ends."""
+    pin_scheduling_clock(monkeypatch, _BEFORE_THE_FIXTURES)
     recompute, board, order_repo, _lots = _build_reference_scenario()
 
     await recompute.execute_all()

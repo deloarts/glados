@@ -43,6 +43,11 @@ class InspectionMethod(Entity):
     default_setup_minutes: int | None = None
     default_minutes_per_piece: float | None = None
 
+    # Clock minutes the pieces wait after a check of this method before the
+    # next step may start, such as for a lab result; it runs overnight and
+    # over weekends. None waits nothing.
+    wait_after_minutes: int | None = None
+
     # Hides the method from pickers for new steps; steps already using it keep
     # working. It cannot be archived while it is the production settings'
     # default_inspection_method_id, and only Archive/RestoreInspectionMethod

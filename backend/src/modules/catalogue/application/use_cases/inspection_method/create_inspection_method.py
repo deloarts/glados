@@ -81,6 +81,7 @@ class CreateInspectionMethod:
             creator=actor,
             default_setup_minutes=cmd.default_setup_minutes,
             default_minutes_per_piece=cmd.default_minutes_per_piece,
+            wait_after_minutes=cmd.wait_after_minutes,
             requires_evidence=cmd.requires_evidence,
             default_machine_id=cmd.default_machine_id,
             sort_order=await self._inspection_methods.next_sort_order(),

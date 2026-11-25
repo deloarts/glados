@@ -46,6 +46,7 @@ class _FabricationMethodWriteRequest(LabeledCatalogueWriteRequest):
     required_external: bool | None = False
     default_supplier_id: int | None = None
     lead_time_days: int | None = Field(default=None, ge=0)
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     default_for_assemblies: bool | None = False
 
 
@@ -88,10 +89,13 @@ class FabricationMethodResponse(_FabricationMethodFields[ResolvedLabel]):
 
 class FabricationMethodWebResponse(_FabricationMethodFields[dict[str, str]]):
     """The web shape: `name` and `description` as language maps, plus
-    lead_time_days, which feeds the scheduler's external lead-time forecast
-    and has no pat use (the SolidWorks add-in never reads or sets it)."""
+    lead_time_days, which feeds the scheduler's external lead-time forecast,
+    and wait_after_minutes, the wait the scheduler adds after a step of the
+    method. Neither has a pat use (the SolidWorks add-in never reads or sets
+    them)."""
 
     lead_time_days: int | None = None
+    wait_after_minutes: int | None = None
 
 
 # ── Filter params ─────────────────────────────────────────────────────

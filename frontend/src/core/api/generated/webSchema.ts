@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-25T12:02:00.712Z
+ * Generated: 2026-11-25T13:00:50.569Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -16424,6 +16424,8 @@ export interface components {
              * @default true
              */
             requires_machine: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /** FabricationMethodResponse */
         FabricationMethodResponse: {
@@ -16549,6 +16551,8 @@ export interface components {
             requires_machine: boolean;
             /** Sort Order */
             sort_order: number;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** FabricationMethodUpdateRequest */
         FabricationMethodUpdateRequest: {
@@ -16589,12 +16593,16 @@ export interface components {
              * @default true
              */
             requires_machine: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /**
          * FabricationMethodWebResponse
          * @description The web shape: `name` and `description` as language maps, plus
-         *     lead_time_days, which feeds the scheduler's external lead-time forecast
-         *     and has no pat use (the SolidWorks add-in never reads or sets it).
+         *     lead_time_days, which feeds the scheduler's external lead-time forecast,
+         *     and wait_after_minutes, the wait the scheduler adds after a step of the
+         *     method. Neither has a pat use (the SolidWorks add-in never reads or sets
+         *     them).
          */
         FabricationMethodWebResponse: {
             /**
@@ -16656,6 +16664,8 @@ export interface components {
              * @default true
              */
             requires_machine: boolean;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** FeatureFlags */
         FeatureFlags: {
@@ -17455,6 +17465,8 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /** InspectionMethodResponse */
         InspectionMethodResponse: {
@@ -17544,10 +17556,14 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /**
          * InspectionMethodWebResponse
-         * @description The web shape: `name` and `description` as language maps.
+         * @description The web shape: `name` and `description` as language maps, plus
+         *     wait_after_minutes, the wait the scheduler adds after a check of the
+         *     method, which has no pat use.
          */
         InspectionMethodWebResponse: {
             /**
@@ -17603,6 +17619,8 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** IntegrationStatusResponse */
         IntegrationStatusResponse: {

@@ -60,6 +60,10 @@ class LotStep(Entity):
     # Only set for inspection steps; drives the evidence-file gate in
     # record_production_order_completion.py.
     inspection_method_requires_evidence: bool | None = None
+    # The wait of the step's method, its fabrication method's or, for an
+    # inspection step, its inspection method's: clock minutes the pieces
+    # wait after the step before the next one may start. None waits nothing.
+    method_wait_after_minutes: int | None = None
 
     # ── Scheduling ───────────────────────────────────────────────────────
     # Per-piece estimate apportioned from the project's production time

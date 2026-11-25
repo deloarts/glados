@@ -263,3 +263,17 @@ async def test_a_line_moved_to_another_supplier_requests_a_walk(db, auth_client,
             json={"target_order_id": second.id},
         ),
     )
+
+
+async def test_inspection_method_writes_request_a_walk(auth_client, counter) -> None:
+    client = await auth_client(permissions=[Permission.WRITE_INSPECTION_METHODS])
+    method = await client.post(f"{API_WEB}/inspection-methods/", json={"name": {"enGB": "Lab"}})
+    assert method.status_code == 201, method.text
+    counter.requests = 0
+    await _requests_one_walk(
+        counter,
+        await client.put(
+            f"{API_WEB}/inspection-methods/{method.json()['id']}",
+            json={"name": {"enGB": "Lab"}, "wait_after_minutes": 240},
+        ),
+    )
