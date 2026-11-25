@@ -13,6 +13,12 @@ placement choices. Every public name is re-exported here, so callers import
 from `src.modules.fulfillment.domain.services.scheduling`.
 """
 
+from src.modules.fulfillment.domain.policies.wait_after import StepWait
+from src.modules.fulfillment.domain.policies.wait_after import latest_ready_moment
+from src.modules.fulfillment.domain.policies.wait_after import position_wait_after_minutes
+from src.modules.fulfillment.domain.policies.wait_after import ready_after_wait
+from src.modules.fulfillment.domain.policies.wait_after import step_waits
+from src.modules.fulfillment.domain.policies.wait_after import wait_days
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import AutoPlanCandidate
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import OrderingStrategy
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import (
@@ -142,6 +148,9 @@ from src.modules.fulfillment.domain.services.scheduling.walk_context import (
 from src.modules.fulfillment.domain.services.scheduling.walk_context import (
     stale_external_predecessor,
 )
+from src.modules.fulfillment.domain.services.scheduling.walk_context import (
+    stored_predecessor_readiness,
+)
 from src.modules.fulfillment.domain.value_objects.work_interval import DayHours
 from src.modules.fulfillment.domain.value_objects.work_interval import WorkInterval
 from src.shared_kernel.domain.services.clock import as_utc
@@ -160,6 +169,7 @@ __all__ = [
     "ScheduleWalkResult",
     "ScheduledOrder",
     "SelectionStrategy",
+    "StepWait",
     "WorkInterval",
     "advance_machine_queue",
     "apply_downtimes",
@@ -172,14 +182,17 @@ __all__ = [
     "compute_position_due_dates",
     "explain_earliest_start",
     "is_unplannable_for_missing_material",
+    "latest_ready_moment",
     "machine_covers_fabrication_methods",
     "place",
     "placed_ends_by_position",
     "position_lead_days",
     "position_ready_at_in_run",
+    "position_wait_after_minutes",
     "predecessor_ready_moment",
     "production_order_touches_date",
     "propagation_pass_limit",
+    "ready_after_wait",
     "refresh_predecessor_readiness",
     "resolve_algorithm_strategies",
     "resolve_best_machine",
@@ -211,6 +224,9 @@ __all__ = [
     "sort_candidates_by_priority",
     "sort_candidates_by_spt",
     "stale_external_predecessor",
+    "step_waits",
+    "stored_predecessor_readiness",
     "validate_day_hours",
     "validate_weekly_hours",
+    "wait_days",
 ]

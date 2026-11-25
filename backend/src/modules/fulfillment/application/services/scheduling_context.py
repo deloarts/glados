@@ -51,16 +51,19 @@ from src.modules.fulfillment.domain.services.scheduling import MachineCalendar
 from src.modules.fulfillment.domain.services.scheduling import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling import PredecessorPosition
 from src.modules.fulfillment.domain.services.scheduling import apply_downtimes
-from src.modules.fulfillment.domain.services.scheduling import buffered_ready_day
 from src.modules.fulfillment.domain.services.scheduling import build_machine_calendar
 from src.modules.fulfillment.domain.services.scheduling import compute_order_conflicts
 from src.modules.fulfillment.domain.services.scheduling import explain_earliest_start
+from src.modules.fulfillment.domain.services.scheduling import latest_ready_moment
+from src.modules.fulfillment.domain.services.scheduling import position_wait_after_minutes
 from src.modules.fulfillment.domain.services.scheduling import predecessor_ready_moment
+from src.modules.fulfillment.domain.services.scheduling import ready_after_wait
 from src.modules.fulfillment.domain.services.scheduling import resolve_external_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_input_material_ready_at
-from src.modules.fulfillment.domain.services.scheduling import resolve_internal_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_position_lead_days
 from src.modules.fulfillment.domain.services.scheduling import stale_external_predecessor
+from src.modules.fulfillment.domain.services.scheduling import step_waits
+from src.modules.fulfillment.domain.services.scheduling import stored_predecessor_readiness
 from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkChain
 from src.modules.fulfillment.domain.services.scheduling.external_work import (
     is_outsourced_unassigned,
@@ -78,6 +81,7 @@ from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.production_status import (
     ACTIVE_PRODUCTION_ORDER_STATUSES,
 )
+from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.domain.value_objects.schedule_conflict import ScheduleConflictReason
 from src.modules.fulfillment.ports.outbound.fulfillment_settings_repository import (
     IFulfillmentSettingsRepository,
@@ -265,21 +269,6 @@ async def _typed_external_date(
     return order_item.expected_delivery_date or order_item.expected_pickup_date
 
 
-async def _internal_ready_at(
-    position_id: int,
-    repos: SchedulingRepos,
-    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
-    *,
-    zone: tzinfo,
-) -> date | None:
-    sibling_orders = (
-        sibling_orders_by_position.get(position_id, [])
-        if sibling_orders_by_position is not None
-        else await repos.orders.get_by_lot_position_id(position_id)
-    )
-    return resolve_internal_predecessor_ready_at([o.planned_end for o in sibling_orders], zone=zone)
-
-
 async def _internal_ready_moment(
     position_id: int,
     repos: SchedulingRepos,
@@ -302,31 +291,6 @@ _TERMINAL_POSITION_STATUSES = {
 }
 
 
-async def _position_ready_shares(
-    position: LotPosition,
-    repos: SchedulingRepos,
-    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
-    order_items_by_position: dict[int, OrderItem] | None = None,
-    *,
-    zone: tzinfo,
-    today: date,
-) -> tuple[date | None, date | None]:
-    """One open position's external and in-house ready days, per position
-    kind, each None where the kind has no such share or it is undated."""
-    kind = position.kind
-    external = None
-    internal = None
-    if kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
-        external = await _external_ready_at(
-            position.id, repos, order_items_by_position, zone=zone, today=today
-        )
-    if kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
-        internal = await _internal_ready_at(
-            position.id, repos, sibling_orders_by_position, zone=zone
-        )
-    return external, internal
-
-
 async def resolve_predecessor_ready_at(
     position: LotPosition,
     lot: ProductionLot,
@@ -343,34 +307,25 @@ async def resolve_predecessor_ready_at(
     the day of `zone` a passed expected delivery counts as, the current one
     unless the caller walks against its own clock. `response_time_days` is
     added to every external arrival, not to an in-house end
-    (buffered_ready_day).
+    (scheduling.buffered_ready_day).
 
-    Returns the latest day in `zone` contributed by open earlier positions
-    and whether any open earlier position had no date signal at all.
-    Completed and canceled positions contribute nothing and never make the
-    chain unknown. The optional prefetched maps avoid per-position
-    queries."""
-    earlier_positions = [p for p in lot.positions if p.sequence < position.sequence]
-    contributed: list[date] = []
-    chain_unknown = False
-    for earlier in earlier_positions:
-        if earlier.status in _TERMINAL_POSITION_STATUSES:
-            continue
-        external, internal = await _position_ready_shares(
-            earlier,
-            repos,
-            sibling_orders_by_position,
-            order_items_by_position,
-            zone=zone,
-            today=today if today is not None else today_in(zone),
-        )
-        ready_at = buffered_ready_day(external, internal, response_time_days)
-        if ready_at is None:
-            chain_unknown = True
-            continue
-        contributed.append(ready_at)
-    predecessor_ready_at = max(contributed) if contributed else None
-    return predecessor_ready_at, chain_unknown
+    Returns the latest day in `zone` contributed by open earlier positions,
+    each in-house share with the wait after it, and whether any open earlier
+    position had no date signal at all. Canceled positions contribute
+    nothing, and so do completed ones once their wait is over; neither ever
+    makes the chain unknown. It reads the snapshot describe_predecessor_
+    positions builds, the one the walk refreshes, so both agree. The
+    optional prefetched maps avoid per-position queries."""
+    predecessors = await describe_predecessor_positions(
+        position,
+        lot,
+        repos,
+        sibling_orders_by_position,
+        order_items_by_position,
+        zone=zone,
+        today=today,
+    )
+    return stored_predecessor_readiness(predecessors, response_time_days)
 
 
 async def _predecessor_supplier_lead_days(
@@ -450,11 +405,27 @@ async def _describe_open_positions(
     today: date,
 ) -> tuple[PredecessorPosition, ...]:
     """The open ones of `positions` as PredecessorPositions, in days of
-    `zone`, a passed expected arrival counted as `today`. An outsourced UNASSIGNED position carries the lead days of its
-    steps, since it has no order line yet."""
+    `zone`, a passed expected arrival counted as `today`, plus each
+    completed one whose wait after it still runs. An in-house share is ready
+    at its end plus the position's wait, and the completed orders of a
+    position hold it until their wait is over too. An outsourced UNASSIGNED
+    position carries the lead days of its steps, since it has no order line
+    yet."""
     described: list[PredecessorPosition] = []
     for earlier in positions:
-        if earlier.status in _TERMINAL_POSITION_STATUSES:
+        wait = position_wait_after_minutes(earlier.kind, step_waits(earlier.steps))
+        completed_ready_moment = await _completed_ready_moment(
+            earlier.id, repos, sibling_orders_by_position, wait
+        )
+        if (
+            completed_ready_moment is not None
+            and as_utc(completed_ready_moment).astimezone(zone).date() < today
+        ):
+            completed_ready_moment = None
+        closed = earlier.status in _TERMINAL_POSITION_STATUSES
+        if closed and (
+            earlier.status != LotPositionStatus.COMPLETED or completed_ready_moment is None
+        ):
             continue
         external_ready_at = None
         stored_internal_ready_at = None
@@ -477,10 +448,9 @@ async def _describe_open_positions(
         elif outsourced_unassigned:
             lead_days = resolve_position_lead_days(earlier.steps, None, default_external_lead_days)
         stored_internal_ready_moment = None
-        if earlier.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
-            stored_internal_ready_moment = await _internal_ready_moment(
-                earlier.id, repos, sibling_orders_by_position
-            )
+        if earlier.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED) and not closed:
+            end = await _internal_ready_moment(earlier.id, repos, sibling_orders_by_position)
+            stored_internal_ready_moment = ready_after_wait(end, wait) if end is not None else None
             stored_internal_ready_at = (
                 stored_internal_ready_moment.astimezone(zone).date()
                 if stored_internal_ready_moment is not None
@@ -503,9 +473,40 @@ async def _describe_open_positions(
                 material_ready_at=material_ready_at,
                 stored_internal_ready_moment=stored_internal_ready_moment,
                 outsourced_unassigned=outsourced_unassigned,
+                wait_after_minutes=wait,
+                completed_ready_at=(
+                    completed_ready_moment.astimezone(zone).date()
+                    if completed_ready_moment is not None
+                    else None
+                ),
+                completed_ready_moment=completed_ready_moment,
+                completed=closed,
             )
         )
     return tuple(described)
+
+
+async def _completed_ready_moment(
+    position_id: int,
+    repos: SchedulingRepos,
+    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None,
+    wait_after_minutes: int,
+) -> datetime | None:
+    """When the pieces of the position's completed orders are ready, the
+    latest actual end plus the wait after the position. None without a wait,
+    since a completed order without one holds nothing back."""
+    if wait_after_minutes <= 0:
+        return None
+    sibling_orders = (
+        sibling_orders_by_position.get(position_id, [])
+        if sibling_orders_by_position is not None
+        else await repos.orders.get_by_lot_position_id(position_id)
+    )
+    return latest_ready_moment(
+        (o.actual_end, wait_after_minutes)
+        for o in sibling_orders
+        if o.status == ProductionOrderStatus.COMPLETED
+    )
 
 
 async def describe_external_work_chains(
@@ -909,16 +910,6 @@ async def _resolve_position_ready_dates(
     predecessor_chain_unknown = False
     predecessor_positions: tuple[PredecessorPosition, ...] = ()
     if position is not None and position.sequence > 1:
-        predecessor_ready_at, predecessor_chain_unknown = await resolve_predecessor_ready_at(
-            position,
-            lot,
-            repos,
-            sibling_orders_by_position,
-            order_items_by_position,
-            zone=zone,
-            today=today,
-            response_time_days=response_time_days,
-        )
         predecessor_positions = await describe_predecessor_positions(
             position,
             lot,
@@ -929,6 +920,9 @@ async def _resolve_position_ready_dates(
             material_ready_at_cache,
             zone=zone,
             today=today,
+        )
+        predecessor_ready_at, predecessor_chain_unknown = stored_predecessor_readiness(
+            predecessor_positions, response_time_days
         )
 
     material_ready_at = None
@@ -1101,6 +1095,11 @@ async def build_order_context(
         predecessor_positions=predecessor_positions,
         response_time_days=response_time_days,
         internal_handoff_minutes=internal_handoff_minutes,
+        wait_after_minutes=(
+            position_wait_after_minutes(position.kind, step_waits(steps))
+            if position is not None
+            else 0
+        ),
         # From persisted dates; the propagated walk re-derives it every pass.
         stale_external_predecessor=stale_external_predecessor(predecessor_positions, None),
         predecessor_ready_moment=predecessor_ready_moment(

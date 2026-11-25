@@ -16,9 +16,11 @@ from src.modules.fulfillment.application.use_cases.production_lot.get_planning_e
     GetPlanningExceptions,
 )
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
+from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.planning_exception_kind import (
     PlanningExceptionKind,
 )
+from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from tests.unit._tenant_settings import TenantSettings
 from tests.unit.production_order._helpers import make_lot
 from tests.unit.production_order._helpers import make_order
@@ -84,3 +86,40 @@ async def test_a_target_date_is_past_once_the_vienna_day_after_it_began(
     rows = await _use_case([], timezone)._late([_lot()])
 
     assert [r.kind for r in rows] == ([PlanningExceptionKind.LATE] if late else [])
+
+
+def _waiting_lot(minutes: int):
+    """A lot whose only position is done in house and its pieces wait
+    `minutes` after it, such as for a lab result."""
+    position = make_position(kind=LotPositionKind.INTERNAL)
+    position.steps[0].method_wait_after_minutes = minutes
+    lot = make_lot(positions=[position])
+    lot.required_delivery_date = TARGET
+    return lot
+
+
+async def test_the_wait_after_the_last_step_makes_the_lot_late(monkeypatch):
+    """The last order ends at 14:00 on the target date, and its result takes
+    another day, so the lot is late."""
+    monkeypatch.setattr(
+        get_planning_exceptions, "now_utc", lambda: datetime(2026, 7, 20, 8, 0, tzinfo=UTC)
+    )
+    order = make_order()
+    order.planned_end = datetime(2026, 7, 27, 14, 0, tzinfo=UTC)
+
+    assert [r.kind for r in await _use_case([order], "UTC")._late([_waiting_lot(0)])] == []
+    rows = await _use_case([order], "UTC")._late([_waiting_lot(1440)])
+    assert [r.kind for r in rows] == [PlanningExceptionKind.LATE]
+    assert rows[0].planned_end == datetime(2026, 7, 28, 14, 0, tzinfo=UTC)
+
+
+async def test_a_completed_last_step_keeps_the_lot_late_while_it_waits(monkeypatch):
+    monkeypatch.setattr(
+        get_planning_exceptions, "now_utc", lambda: datetime(2026, 7, 20, 8, 0, tzinfo=UTC)
+    )
+    done = make_order(status=ProductionOrderStatus.COMPLETED)
+    done.actual_end = datetime(2026, 7, 27, 9, 0, tzinfo=UTC)
+
+    rows = await _use_case([done], "UTC")._late([_waiting_lot(1440)])
+
+    assert [r.kind for r in rows] == [PlanningExceptionKind.LATE]

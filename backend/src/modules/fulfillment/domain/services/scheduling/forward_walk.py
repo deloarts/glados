@@ -43,6 +43,7 @@ from datetime import tzinfo
 from typing import Literal
 
 from src.modules.fulfillment.domain.errors import NoWorkingTimeError
+from src.modules.fulfillment.domain.policies.wait_after import ready_after_wait
 from src.modules.fulfillment.domain.services.scheduling._shared import as_day
 from src.modules.fulfillment.domain.services.scheduling._shared import day_of
 from src.modules.fulfillment.domain.services.scheduling._shared import day_start
@@ -111,10 +112,11 @@ def _with_waiting_and_target_flags(
     now: datetime,
 ) -> list[str]:
     """Adds the flags that compare a day: waiting while the predecessor's
-    ready day lies after today, and past the target date while the planned
-    end falls on a later day. Both days are the tenant's, so in Vienna an
-    order ending at 23:30 UTC on its target date ends on the next local day
-    and is late."""
+    ready day lies after today, and past the target date while the pieces
+    are ready on a later day, the planned end plus the wait after the
+    order's position. Both days are the tenant's, so in Vienna an order
+    ending at 23:30 UTC on its target date ends on the next local day and
+    is late."""
     result = list(conflicts)
     # _static_conflicts may already have flagged the same blockage.
     if (
@@ -126,7 +128,8 @@ def _with_waiting_and_target_flags(
     if (
         ctx.target_date is not None
         and planned_end is not None
-        and day_of(planned_end, ctx.zone) > ctx.target_date
+        and day_of(ready_after_wait(planned_end, ctx.wait_after_minutes), ctx.zone)
+        > ctx.target_date
     ):
         result.append(ScheduleConflictReason.PAST_TARGET_DATE.value)
     return result
@@ -693,9 +696,9 @@ def placed_ends_by_position(
     contexts: Iterable[OrderSchedulingContext], result: ScheduleWalkResult
 ) -> dict[int, date | None]:
     """Each position's in-run ready date from one pass, the tenant day of
-    its latest planned end. A position whose orders are all undated maps to
-    None rather than being absent, and callers must tell the two apart (see
-    position_ready_at_in_run)."""
+    its latest planned end plus the wait after the position. A position
+    whose orders are all undated maps to None rather than being absent, and
+    callers must tell the two apart (see position_ready_at_in_run)."""
     scheduled_by_id = {s.order_id: s for s in result.all_orders()}
     ends_by_position: dict[int, list[datetime | None]] = {}
     zone_by_position: dict[int, tzinfo] = {}
@@ -704,7 +707,12 @@ def placed_ends_by_position(
             continue
         scheduled = scheduled_by_id.get(ctx.order_id)
         planned_end = scheduled.planned_end if scheduled is not None else None
-        ends_by_position.setdefault(ctx.lot_position_id, []).append(planned_end)
+        ready = (
+            ready_after_wait(planned_end, ctx.wait_after_minutes)
+            if planned_end is not None
+            else None
+        )
+        ends_by_position.setdefault(ctx.lot_position_id, []).append(ready)
         zone_by_position[ctx.lot_position_id] = ctx.zone
     return {
         position_id: resolve_internal_predecessor_ready_at(ends, zone=zone_by_position[position_id])
@@ -715,16 +723,21 @@ def placed_ends_by_position(
 def placed_end_moments_by_position(
     contexts: Iterable[OrderSchedulingContext], result: ScheduleWalkResult
 ) -> dict[int, datetime | None]:
-    """Each position's latest planned end in one pass as a moment, the
-    floor of its successors (predecessor_ready_moment). A position whose
-    orders are all undated maps to None, as in placed_ends_by_position."""
+    """Each position's latest planned end in one pass as a moment, plus the
+    wait after the position, the floor of its successors
+    (predecessor_ready_moment). A position whose orders are all undated maps
+    to None, as in placed_ends_by_position."""
     scheduled_by_id = {s.order_id: s for s in result.all_orders()}
     ends: dict[int, datetime | None] = {}
     for ctx in contexts:
         if ctx.lot_position_id is None:
             continue
         scheduled = scheduled_by_id.get(ctx.order_id)
-        end = scheduled.planned_end if scheduled is not None else None
+        end = (
+            ready_after_wait(scheduled.planned_end, ctx.wait_after_minutes)
+            if scheduled is not None and scheduled.planned_end is not None
+            else None
+        )
         known = ends.get(ctx.lot_position_id)
         if end is not None:
             ends[ctx.lot_position_id] = max(known, as_utc(end)) if known else as_utc(end)

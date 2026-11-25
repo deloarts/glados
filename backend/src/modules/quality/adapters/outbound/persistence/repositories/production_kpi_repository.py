@@ -23,6 +23,9 @@ from sqlalchemy.sql.elements import ColumnElement
 from src.modules.catalogue.adapters.outbound.persistence.models.fabrication_method_model import (
     FabricationMethodOrmModel,
 )
+from src.modules.catalogue.adapters.outbound.persistence.models.inspection_method_model import (
+    InspectionMethodOrmModel,
+)
 from src.modules.catalogue.adapters.outbound.persistence.models.made_item_model import (
     MadeItemOrmModel,
 )
@@ -54,6 +57,9 @@ from src.modules.fulfillment.adapters.outbound.persistence.models.production_ord
 from src.modules.fulfillment.domain.entities.production_order_interruption import (
     ProductionOrderInterruption,
 )
+from src.modules.fulfillment.domain.policies.wait_after import StepWait
+from src.modules.fulfillment.domain.policies.wait_after import position_wait_after_minutes
+from src.modules.fulfillment.domain.policies.wait_after import ready_after_wait
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
@@ -324,11 +330,17 @@ class SqlAlchemyProductionKpiRepository:
                 )
             )
         ).all()
+        # A lot is finished once the pieces of its last step are ready, so
+        # each end counts with the wait after its position.
+        wait_by_position = await self._position_waits(
+            sorted({order.lot_position_id for order, _lot_id in order_rows})
+        )
         best_by_lot: dict[int, tuple[int, datetime]] = {}
         for order, lot_id in order_rows:
-            effective_end = order.actual_end or order.planned_end
-            if effective_end is None:
+            end = order.actual_end or order.planned_end
+            if end is None:
                 continue
+            effective_end = ready_after_wait(end, wait_by_position.get(order.lot_position_id, 0))
             current = best_by_lot.get(lot_id)
             if current is None or effective_end > current[1]:
                 best_by_lot[lot_id] = (order.id, effective_end)
@@ -341,6 +353,52 @@ class SqlAlchemyProductionKpiRepository:
             )
             for lot in lots
         ]
+
+    async def _position_waits(self, position_ids: list[int]) -> dict[int, int]:
+        """The clock minutes the pieces wait after each of the positions,
+        from their steps' methods, as the schedule walk reads them
+        (scheduling.position_wait_after_minutes)."""
+        if not position_ids:
+            return {}
+        rows = (
+            await self._db.execute(
+                select(
+                    LotStepOrmModel.position_id,
+                    LotPositionOrmModel.kind,
+                    LotStepOrmModel.sequence,
+                    LotStepOrmModel.role,
+                    FabricationMethodOrmModel.required_external,
+                    FabricationMethodOrmModel.wait_after_minutes,
+                    InspectionMethodOrmModel.wait_after_minutes,
+                )
+                .join(LotPositionOrmModel, LotStepOrmModel.position_id == LotPositionOrmModel.id)
+                .outerjoin(
+                    FabricationMethodOrmModel,
+                    LotStepOrmModel.fabrication_method_id == FabricationMethodOrmModel.id,
+                )
+                .outerjoin(
+                    InspectionMethodOrmModel,
+                    LotStepOrmModel.inspection_method_id == InspectionMethodOrmModel.id,
+                )
+                .where(LotStepOrmModel.position_id.in_(position_ids))
+            )
+        ).all()
+        kinds: dict[int, str] = {}
+        steps: dict[int, list[StepWait]] = {}
+        for position_id, kind, sequence, role, external, fabrication_wait, inspection_wait in rows:
+            inspection = role == StepRole.INSPECTION.value
+            kinds[position_id] = kind
+            steps.setdefault(position_id, []).append(
+                StepWait(
+                    sequence=sequence,
+                    usually_external=not inspection and bool(external),
+                    minutes=inspection_wait if inspection else fabrication_wait,
+                )
+            )
+        return {
+            position_id: position_wait_after_minutes(kinds[position_id], position_steps)
+            for position_id, position_steps in steps.items()
+        }
 
     async def get_waiting_time_rows(self, period: KpiPeriod, scope: KpiScope) -> list[WaitingRow]:
         candidate_rows = await self._query_waiting_candidates(period, scope)

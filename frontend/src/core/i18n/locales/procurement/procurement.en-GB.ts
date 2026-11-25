@@ -60,6 +60,8 @@ export default {
       safetyMargin: '− {days} day safety margin | − {days} days safety margin',
       laterStep: '− {days} day {methods} | − {days} days {methods}',
       laterStepMinutes: '− {days} day {methods} ({minutes} min) | − {days} days {methods} ({minutes} min)',
+      waitAfter:
+        '− {days} day waiting after {methods} ({minutes} min) | − {days} days waiting after {methods} ({minutes} min)',
       backBy: '= back by {date}',
       leadTime: '{sign} {days} day lead time ({source}) | {sign} {days} days lead time ({source})',
       leadSource: {

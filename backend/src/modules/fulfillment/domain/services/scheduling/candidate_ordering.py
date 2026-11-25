@@ -30,17 +30,23 @@ def compute_position_due_dates(
     position_sequences: list[int],
     lead_days_by_sequence: dict[int, int],
     lot_target_date: date | None,
+    wait_days_by_sequence: dict[int, int] | None = None,
 ) -> dict[int, date | None]:
-    """Backward pass: the last position is due at the lot's target, each
-    earlier one when its successor must start. Without a target every
+    """Backward pass: a position is due when its pieces have to be ready,
+    the lot's target for the last one and the start of its successor for
+    every earlier one, less the days its pieces wait after it, since the
+    wait follows its work. The position before it has to be ready when its
+    work starts, its due day less its lead days. Without a target every
     position is None."""
     if lot_target_date is None:
         return dict.fromkeys(position_sequences)
+    waits = wait_days_by_sequence or {}
     due: dict[int, date | None] = {}
-    next_due = lot_target_date
+    next_start = lot_target_date
     for sequence in sorted(position_sequences, reverse=True):
-        due[sequence] = next_due
-        next_due = next_due - timedelta(days=lead_days_by_sequence.get(sequence, 0))
+        position_due = next_start - timedelta(days=waits.get(sequence, 0))
+        due[sequence] = position_due
+        next_start = position_due - timedelta(days=lead_days_by_sequence.get(sequence, 0))
     return due
 
 

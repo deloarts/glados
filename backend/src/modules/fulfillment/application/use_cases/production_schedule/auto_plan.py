@@ -72,6 +72,7 @@ from src.modules.fulfillment.domain.services.scheduling import advance_machine_q
 from src.modules.fulfillment.domain.services.scheduling import compute_position_due_dates
 from src.modules.fulfillment.domain.services.scheduling import is_unplannable_for_missing_material
 from src.modules.fulfillment.domain.services.scheduling import position_lead_days
+from src.modules.fulfillment.domain.services.scheduling import position_wait_after_minutes
 from src.modules.fulfillment.domain.services.scheduling import production_order_touches_date
 from src.modules.fulfillment.domain.services.scheduling import resolve_algorithm_strategies
 from src.modules.fulfillment.domain.services.scheduling import resolve_eligible_machine_ids
@@ -80,6 +81,8 @@ from src.modules.fulfillment.domain.services.scheduling import resolve_machine_f
 from src.modules.fulfillment.domain.services.scheduling import resolve_pool_for_candidate
 from src.modules.fulfillment.domain.services.scheduling import resolve_position_lead_days
 from src.modules.fulfillment.domain.services.scheduling import sort_candidates
+from src.modules.fulfillment.domain.services.scheduling import step_waits
+from src.modules.fulfillment.domain.services.scheduling import wait_days
 from src.modules.fulfillment.domain.value_objects.auto_plan_skip_reason import AutoPlanSkipReason
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
@@ -533,6 +536,10 @@ class AutoPlan:
         caller can reintroduce per-lot queries."""
         sequences = [p.sequence for p in lot.positions]
         lead_days_by_sequence = {}
+        wait_days_by_sequence = {
+            p.sequence: wait_days(position_wait_after_minutes(p.kind, step_waits(p.steps)))
+            for p in lot.positions
+        }
         for position in lot.positions:
             if position.kind == LotPositionKind.EXTERNAL:
                 order_item = order_items_by_position.get(position.id)
@@ -548,7 +555,9 @@ class AutoPlan:
             lead_days_by_sequence[position.sequence] = position_lead_days(
                 position.kind, total_minutes, default_external_lead_days
             )
-        return compute_position_due_dates(sequences, lead_days_by_sequence, lot_target_date)
+        return compute_position_due_dates(
+            sequences, lead_days_by_sequence, lot_target_date, wait_days_by_sequence
+        )
 
     async def _load_machine_context(self, cmd: AutoPlanCommand) -> _AutoPlanState:
         settings = await self._settings.get_production()

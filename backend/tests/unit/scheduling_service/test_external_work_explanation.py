@@ -169,3 +169,36 @@ async def test_the_explanation_ends_on_the_dates_the_walk_stores(monkeypatch):
     assert explanation.ready_from[-1].date == hardening.planned_pickup_date
     assert explanation.latest_pickup[-1].date == hardening.latest_pickup_date
     assert hardening.latest_delivery_date == hardening.latest_pickup_date + timedelta(days=4)
+
+
+async def test_the_explanation_counts_the_waits_as_the_walk_does(monkeypatch):
+    """The milling's pieces cure a day before they can leave, and the QA
+    check after the hardening waits two days for its result: the walk and
+    the explanation count both waits alike."""
+    pin_scheduling_clock(monkeypatch, _BEFORE_THE_FIXTURES)
+    milling, hardening, inspection = _milling(), _hardening(LotPositionKind.EXTERNAL), _inspection()
+    milling.steps[0].method_wait_after_minutes = 1440
+    inspection.steps[0].method_wait_after_minutes = 2000
+    lot = _lot(milling, hardening, inspection)
+    lot.required_delivery_date = _TARGET
+    recompute, orders = _recompute(
+        lot, [_milling_order(), _inspection_order()], [_hardening_line()]
+    )
+
+    await recompute.execute_all()
+    for position in lot.positions:
+        position.production_orders = [
+            o for o in orders.orders.values() if o.lot_position_id == position.id
+        ]
+
+    explanation = explain_external_work(hardening, lot, _inputs(), ready_now=False)
+
+    assert explanation.stale is False
+    milling_end = orders.orders[1].planned_end
+    assert milling_end is not None
+    # Ready a day after the milling ends, plus the day of response time.
+    assert explanation.ready_from[0].date == milling_end.date() + timedelta(days=1)
+    assert hardening.planned_pickup_date == milling_end.date() + timedelta(days=2)
+    waits = [t for t in explanation.latest_pickup if t.kind == DateTermKind.WAIT_AFTER]
+    assert [(t.days, t.minutes) for t in waits] == [(2, 2000)]
+    assert explanation.latest_pickup[-1].date == hardening.latest_pickup_date

@@ -60,6 +60,8 @@ export default {
       safetyMargin: '− {days} Tag Sicherheitsabstand | − {days} Tage Sicherheitsabstand',
       laterStep: '− {days} Tag {methods} | − {days} Tage {methods}',
       laterStepMinutes: '− {days} Tag {methods} ({minutes} min) | − {days} Tage {methods} ({minutes} min)',
+      waitAfter:
+        '− {days} Tag Wartezeit nach {methods} ({minutes} min) | − {days} Tage Wartezeit nach {methods} ({minutes} min)',
       backBy: '= zurück sein am {date}',
       leadTime: '{sign} {days} Tag Lieferzeit ({source}) | {sign} {days} Tage Lieferzeit ({source})',
       leadSource: {

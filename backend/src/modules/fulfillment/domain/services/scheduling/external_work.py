@@ -13,6 +13,7 @@ from datetime import timedelta
 from src.modules.catalogue.domain.value_objects.step_role import StepRole
 from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
+from src.modules.fulfillment.domain.policies.wait_after import wait_days
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import (
     compute_position_due_dates,
 )
@@ -73,26 +74,33 @@ def latest_pickup_dates(chain: ExternalWorkChain, safety_margin_days: int) -> di
     Auto-Plan dates its positions (compute_position_due_dates): a position
     done in house takes its remaining minutes in whole days of eight hours,
     at least one, and an external position its lead days, all counted as
-    calendar days and without any waiting at the machines. An external position must be back
-    when the position after it has to start, so it leaves its lead days
-    before that. A lot without a target date has no latest day."""
+    calendar days and without any waiting at the machines. The wait after a
+    position done in house counts in whole days too. An external position
+    must be back when the position after it has to start, so it leaves its
+    lead days before that. A completed position whose wait still runs has
+    no work left and counts nothing. A lot without a target date has no
+    latest day."""
     if chain.target_date is None:
         return {}
+    open_positions = [p for p in chain.positions if not p.completed]
     lead_days_by_sequence: dict[int, int] = {}
-    for position in chain.positions:
+    wait_days_by_sequence: dict[int, int] = {}
+    for position in open_positions:
         if position.position_id in chain.external_position_ids:
             lead_days_by_sequence[position.sequence] = position.lead_days or 0
         else:
             lead_days_by_sequence[position.sequence] = position_lead_days(
                 "internal", chain.remaining_minutes_by_position.get(position.position_id, 0), 0
             )
+        wait_days_by_sequence[position.sequence] = wait_days(position.wait_after_minutes)
     due_by_sequence = compute_position_due_dates(
-        [p.sequence for p in chain.positions],
+        [p.sequence for p in open_positions],
         lead_days_by_sequence,
         chain.target_date - timedelta(days=safety_margin_days),
+        wait_days_by_sequence,
     )
     latest: dict[int, date] = {}
-    for position in chain.positions:
+    for position in open_positions:
         due = due_by_sequence.get(position.sequence)
         if position.position_id in chain.external_position_ids and due is not None:
             latest[position.position_id] = due - timedelta(

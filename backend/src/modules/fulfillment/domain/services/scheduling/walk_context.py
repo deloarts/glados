@@ -35,8 +35,9 @@ from src.shared_kernel.domain.services.clock import as_utc
 class PredecessorPosition:
     """One earlier, still-open position of the same lot. Carrying these on
     the context lets schedule_all_propagated re-derive predecessor
-    readiness every pass without a repository. Completed and canceled
-    positions are left out."""
+    readiness every pass without a repository. Canceled positions are left
+    out, and so are completed ones, except a completed position whose wait
+    after it still runs (`completed`), since its pieces are not ready yet."""
 
     position_id: int
     sequence: int
@@ -44,7 +45,7 @@ class PredecessorPosition:
     # Actual delivery, then ready-for-pickup, then typed expected delivery.
     external_ready_at: date | None
     # The tenant day of the latest persisted planned_end over this
-    # position's own orders.
+    # position's own orders, plus the position's wait after it.
     stored_internal_ready_at: date | None
     lead_days: int | None = None
     # The supplier's typed promise. None once an actual delivery or pickup
@@ -54,12 +55,27 @@ class PredecessorPosition:
     # forecast basis there because no earlier position feeds it.
     material_ready_at: date | None = None
     # The latest persisted planned_end over this position's own orders as a
-    # moment, the floor a successor starts from (predecessor_ready_moment).
+    # moment, plus the position's wait after it, the floor a successor starts
+    # from (predecessor_ready_moment).
     stored_internal_ready_moment: datetime | None = None
     # An UNASSIGNED position whose fabrication steps use a method that is
     # usually outsourced. It gets a forecast for display, but the forecast
     # never feeds the chain, so it moves no internal order.
     outsourced_unassigned: bool = False
+    # The clock minutes the pieces wait after the position
+    # (wait_after.position_wait_after_minutes), already in the ready values
+    # above; the backward passes read it on its own.
+    wait_after_minutes: int = 0
+    # When the pieces of the position's completed orders are ready, the
+    # latest actual_end plus the wait, as a day and a moment. Set only while
+    # that is today or later, so a finished wait holds nothing back. A
+    # position still running takes the later of these and its own end.
+    completed_ready_at: date | None = None
+    completed_ready_moment: datetime | None = None
+    # The whole position is completed and only its wait still runs. It is
+    # ready at completed_ready_*, is never undated, and has no work left
+    # for a backward pass.
+    completed: bool = False
 
 
 LeadDaysSource = Literal["supplier", "method", "default"]
@@ -187,6 +203,10 @@ class OrderSchedulingContext:
     # Added to the moment the in-house predecessors end
     # (predecessor_ready_moment).
     internal_handoff_minutes: int = 0
+    # The clock minutes the pieces wait after this order's own position,
+    # added to its planned end where a successor or the lot's target date
+    # reads it.
+    wait_after_minutes: int = 0
     # This is the first INTERNAL or MIXED position after an EXTERNAL or
     # MIXED position whose typed date is earlier than the chain feeding it.
     stale_external_predecessor: bool = False
@@ -218,6 +238,31 @@ class ScheduledOrder:
     trial_machine_id: int | None = None
 
 
+def _with_completed[T: (date, datetime)](
+    pred: PredecessorPosition, internal_ready: T | None, completed: T | None
+) -> T | None:
+    """A position's in-house readiness, a day or a moment, with its
+    completed orders' wait: a completed position is ready at that alone, an
+    undated running one stays undated, and a dated one is ready at the later
+    of both."""
+    if pred.completed:
+        return completed
+    if internal_ready is None or completed is None:
+        return internal_ready
+    return max(internal_ready, completed)
+
+
+def _internal_ready_day(
+    pred: PredecessorPosition, placed_end_by_position: dict[int, date | None]
+) -> date | None:
+    """The day the in-house pieces of a position are ready: this run's
+    placed end when the position has an order in the run, None included,
+    else the stored one, either with the wait, and the completed orders'
+    wait on top."""
+    internal = placed_end_by_position.get(pred.position_id, pred.stored_internal_ready_at)
+    return _with_completed(pred, internal, pred.completed_ready_at)
+
+
 def position_ready_at_in_run(
     pred: PredecessorPosition, placed_end_by_position: dict[int, date | None]
 ) -> date | None:
@@ -225,18 +270,16 @@ def position_ready_at_in_run(
     preferring this run's placed end over the stored one. A position that
     appears in placed_end_by_position uses that value even when it is None,
     because an undated in-run result is more honest than a stale stored
-    date; only a position with no order in this run falls back to storage."""
+    date; only a position with no order in this run falls back to storage.
+    Both include the position's wait after it."""
     if pred.kind == LotPositionKind.EXTERNAL:
         return pred.external_ready_at
     if pred.kind == LotPositionKind.INTERNAL:
-        if pred.position_id in placed_end_by_position:
-            return placed_end_by_position[pred.position_id]
-        return pred.stored_internal_ready_at
+        return _internal_ready_day(pred, placed_end_by_position)
     if pred.kind == LotPositionKind.MIXED:
-        internal_ready_at = placed_end_by_position.get(
-            pred.position_id, pred.stored_internal_ready_at
+        return resolve_mixed_predecessor_ready_at(
+            pred.external_ready_at, _internal_ready_day(pred, placed_end_by_position)
         )
-        return resolve_mixed_predecessor_ready_at(pred.external_ready_at, internal_ready_at)
     return None
 
 
@@ -260,12 +303,9 @@ def _predecessor_shares_with_forecast(
         return pred.external_ready_at or forecast.planned_delivery_date, None, forecast
     if pred.kind == LotPositionKind.MIXED:
         forecast = resolve_external_forecast(pred, chain_end_before, response_time_days)
-        internal_ready_at = placed_end_by_position.get(
-            pred.position_id, pred.stored_internal_ready_at
-        )
         return (
             pred.external_ready_at or forecast.planned_delivery_date,
-            internal_ready_at,
+            _internal_ready_day(pred, placed_end_by_position),
             forecast,
         )
     return None, position_ready_at_in_run(pred, placed_end_by_position), None
@@ -306,7 +346,8 @@ def stale_external_predecessor(
     pending = False
     for pred in sorted(predecessor_positions, key=lambda p: p.sequence):
         ready_at = position_ready_at_in_run(pred, placed)
-        if pred.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
+        # A completed position that only waits is no position to flag.
+        if pred.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED) and not pred.completed:
             pending = False
         if (
             pred.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED)
@@ -365,7 +406,8 @@ def predecessor_ready_moment(
     """When the pieces of the earlier positions' internal work are ready
     for the next order: each internal or mixed position's latest planned
     end in this run, or its stored one when the position has no order in
-    the run, plus the handoff minutes. None when none of them is dated.
+    the run, each with the position's wait after it, plus the handoff
+    minutes. None when none of them is dated.
     External shares, and the response time after them in whole days, count
     through predecessor_ready_at."""
     placed = placed_moment_by_position or {}
@@ -374,10 +416,43 @@ def predecessor_ready_moment(
         if pred.kind not in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
             continue
         # A position in the run counts with its in-run end, None included.
-        end = placed.get(pred.position_id, pred.stored_internal_ready_moment)
+        end = _with_completed(
+            pred,
+            placed.get(pred.position_id, pred.stored_internal_ready_moment),
+            pred.completed_ready_moment,
+        )
         if end is not None:
             ends.append(as_utc(end))
     return max(ends) + timedelta(minutes=handoff_minutes) if ends else None
+
+
+def stored_predecessor_readiness(
+    predecessor_positions: tuple[PredecessorPosition, ...], response_time_days: int
+) -> tuple[date | None, bool]:
+    """The read path's predecessor readiness from the stored dates, with the
+    response time after every arrival (buffered_ready_day): the latest
+    ready day and whether an earlier position has no date signal. Unlike
+    the walk, an undated external position is not forecast, so it leaves
+    the chain unknown."""
+    contributed: list[date] = []
+    chain_unknown = False
+    for pred in predecessor_positions:
+        external_ready_at = (
+            pred.external_ready_at
+            if pred.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED)
+            else None
+        )
+        internal_ready_at = (
+            _internal_ready_day(pred, {})
+            if pred.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED)
+            else None
+        )
+        buffered = buffered_ready_day(external_ready_at, internal_ready_at, response_time_days)
+        if buffered is None:
+            chain_unknown = True
+            continue
+        contributed.append(buffered)
+    return (max(contributed) if contributed else None), chain_unknown
 
 
 def refresh_predecessor_readiness(
