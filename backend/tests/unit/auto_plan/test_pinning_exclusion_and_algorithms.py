@@ -17,6 +17,7 @@ from src.modules.fulfillment.application.use_cases.production_schedule import (
 )
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.domain.value_objects.production_status import UrgencyClass
+from tests.unit._scheduling_clock import pin_scheduling_clock
 from tests.unit.auto_plan._helpers import SYSTEM_ACTOR
 from tests.unit.auto_plan._helpers import build_auto_plan
 from tests.unit.auto_plan._helpers import make_lot
@@ -64,12 +65,18 @@ async def test_pinned_order_is_not_moved_and_still_blocks_capacity_as_an_anchor(
     assert any(p.order_id == 2 for p in result.proposals)
 
 
-async def test_exclude_todays_planned_default_leaves_a_queued_order_starting_today_untouched():
+async def test_exclude_todays_planned_default_leaves_a_queued_order_starting_today_untouched(
+    monkeypatch,
+):
     """A QUEUED order already planned to start today, even though it
     hasn't actually started, is protected by default. Reshuffling it
     mid-day is exactly the shop-floor surprise exclude_todays_planned
-    exists to prevent."""
+    exists to prevent. The clock stands at 07:00, so the walk after the run
+    keeps the order where it was planned."""
     today = datetime.now(TENANT_ZONE).date()
+    pin_scheduling_clock(
+        monkeypatch, datetime.combine(today, time(7, 0), tzinfo=TENANT_ZONE).astimezone(UTC)
+    )
     machine = make_machine(1)
     lot = make_lot(1)
     todays_start = datetime.combine(today, time(8, 0), tzinfo=TENANT_ZONE)

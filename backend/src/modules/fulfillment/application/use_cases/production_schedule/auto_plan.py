@@ -1174,7 +1174,7 @@ class AutoPlan:
             return
 
     async def _build_result(self, actor: User, state: _AutoPlanState) -> AutoPlanResult:
-        await self._recompute_touched(state)
+        await self._walk_after_write(state)
         _emit(state, AutoPlanProgress(stage="finalizing"))
         proposals = await self._build_proposals(state)
         moved = sum(1 for p in proposals if _moved(p))
@@ -1193,15 +1193,14 @@ class AutoPlan:
             skipped=state.skipped_orders,
         )
 
-    async def _recompute_touched(self, state: _AutoPlanState) -> None:
-        """Runs one global recompute if the run touched anything. The plan
-        is committed by then, so a failed walk is logged and rolled back
+    async def _walk_after_write(self, state: _AutoPlanState) -> None:
+        """Runs one global walk of the schedule on every run, also when the
+        run moved nothing, so the dates are current when the answer arrives.
+        The progress counts the walk itself, 0/1 before and 1/1 after it. The
+        plan is committed by then, so a failed walk is logged and rolled back
         rather than answered as an error; the proposals read the committed
         rows, and the next walk dates them."""
-        total_touched = len(state.touched_machine_ids)
-        _emit(state, AutoPlanProgress(stage="recomputing", current=0, total=total_touched))
-        if not total_touched:
-            return
+        _emit(state, AutoPlanProgress(stage="recomputing", current=0, total=1))
         try:
             await self._recompute.execute_all(
                 response_time_days=state.response_time_days,
@@ -1212,10 +1211,7 @@ class AutoPlan:
                 "Schedule recompute failed after Auto-Plan; the plan itself is committed."
             )
             await self._uow.rollback()
-        _emit(
-            state,
-            AutoPlanProgress(stage="recomputing", current=total_touched, total=total_touched),
-        )
+        _emit(state, AutoPlanProgress(stage="recomputing", current=1, total=1))
 
     async def _build_proposals(self, state: _AutoPlanState) -> list[AutoPlanOrderDiff]:
         """Diffs every placed order's pre-run snapshot against its freshly reloaded row."""

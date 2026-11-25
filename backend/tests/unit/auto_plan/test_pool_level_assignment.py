@@ -60,17 +60,20 @@ async def test_pool_assigned_unresolved_order_resolves_to_a_pool_member_by_defau
 # ══════════════════════════════════════════════════════════════════════
 
 
-async def test_pools_level_machine_resolved_order_is_an_anchor_never_moved():
+async def test_pools_level_machine_resolved_order_is_an_anchor_never_moved(monkeypatch):
     """A machine-resolved order is an anchor under 'pools', same standing
     as pinned/IN_PROGRESS, even though it's an ordinary QUEUED/unpinned
     order that 'machines' level would happily re-sequence. Planning at
     the pool level never touches it at all, not even a re-sequence within
     its own machine, its dates stay bit-identical to what was already
-    there."""
+    there. The walk after every run keeps them too, since they lie on the
+    calendar (08:00 in the tenant's Vienna, 07:00 UTC) and the clock stands
+    at the start of that day, so the window is the first one the walk has."""
+    pin_scheduling_clock(monkeypatch, datetime(2026, 1, 5, tzinfo=UTC))
     machine = make_machine(1)
     lot = make_lot(1)
-    start = datetime(2026, 1, 5, 8, 0)
-    end = datetime(2026, 1, 5, 9, 0)
+    start = datetime(2026, 1, 5, 7, 0, tzinfo=UTC)
+    end = datetime(2026, 1, 5, 8, 0, tzinfo=UTC)
     order = make_order(
         1,
         lot_id=1,

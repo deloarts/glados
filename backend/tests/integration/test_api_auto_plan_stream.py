@@ -332,15 +332,16 @@ async def test_stream_no_eligible_orders_matches_plain_endpoint(auth_client) -> 
         "scoring",
         "placing",
         "recomputing",
+        "recomputing",
         "finalizing",
     ]
     placing = next(p for p in progress if p["stage"] == "placing")
     assert placing["current"] == 0
     assert placing["total"] == 0
     assert placing["order"] is None
-    recomputing = next(p for p in progress if p["stage"] == "recomputing")
-    assert recomputing["current"] == 0
-    assert recomputing["total"] == 0
+    # A run that moves nothing still walks the schedule, counted as one walk.
+    recomputing = [(p["current"], p["total"]) for p in progress if p["stage"] == "recomputing"]
+    assert recomputing == [(0, 1), (1, 1)]
 
     result_frames = [data for event, data in frames if event == "result"]
     assert len(result_frames) == 1
