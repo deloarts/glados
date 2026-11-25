@@ -6,6 +6,7 @@ import {
   isInspectionOrder,
   isStaticColumn,
   orderColumnKey,
+  sortColumnOrders,
 } from '../queueColumnRouting'
 import type { RoutingStep } from '../queueColumnRouting'
 
@@ -69,6 +70,33 @@ describe('isStaticColumn', () => {
     expect(isStaticColumn('unassigned')).toBe(false)
     expect(isStaticColumn('machine')).toBe(false)
     expect(isStaticColumn('pool')).toBe(false)
+  })
+})
+
+describe('sortColumnOrders', () => {
+  const orders = () => [
+    { id: 1, queue_sequence: 1, planned_start: '2026-12-11T07:00:00Z' },
+    { id: 2, queue_sequence: 2, planned_start: null },
+    { id: 3, queue_sequence: 3, planned_start: '2026-11-25T08:30:00Z' },
+    { id: 4, queue_sequence: 4, planned_start: '2026-12-07T07:00:00Z' },
+  ]
+
+  it.each(['manual', 'inspection'])('sorts the %s column by planned start, undated last', (key) => {
+    expect(sortColumnOrders(key, orders()).map((o) => o.id)).toEqual([3, 4, 1, 2])
+  })
+
+  it('breaks a planned start tie by queue place', () => {
+    const tied = [
+      { id: 7, queue_sequence: 2, planned_start: '2026-11-25T08:30:00Z' },
+      { id: 8, queue_sequence: 1, planned_start: '2026-11-25T08:30:00Z' },
+    ]
+    expect(sortColumnOrders('manual', tied).map((o) => o.id)).toEqual([8, 7])
+  })
+
+  it('keeps every other column in queue order', () => {
+    for (const key of ['unassigned', '1', 'pool-2']) {
+      expect(sortColumnOrders(key, orders().reverse()).map((o) => o.id)).toEqual([1, 2, 3, 4])
+    }
   })
 })
 

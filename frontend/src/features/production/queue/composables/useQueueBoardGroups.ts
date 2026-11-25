@@ -6,7 +6,7 @@ import { parseBackendTimestamp, startOfDay, toDateKey } from '@/core/utils/dates
 import { useProductionQueueStore } from '../../stores/productionQueueStore'
 import { FINISHED_ORDER_WINDOW_MS, isProductionOrderLocked } from '../../utils/productionOrderStatus'
 import { computeProductionSchedule } from '../../utils/productionPlanningTasks'
-import { poolColumnKey } from '../../utils/queueColumnRouting'
+import { poolColumnKey, sortColumnOrders } from '../../utils/queueColumnRouting'
 import { fullQueueIdsForColumn } from '../../utils/queueReorderPayload'
 import { isNotReady } from './useQueueHideNotReady'
 
@@ -138,9 +138,7 @@ export function useQueueBoardGroups(options: QueueBoardGroupsOptions) {
       if (!ordersByKey.has(key)) ordersByKey.set(key, [])
       ordersByKey.get(key)!.push(order)
     }
-    for (const list of ordersByKey.values()) {
-      list.sort((a, b) => a.queue_sequence - b.queue_sequence)
-    }
+    for (const [key, list] of ordersByKey) sortColumnOrders(key, list)
 
     const days = rangeDays.value
     const rangeStart = (days[0] ?? now).getTime()
@@ -235,7 +233,8 @@ export function useQueueBoardGroups(options: QueueBoardGroupsOptions) {
         futureOrders = store.ordersByMachine.get(column.id) ?? []
         break
       default:
-        // Manual and inspection columns are static and never reordered.
+        // Manual and inspection columns are static, sorted by planned start
+        // and never reordered.
         futureOrders = []
     }
 

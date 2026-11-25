@@ -31,6 +31,21 @@ export function isStaticColumn(kind: BoardColumnKind): boolean {
   return kind === 'manual' || kind === 'inspection'
 }
 
+type ColumnOrder = Pick<ProductionOrderResponse, 'id' | 'queue_sequence' | 'planned_start'>
+
+function plannedStartTime(order: ColumnOrder): number {
+  return order.planned_start ? new Date(order.planned_start).getTime() : Number.POSITIVE_INFINITY
+}
+
+// Manual and inspection orders wait behind no other order, so their queue
+// place dates nothing and their columns list them by planned start, the
+// undated ones last. Every other column lists its queue in order.
+export function sortColumnOrders<T extends ColumnOrder>(columnKey: string, orders: T[]): T[] {
+  const byQueue = (a: T, b: T) => a.queue_sequence - b.queue_sequence || a.id - b.id
+  if (columnKey !== 'manual' && columnKey !== 'inspection') return orders.sort(byQueue)
+  return orders.sort((a, b) => plannedStartTime(a) - plannedStartTime(b) || byQueue(a, b))
+}
+
 // A resolved machine wins, then an unresolved pool, then the manual,
 // inspection or unassigned column. Display grouping only.
 export function orderColumnKey(
