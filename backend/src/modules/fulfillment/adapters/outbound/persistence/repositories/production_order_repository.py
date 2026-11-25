@@ -653,11 +653,16 @@ class SqlAlchemyProductionOrderRepository:
             "production_order_number": ProductionOrderOrmModel.production_order_number,
             "created": ProductionOrderOrmModel.created,
             "queue_sequence": ProductionOrderOrmModel.queue_sequence,
+            "planned_start": ProductionOrderOrmModel.planned_start,
         }
         if filters.order_by and filters.order_by in _sort_column_map:
             secondary = order_term(
                 _sort_column_map[filters.order_by], filters.order_dir, default="desc"
             )
+            if filters.order_by == "planned_start":
+                # SQLite and Postgres disagree on where NULL sorts, and an
+                # undated order belongs after every dated one either way.
+                secondary = secondary.nulls_last()
         else:
             secondary = asc(ProductionOrderOrmModel.queue_sequence)
 

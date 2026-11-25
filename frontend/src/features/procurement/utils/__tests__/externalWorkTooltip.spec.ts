@@ -57,6 +57,25 @@ describe('externalWorkDateTooltip', () => {
     ])
   })
 
+  it('counts a passed expected arrival from today', () => {
+    const tooltip = externalWorkDateTooltip(
+      [
+        term('raw_material', { date: '2026-11-20' }),
+        term('late_arrival', { date: '2026-11-25' }),
+        term('response_time', { days: 1 }),
+        term('result', { date: '2026-11-26' }),
+      ],
+      { t, localize, leadTimeSign: '+', stale: false },
+    )
+
+    expect(tooltip?.split('\n')).toEqual([
+      'Raw material in on 2026-11-20',
+      'Not there yet, counts from today 2026-11-25',
+      '+ 1 day response time',
+      '= 2026-11-26',
+    ])
+  })
+
   it('shows nothing for a date without terms', () => {
     expect(externalWorkDateTooltip([], { t, localize, leadTimeSign: '+', stale: false })).toBeUndefined()
   })

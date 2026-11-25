@@ -11912,6 +11912,7 @@
         "enum": [
           "after_step",
           "raw_material",
+          "late_arrival",
           "response_time",
           "target_lot",
           "target_demand",

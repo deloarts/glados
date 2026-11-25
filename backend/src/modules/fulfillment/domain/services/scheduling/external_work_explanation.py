@@ -1,6 +1,7 @@
 """How the three dates of a position of external work come about, as terms
 the procurement list shows on hover: the ready date of the step before, or
-of the raw material, plus the response time for "ready from"; the lot's
+of the raw material, counted as today once an expected arrival has
+passed, plus the response time for "ready from"; the lot's
 target date less the safety margin, the steps after it and its lead days
 for the latest pickup; the supplier's date, else the latest pickup plus the
 lead days, for "back by". The arithmetic is the walk's (walk_context and
@@ -19,6 +20,7 @@ from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
 from src.modules.fulfillment.domain.services.scheduling._shared import as_day
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import position_lead_days
+from src.modules.fulfillment.domain.services.scheduling.earliest_start import expected_arrival_day
 from src.modules.fulfillment.domain.services.scheduling.earliest_start import (
     resolve_external_predecessor_ready_at,
 )
@@ -56,6 +58,8 @@ class DateTermKind(StrValueEnum):
     AFTER_STEP = "after_step"
     # The raw material's delivery, or its expected delivery.
     RAW_MATERIAL = "raw_material"
+    # The expected arrival above has passed, so it counts as today, `date`.
+    LATE_ARRIVAL = "late_arrival"
     RESPONSE_TIME = "response_time"
     # The lot's own target date, or the desired date of demand `reference`.
     TARGET_LOT = "target_lot"
@@ -97,7 +101,8 @@ class ExternalWorkExplanation:
 @dataclass(frozen=True)
 class ExplanationInputs:
     """What the explanation reads besides the lot: the target date with its
-    source, the settings the walk used and the tenant's timezone."""
+    source, the settings the walk used, the tenant's timezone and today in
+    it."""
 
     target_date: date | None
     target_demand_id: int | None
@@ -105,6 +110,7 @@ class ExplanationInputs:
     safety_margin_days: int
     default_external_lead_days: int
     zone: tzinfo
+    today: date
 
 
 def remaining_minutes(position: LotPosition, orders: list[ProductionOrder]) -> int:
@@ -143,28 +149,42 @@ def _lead_days(position: LotPosition, default: int) -> tuple[int, LeadDaysSource
     return resolve_position_lead_days_with_source(position.steps, override, default)
 
 
-def _ready_at(position: LotPosition, zone: tzinfo) -> date | None:
+def _ready_at(position: LotPosition, inputs: ExplanationInputs) -> tuple[date, date] | None:
     """An earlier position's ready day, as position_ready_at_in_run reads it
-    with the walk's forecast for an undated external one."""
+    with the walk's forecast for an undated external one, and the day to
+    show for it: the passed expected delivery when that counts as today,
+    else the ready day itself. None for a position without a ready day."""
     internal = resolve_internal_predecessor_ready_at(
-        [o.planned_end for o in position.production_orders], zone=zone
+        [o.planned_end for o in position.production_orders], zone=inputs.zone
     )
     external = None
+    expected = None
     if position.order_item_id is not None:
         external = resolve_external_predecessor_ready_at(
             position.order_item_delivery_date,
             position.order_item_ready_for_pickup_date,
             position.expected_delivery_date,
-            zone=zone,
+            zone=inputs.zone,
+            today=inputs.today,
         )
+        if (
+            position.order_item_delivery_date is None
+            and position.order_item_ready_for_pickup_date is None
+        ):
+            expected = position.expected_delivery_date
     external = external or position.planned_delivery_date
+    ready: date | None = None
     if position.kind == LotPositionKind.INTERNAL:
-        return internal
-    if position.kind == LotPositionKind.EXTERNAL:
-        return external
-    if position.kind == LotPositionKind.MIXED:
-        return resolve_mixed_predecessor_ready_at(external, internal)
-    return None
+        ready = internal
+    elif position.kind == LotPositionKind.EXTERNAL:
+        ready = external
+    elif position.kind == LotPositionKind.MIXED:
+        ready = resolve_mixed_predecessor_ready_at(external, internal)
+    if ready is None:
+        return None
+    if expected is not None and expected < ready and ready == external:
+        return ready, expected
+    return ready, ready
 
 
 def _explain_ready_from(
@@ -174,23 +194,28 @@ def _explain_ready_from(
         p for p in lot.positions if p.sequence < position.sequence and p.status not in _CLOSED
     ]
     base: DateTerm | None = None
+    ready: date | None = None
     if position.sequence <= 1:
-        material = (
-            as_day(lot.source_delivery_date, inputs.zone) or lot.source_expected_delivery_date
-        )
+        delivered = as_day(lot.source_delivery_date, inputs.zone)
+        material = delivered or lot.source_expected_delivery_date
         if material is not None:
             base = DateTerm(DateTermKind.RAW_MATERIAL, date=material)
+            ready = (
+                material if delivered is not None else expected_arrival_day(material, inputs.today)
+            )
     else:
-        dated = [(ready, p) for p in earlier if (ready := _ready_at(p, inputs.zone)) is not None]
+        dated = [(days, p) for p in earlier if (days := _ready_at(p, inputs)) is not None]
         if dated:
-            ready, source = max(dated, key=lambda pair: (pair[0], pair[1].sequence))
-            base = DateTerm(DateTermKind.AFTER_STEP, date=ready, methods=_methods(source))
-    if base is None or base.date is None:
+            (ready, shown), source = max(dated, key=lambda pair: (pair[0][0], pair[1].sequence))
+            base = DateTerm(DateTermKind.AFTER_STEP, date=shown, methods=_methods(source))
+    if base is None or ready is None:
         return ()
+    late = [DateTerm(DateTermKind.LATE_ARRIVAL, date=ready)] if base.date != ready else []
     return (
         base,
+        *late,
         DateTerm(DateTermKind.RESPONSE_TIME, days=inputs.response_time_days),
-        DateTerm(DateTermKind.RESULT, date=base.date + timedelta(days=inputs.response_time_days)),
+        DateTerm(DateTermKind.RESULT, date=ready + timedelta(days=inputs.response_time_days)),
     )
 
 

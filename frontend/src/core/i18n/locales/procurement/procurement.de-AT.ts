@@ -53,6 +53,7 @@ export default {
     tooltip: {
       afterStep: '{methods} fertig am {date}',
       rawMaterial: 'Rohmaterial da am {date}',
+      lateArrival: 'Noch nicht da, zählt ab heute {date}',
       responseTime: '+ {days} Tag Reaktionszeit | + {days} Tage Reaktionszeit',
       targetLot: 'Zieltermin des Loses {date}',
       targetDemand: 'Zieltermin {date} (aus Bedarf #{demand})',

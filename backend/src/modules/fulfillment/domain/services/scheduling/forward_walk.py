@@ -2,7 +2,9 @@
 
 The walk places each machine's orders in queue_sequence order, each
 starting at max(previous planned_end, earliest_start), never before now for
-a queued order, and snapped into working windows. Running orders anchor at
+a queued order, and snapped into working windows. A manual order without a
+machine shares no queue: it is placed on its own against the admin default
+calendar, so manual orders take no capacity from each other. Running orders anchor at
 their latest start, and pinned and frozen orders keep their window without
 moving the cursor backwards; a kept window that overlaps the order before it
 is flagged. A machine whose calendar holds no working time leaves its own
@@ -188,7 +190,9 @@ def _running_since(ctx: OrderSchedulingContext) -> datetime | None:
     return max(as_utc(ctx.actual_start), as_utc(ctx.last_resumed_at))
 
 
-def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanation:
+def explain_earliest_start(
+    ctx: OrderSchedulingContext, *, on_queue: bool = True
+) -> EarliestStartExplanation:
     """Names the advance_machine_queue branch that governs ctx's earliest
     start, so a read model can never disagree with the forward walk.
 
@@ -196,6 +200,8 @@ def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanat
     readiness, except that `queue` is reported when the persisted
     planned_start lies later than that date, because the machine queue
     pushed the start out. The date reported then stays the constraint's.
+    A manual order without a machine waits behind no other order, so the
+    caller passes `on_queue=False` for it and `queue` is never reported.
     Every date is a day of the tenant's timezone."""
     running_since = _running_since(ctx)
     if running_since is not None:
@@ -221,7 +227,8 @@ def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanat
     if earliest_start_date is None:
         return EarliestStartExplanation("none", None)
     if (
-        ctx.existing_planned_start is not None
+        on_queue
+        and ctx.existing_planned_start is not None
         and day_of(ctx.existing_planned_start, ctx.zone) > earliest_start_date
     ):
         return EarliestStartExplanation("queue", earliest_start_date)
@@ -414,6 +421,30 @@ def _walk_machine_queue(
     return results, cursor
 
 
+def _walk_manual_orders(
+    orders: list[OrderSchedulingContext],
+    calendar: MachineCalendar,
+    now: datetime,
+) -> list[ScheduledOrder]:
+    """Places every manual order without a machine on its own against the
+    admin default calendar. There is no shared cursor, so one order never
+    waits for another and queue_sequence changes no date: each starts at
+    the latest of its earliest start, its predecessor's ready moment and
+    now. Running, pinned and frozen orders keep their anchor or window as
+    on a machine queue, without an overlap to flag."""
+    results: list[ScheduledOrder] = []
+    for ctx in sorted(orders, key=lambda o: o.order_id):
+        placement = place_on_queue(ctx, None, calendar, now)
+        conflicts = _with_waiting_and_target_flags(
+            _static_conflicts(ctx), ctx, placement.planned_end, now
+        )
+        conflicts += _placement_conflicts(placement)
+        results.append(
+            ScheduledOrder(ctx.order_id, placement.planned_start, placement.planned_end, conflicts)
+        )
+    return results
+
+
 def schedule_unassigned_orders(orders: list[OrderSchedulingContext]) -> list[ScheduledOrder]:
     """Orders without a machine get no dates and are flagged
     NO_MACHINE_ASSIGNED, except pool-assigned ones (for example a pool
@@ -509,9 +540,9 @@ def schedule_all(
     then merged as an earliest-finish merge of FIFO queues: each round
     trials every pool's head, commits all undated heads at once (so one
     undated head cannot stall another pool), and otherwise commits only the
-    single earliest finish, ties broken by pool id then member id. The
-    manual queue walks against the admin default calendar and unassigned
-    orders get no dates.
+    single earliest finish, ties broken by pool id then member id. Each
+    manual order is placed on its own against the admin default calendar
+    (_walk_manual_orders), and unassigned orders get no dates.
     """
     _assert_machine_queues_have_calendars(machine_queues, machine_calendars)
     by_machine, machine_cursors = _walk_all_machine_queues(machine_queues, machine_calendars, now)
@@ -522,7 +553,7 @@ def schedule_all(
         by_pool, pool_member_calendars, pool_sorted_orders, pool_heads, machine_cursors, now
     )
 
-    manual, _ = _walk_machine_queue(manual_queue, manual_calendar, now)
+    manual = _walk_manual_orders(manual_queue, manual_calendar, now)
     unassigned_results = schedule_unassigned_orders(unassigned)
 
     return ScheduleWalkResult(
@@ -870,7 +901,7 @@ def _schedule_all_propagated(
     also_blocked: frozenset[int],
 ) -> tuple[ScheduleWalkResult, int]:
     every_context = _all_propagated_contexts(machine_queues, pool_queues, manual_queue, unassigned)
-    blocked = cycle_blocked_order_ids(machine_queues, manual_queue, every_context) | also_blocked
+    blocked = cycle_blocked_order_ids(machine_queues, every_context) | also_blocked
     if blocked:
         # Walked as orders without a queue, which get no dates, so their
         # positions read as undated and the later steps of their lots wait.

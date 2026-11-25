@@ -400,3 +400,38 @@ class TestQaFilterApi:
             URL, params={"quantity_min": 5, "quantity_max": 1}
         )
         assert response.status_code == 422
+
+
+class TestQaSortByPlannedStart:
+    async def test_planned_start_ascending_puts_undated_tasks_last(self, db, create_user):
+        """The infoscreen's QA queue lists inspections by planned start. An
+        undated task comes after every dated one, also when its queue place
+        is earlier, since SQLite and Postgres would otherwise disagree."""
+        user = await create_user()
+        method = await _make_inspection_method(db, user.id, "Visual")
+
+        async def task(key: str, planned_start: datetime | None) -> ProductionOrder:
+            return await _make_task(
+                db,
+                user.id,
+                method_id=method.id,
+                lot_number=f"LN-S{key}",
+                project_number=f"P-S{key}",
+                part_number=f"TN-S{key}",
+                article_name="Shaft",
+                planned_start=planned_start,
+            )
+
+        undated = await task("1", None)
+        later = await task("2", datetime(2026, 12, 11, 7, 50, tzinfo=UTC))
+        earlier = await task("3", datetime(2026, 11, 25, 9, 30, tzinfo=UTC))
+
+        _, orders = await SqlAlchemyProductionOrderRepository(db).get_multi(
+            ProductionOrderFilterDto(
+                step_role=StepRole.INSPECTION.value,
+                limit=200,
+                order_by="planned_start",
+                order_dir="asc",
+            )
+        )
+        assert [o.id for o in orders] == [earlier.id, later.id, undated.id]

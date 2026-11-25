@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T14:04:05.014Z
+ * Generated: 2026-11-25T11:49:25.712Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -15644,7 +15644,7 @@ export interface components {
          * @description One line of a date's explanation.
          * @enum {string}
          */
-        DateTermKind: "after_step" | "raw_material" | "response_time" | "target_lot" | "target_demand" | "safety_margin" | "later_step" | "back_by" | "lead_time" | "latest_pickup" | "supplier_date" | "result";
+        DateTermKind: "after_step" | "raw_material" | "late_arrival" | "response_time" | "target_lot" | "target_demand" | "safety_margin" | "later_step" | "back_by" | "lead_time" | "latest_pickup" | "supplier_date" | "result";
         /**
          * DateTermResult
          * @description One line of how a date comes about (external_work_explanation).

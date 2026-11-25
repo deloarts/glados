@@ -34,6 +34,8 @@ export function externalWorkDateTooltip(
         return t(`${KEY}.afterStep`, { methods: methods(term), date })
       case 'raw_material':
         return t(`${KEY}.rawMaterial`, { date })
+      case 'late_arrival':
+        return t(`${KEY}.lateArrival`, { date })
       case 'response_time':
         return t(`${KEY}.responseTime`, { days }, days)
       case 'target_lot':

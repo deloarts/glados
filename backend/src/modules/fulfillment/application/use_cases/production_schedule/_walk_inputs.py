@@ -103,7 +103,12 @@ async def build_schedule_walk_inputs(
     machine_orders, machineless_orders = _group_orders_by_machine(orders)
     down_machine_ids = await _resolve_down_machine_ids(downtime_repo, machine_orders, now)
     prefetch = await prefetch_scheduling_data(
-        orders, repos, pool_repo, extra_lot_ids=extra_lot_ids, zone=zone
+        orders,
+        repos,
+        pool_repo,
+        extra_lot_ids=extra_lot_ids,
+        zone=zone,
+        today=as_utc(now).astimezone(zone).date() if now is not None else None,
     )
 
     machine_queues = await _build_machine_queues(

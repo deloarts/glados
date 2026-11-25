@@ -644,7 +644,7 @@ class AutoPlan:
             self._calendars,
             state.settings.default_weekly_hours,
             downtime_repo=self._downtimes,
-            now=now_utc(),
+            now=state.now,
             zone=state.zone,
         )
 
@@ -672,6 +672,7 @@ class AutoPlan:
             self._repos,
             self._pools,
             zone=state.zone,
+            today=state.today,
         )
         for machine_id in machine_scopes:
             group = orders_by_machine[machine_id]
@@ -697,9 +698,8 @@ class AutoPlan:
     async def _seed_anchors(self, cmd: AutoPlanCommand, state: _AutoPlanState) -> None:
         """Classifies orders into candidates and anchors and seeds each
         machine's cursor from its anchors."""
-        now = now_utc()
-        state.now = now
-        state.today = now.astimezone(state.zone).date()
+        assert state.now is not None and state.today is not None  # set by execute
+        now = state.now
         self._classify_orders(cmd, state, state.today)
         self._seed_machine_cursors(state, now)
 
@@ -910,7 +910,7 @@ class AutoPlan:
             )
 
         ordering_strategy, selection_strategy = resolve_algorithm_strategies(cmd.algorithm)
-        assert state.today is not None  # set by _seed_anchors, which always runs first
+        assert state.today is not None  # set by execute before any read
         ordered_candidates = sort_candidates(auto_plan_candidates, ordering_strategy, state.today)
 
         state.lot_cache = lot_cache
@@ -924,7 +924,7 @@ class AutoPlan:
         """Greedy trial loop shell: progress events and skipped-order
         bookkeeping, with no transaction open. Each candidate's trial lives in
         _attempt_placement."""
-        assert state.now is not None  # set by _seed_anchors, which always runs first
+        assert state.now is not None  # set by execute before any read
 
         before_snapshot: _BeforeSnapshot = {}
         touched_machine_ids: set[int | None] = set()
@@ -986,7 +986,7 @@ class AutoPlan:
         """One candidate's placement trial: guard clauses first, then a
         pool or machine placement branch. Returns the placed summary, or
         the skip reason of a candidate it cannot place."""
-        assert state.now is not None  # set by _seed_anchors, which always runs first
+        assert state.now is not None  # set by execute before any read
         now = state.now
         ctx = state.contexts_by_order_id[order.id]
 
@@ -1257,6 +1257,10 @@ class AutoPlan:
         ProductionOrderRules.assert_can_assign(actor)
         state = await self._load_machine_context(cmd)
         state.progress = progress
+        # One clock read for the run, so the calendars, the contexts and the
+        # anchors agree on now and on today.
+        state.now = now_utc()
+        state.today = state.now.astimezone(state.zone).date()
         _emit(state, AutoPlanProgress(stage="preparing"))
         await self._build_calendars(state)
         _emit(state, AutoPlanProgress(stage="loading_orders"))

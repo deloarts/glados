@@ -39,6 +39,7 @@ def _inputs(target: date | None = _TARGET, demand_id: int | None = None) -> Expl
         safety_margin_days=2,
         default_external_lead_days=3,
         zone=UTC,
+        today=_BEFORE_THE_FIXTURES.date(),
     )
 
 

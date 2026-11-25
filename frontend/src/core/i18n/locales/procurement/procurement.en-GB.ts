@@ -53,6 +53,7 @@ export default {
     tooltip: {
       afterStep: '{methods} ready on {date}',
       rawMaterial: 'Raw material in on {date}',
+      lateArrival: 'Not there yet, counts from today {date}',
       responseTime: '+ {days} day response time | + {days} days response time',
       targetLot: 'Target date of the lot {date}',
       targetDemand: 'Target date {date} (from demand #{demand})',
