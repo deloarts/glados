@@ -72,6 +72,7 @@ const fabricationMethods: Schemas['FabricationMethodResult'][] = METHODS.map(([n
   label_color: color,
   label_font_color: '#ffffff',
   lead_time_days: null,
+  wait_after_minutes: null,
   default_supplier_id: null,
   default_for_assemblies: false,
   required_external: false,

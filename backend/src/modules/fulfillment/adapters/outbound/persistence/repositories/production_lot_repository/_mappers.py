@@ -66,6 +66,13 @@ def step_load_options() -> tuple[ORMOption, ...]:
     )
 
 
+def _method_wait_after_minutes(orm: LotStepOrmModel, is_inspection: bool) -> int | None:
+    """The wait of the method that does the step: the inspection method's
+    for an inspection step, the fabrication method's otherwise."""
+    method = orm.inspection_method if is_inspection else orm.fabrication_method
+    return method.wait_after_minutes if method is not None else None
+
+
 def step_orm_to_entity(orm: LotStepOrmModel) -> LotStep:
     is_inspection = orm.role == StepRole.INSPECTION.value
     return LotStep(
@@ -110,6 +117,7 @@ def step_orm_to_entity(orm: LotStepOrmModel) -> LotStep:
         inspection_method_requires_evidence=(
             orm.inspection_method.requires_evidence if orm.inspection_method else None
         ),
+        method_wait_after_minutes=_method_wait_after_minutes(orm, is_inspection),
         time_budget_per_piece=orm.time_budget_per_piece,
     )
 

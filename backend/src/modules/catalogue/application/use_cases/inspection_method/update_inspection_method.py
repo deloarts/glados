@@ -23,6 +23,10 @@ from src.modules.catalogue.ports.outbound.default_machine_port import IDefaultMa
 from src.modules.catalogue.ports.outbound.repositories.inspection_method_repository import (
     IInspectionMethodRepository,
 )
+from src.modules.platform.application.services.schedule_recompute_port import ScheduleRecompute
+from src.modules.platform.application.services.schedule_recompute_port import (
+    recompute_schedule_after_commit,
+)
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.infrastructure.logging.logger import log
 from src.modules.platform.ports.outbound.platform_settings_repository import (
@@ -41,11 +45,13 @@ class UpdateInspectionMethod:
         *,
         settings: IPlatformSettingsRepository,
         uow: IUnitOfWork,
+        recompute_schedule: ScheduleRecompute | None = None,
     ) -> None:
         self._inspection_methods = inspection_method_repo
         self._machines = machine_repo
         self._uow = uow
         self._settings = settings
+        self._recompute = recompute_schedule
 
     async def execute(
         self,
@@ -85,6 +91,7 @@ class UpdateInspectionMethod:
         entity.description = description
         entity.default_setup_minutes = cmd.default_setup_minutes
         entity.default_minutes_per_piece = cmd.default_minutes_per_piece
+        entity.wait_after_minutes = cmd.wait_after_minutes
         entity.requires_evidence = cmd.requires_evidence
         entity.default_machine_id = cmd.default_machine_id
         entity.changed = now_utc()
@@ -92,5 +99,9 @@ class UpdateInspectionMethod:
 
         saved = await self._inspection_methods.save(entity)
         await self._uow.commit()
+        # Its wait dates the steps after the checks that use it.
+        await recompute_schedule_after_commit(
+            self._recompute, after="changing an inspection method; the change itself is committed."
+        )
         log.info(f"Updated inspection method {shown_name(saved.name)!r}, ID={saved.id}.")
         return InspectionMethodMapper.to_result(saved)

@@ -53,12 +53,15 @@ export default {
     tooltip: {
       afterStep: '{methods} ready on {date}',
       rawMaterial: 'Raw material in on {date}',
+      lateArrival: 'Not there yet, counts from today {date}',
       responseTime: '+ {days} day response time | + {days} days response time',
       targetLot: 'Target date of the lot {date}',
       targetDemand: 'Target date {date} (from demand #{demand})',
       safetyMargin: '− {days} day safety margin | − {days} days safety margin',
       laterStep: '− {days} day {methods} | − {days} days {methods}',
       laterStepMinutes: '− {days} day {methods} ({minutes} min) | − {days} days {methods} ({minutes} min)',
+      waitAfter:
+        '− {days} day waiting after {methods} ({minutes} min) | − {days} days waiting after {methods} ({minutes} min)',
       backBy: '= back by {date}',
       leadTime: '{sign} {days} day lead time ({source}) | {sign} {days} days lead time ({source})',
       leadSource: {

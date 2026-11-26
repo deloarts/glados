@@ -558,12 +558,16 @@ class BuildInfoscreenFeed:
     # ── QA queue ──────────────────────────────────────────────────────
 
     async def _qa_queue(self, ctx: _FeedContext) -> QaQueueWidgetData:
-        """The open inspection orders of the QA worklist, in queue order."""
+        """The open inspection orders of the QA worklist, by planned start,
+        undated ones last. A machineless inspection waits behind no other
+        order, so its queue place says nothing about when it is due."""
         _, orders = await self._repos.orders.get_multi(
             ProductionOrderFilterDto(
                 statuses=_OPEN_QA_STATUSES,
                 step_role=StepRole.INSPECTION.value,
                 limit=_MAX_QA_ROWS,
+                order_by="planned_start",
+                order_dir="asc",
             )
         )
         await ctx.links.prefetch(ItemKind.MADE, [o.made_item_id for o in orders])

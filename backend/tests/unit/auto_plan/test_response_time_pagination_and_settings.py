@@ -21,6 +21,7 @@ from src.modules.fulfillment.domain.entities.admin_settings.production import (
     AdminProductionSettings,
 )
 from src.modules.fulfillment.domain.entities.lot_position import LotPosition
+from src.modules.fulfillment.domain.entities.order_item import OrderItem
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_machine import ProductionMachine
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
@@ -47,6 +48,7 @@ from tests.unit.auto_plan.fakes import FakeOrderRepo
 from tests.unit.auto_plan.fakes import FakePoolRepo
 from tests.unit.auto_plan.fakes import FakeSettingsRepo
 from tests.unit.fakes import FakeUnitOfWork
+from tests.unit.scheduling_service.test_external_work_forecasts import _order_item
 
 # The walk plans no queued order before now, and the fixtures are dated in
 # January 2026.
@@ -58,10 +60,11 @@ PREDECESSOR_SUCCESSOR_END = datetime(2026, 1, 5, 14, 0)
 def build_predecessor_successor_scenario() -> tuple[
     ProductionLot, ProductionOrder, ProductionOrder, ProductionMachine
 ]:
-    """A 2-position lot (INTERNAL -> INTERNAL): position 1's order is
-    already COMPLETED with a real planned_end, position 2's order is a
-    fresh QUEUED candidate on a different machine; the shared scenario
-    behind every response_time_days AutoPlan-level test below. Returns
+    """A 2-position lot (EXTERNAL -> INTERNAL): position 1's supplier line
+    (predecessor_line) was delivered at PREDECESSOR_SUCCESSOR_END, position
+    2's order is a fresh QUEUED candidate on a different machine; the shared
+    scenario behind every response_time_days AutoPlan-level test below. The
+    response time buffers an arrival, so position 1 is external. Returns
     fresh objects each call, since AutoPlan.execute() mutates them."""
     machine = make_machine(1)
     lot = make_lot(1)
@@ -71,7 +74,7 @@ def build_predecessor_successor_scenario() -> tuple[
         changed=None,
         changes=[],
         sequence=1,
-        kind=LotPositionKind.INTERNAL,
+        kind=LotPositionKind.EXTERNAL,
         status=LotPositionStatus.ORDERED_OR_QUEUED,
         quantity=10.0,
         quantity_completed=10.0,
@@ -135,10 +138,16 @@ def build_predecessor_successor_scenario() -> tuple[
     return lot, predecessor_order, successor_order, machine
 
 
+def predecessor_line() -> OrderItem:
+    """The supplier line of the scenario's position 1, delivered at
+    PREDECESSOR_SUCCESSOR_END."""
+    return _order_item(1, lot_position_id=100, delivery_date=PREDECESSOR_SUCCESSOR_END)
+
+
 async def test_response_time_days_buffers_the_successors_earliest_start(monkeypatch):
     """AdminProductionSettings.response_time_days must reach all the way
     through AutoPlan.execute() (settings -> build_contexts -> build_
-    order_context): a candidate gated by a predecessor's planned_end
+    order_context): a candidate gated by its predecessor's delivery
     starts response_time_days later when the setting is non-zero, same
     predecessor and same machine otherwise unchanged. This guards the
     threading itself; test_response_time_days_buffer.py already covers
@@ -152,6 +161,7 @@ async def test_response_time_days_buffers_the_successors_earliest_start(monkeypa
             [predecessor_order, successor_order],
             [machine],
             response_time_days=response_time_days,
+            order_items=[predecessor_line()],
         )
 
     auto_plan_unbuffered, repo_unbuffered = build_scenario(response_time_days=0)
@@ -174,7 +184,11 @@ async def test_response_time_days_command_override_replaces_global_default(monke
     lot, predecessor_order, successor_order, machine = build_predecessor_successor_scenario()
     # Global default is 1 day; the per-run override below must win.
     auto_plan, order_repo = build_auto_plan(
-        [lot], [predecessor_order, successor_order], [machine], response_time_days=1
+        [lot],
+        [predecessor_order, successor_order],
+        [machine],
+        response_time_days=1,
+        order_items=[predecessor_line()],
     )
 
     # +2 days (Mon -> Wed) rather than a larger value that would cross the
@@ -364,7 +378,11 @@ async def test_response_time_days_omitted_falls_back_to_global_default(monkeypat
     pin_scheduling_clock(monkeypatch, _BEFORE_THE_FIXTURES)
     lot, predecessor_order, successor_order, machine = build_predecessor_successor_scenario()
     auto_plan, order_repo = build_auto_plan(
-        [lot], [predecessor_order, successor_order], [machine], response_time_days=4
+        [lot],
+        [predecessor_order, successor_order],
+        [machine],
+        response_time_days=4,
+        order_items=[predecessor_line()],
     )
 
     cmd = AutoPlanCommand(assign_machines=False)

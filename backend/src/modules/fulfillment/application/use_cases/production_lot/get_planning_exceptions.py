@@ -41,6 +41,9 @@ from src.modules.fulfillment.domain.entities.made_item_demand_item import MadeIt
 from src.modules.fulfillment.domain.entities.order_item import OrderItem
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.source_item_demand_item import SourceItemDemandItem
+from src.modules.fulfillment.domain.services.scheduling import latest_ready_moment
+from src.modules.fulfillment.domain.services.scheduling import position_wait_after_minutes
+from src.modules.fulfillment.domain.services.scheduling import step_waits
 from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
 from src.modules.fulfillment.domain.value_objects.planning_exception_kind import (
@@ -49,6 +52,7 @@ from src.modules.fulfillment.domain.value_objects.planning_exception_kind import
 from src.modules.fulfillment.domain.value_objects.production_status import (
     TERMINAL_PRODUCTION_ORDER_STATUSES,
 )
+from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.ports.outbound.repositories.bought_item_demand_repository import (
     IBoughtItemAllocationRepository,
 )
@@ -427,16 +431,29 @@ class GetPlanningExceptions:
         position_ids = [p.id for lot in lots for p in lot.positions]
         orders = await self._repos.orders.get_by_lot_position_ids(position_ids)
         position_lot = {p.id: lot.id for lot in lots for p in lot.positions}
-        planned_end: dict[int, datetime] = {}
+        wait_by_position = {
+            p.id: position_wait_after_minutes(p.kind, step_waits(p.steps))
+            for lot in lots
+            for p in lot.positions
+        }
+        # A lot is finished once the pieces of its last step are ready: an
+        # open order's planned end plus the wait after its position, and a
+        # completed order's actual end plus that wait while it still runs.
+        ends_by_lot: dict[int, list[tuple[datetime | None, int]]] = {}
         for order in orders:
-            if order.status in TERMINAL_PRODUCTION_ORDER_STATUSES or order.planned_end is None:
-                continue
             lot_id = position_lot.get(order.lot_position_id)
             if lot_id is None:
                 continue
-            current = planned_end.get(lot_id)
-            if current is None or order.planned_end > current:
-                planned_end[lot_id] = order.planned_end
+            wait = wait_by_position.get(order.lot_position_id, 0)
+            if order.status not in TERMINAL_PRODUCTION_ORDER_STATUSES:
+                ends_by_lot.setdefault(lot_id, []).append((order.planned_end, wait))
+            elif order.status == ProductionOrderStatus.COMPLETED and wait > 0:
+                ends_by_lot.setdefault(lot_id, []).append((order.actual_end, wait))
+        planned_end: dict[int, datetime] = {
+            lot_id: moment
+            for lot_id, ends in ends_by_lot.items()
+            if (moment := latest_ready_moment(ends)) is not None
+        }
         zone = await tenant_zone(self._repos.settings)
         today = now_utc().astimezone(zone).date()
         rows: list[PlanningExceptionResult] = []

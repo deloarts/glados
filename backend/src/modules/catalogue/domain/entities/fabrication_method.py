@@ -50,6 +50,11 @@ class FabricationMethod(Entity):
     # AdminProductionSettings.default_external_lead_days.
     lead_time_days: int | None = None
 
+    # Clock minutes the pieces wait after a step of this method before the
+    # next step may start, such as curing; it runs overnight and over
+    # weekends. None waits nothing.
+    wait_after_minutes: int | None = None
+
     # The method preselected for assemblies, read by the SolidWorks add-in
     # when it builds the process of an assembly. At most one method carries
     # it: setting it on one method clears it on the previous holder, and an

@@ -146,6 +146,10 @@ const detailFields = computed(() => {
       value: m.default_minutes_per_piece === null ? null : String(m.default_minutes_per_piece),
     },
     {
+      label: t('resources.inspectionMethods.columns.waitAfterMinutes'),
+      value: m.wait_after_minutes === null ? null : String(m.wait_after_minutes),
+    },
+    {
       label: t('resources.inspectionMethods.columns.defaultMachine'),
       value: m.default_machine_name,
     },

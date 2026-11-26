@@ -18,6 +18,7 @@ class UpdateProductionSettingsCommand(BaseModel):
     default_weekly_hours: dict[int, list[WorkIntervalDto]] | None = None
     default_external_lead_days: int | None = Field(default=None, ge=0)
     response_time_days: int | None = Field(default=None, ge=0)
+    internal_handoff_minutes: int | None = Field(default=None, ge=0)
     external_safety_margin_days: int | None = Field(default=None, ge=0)
     require_qa: bool | None = None
     frozen_window_hours: int | None = Field(default=None, ge=0, le=MAX_FROZEN_WINDOW_HOURS)
@@ -43,6 +44,7 @@ class AdminProductionSettingsResult(ResultBase):
     default_weekly_hours: dict[int, list[WorkIntervalDto]]
     default_external_lead_days: int
     response_time_days: int
+    internal_handoff_minutes: int
     external_safety_margin_days: int
     require_qa: bool
     frozen_window_hours: int

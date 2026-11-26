@@ -57,6 +57,44 @@ describe('externalWorkDateTooltip', () => {
     ])
   })
 
+  it('counts the wait after a later step back in days', () => {
+    const tooltip = externalWorkDateTooltip(
+      [
+        term('target_lot', { date: '2026-08-20' }),
+        term('later_step', { days: 1, minutes: 30, methods: [{ enGB: 'Painting' }] }),
+        term('wait_after', { days: 2, minutes: 1440, methods: [{ enGB: 'Painting' }] }),
+        term('back_by', { date: '2026-08-17' }),
+      ],
+      { t, localize, leadTimeSign: '−', stale: false },
+    )
+
+    expect(tooltip?.split('\n')).toEqual([
+      'Target date of the lot 2026-08-20',
+      '− 1 day Painting (30 min)',
+      '− 2 days waiting after Painting (1440 min)',
+      '= back by 2026-08-17',
+    ])
+  })
+
+  it('counts a passed expected arrival from today', () => {
+    const tooltip = externalWorkDateTooltip(
+      [
+        term('raw_material', { date: '2026-11-20' }),
+        term('late_arrival', { date: '2026-11-25' }),
+        term('response_time', { days: 1 }),
+        term('result', { date: '2026-11-26' }),
+      ],
+      { t, localize, leadTimeSign: '+', stale: false },
+    )
+
+    expect(tooltip?.split('\n')).toEqual([
+      'Raw material in on 2026-11-20',
+      'Not there yet, counts from today 2026-11-25',
+      '+ 1 day response time',
+      '= 2026-11-26',
+    ])
+  })
+
   it('shows nothing for a date without terms', () => {
     expect(externalWorkDateTooltip([], { t, localize, leadTimeSign: '+', stale: false })).toBeUndefined()
   })

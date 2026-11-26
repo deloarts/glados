@@ -23,6 +23,7 @@ class CreateFabricationMethodCommand(BaseModel):
     required_external: bool = False
     default_supplier_id: int | None = None
     lead_time_days: int | None = None
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     default_for_assemblies: bool = False
 
 
@@ -35,6 +36,7 @@ class UpdateFabricationMethodCommand(BaseModel):
     required_external: bool = False
     default_supplier_id: int | None = None
     lead_time_days: int | None = None
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     default_for_assemblies: bool = False
 
 
@@ -56,6 +58,7 @@ class FabricationMethodResult(ResultBase):
     required_external: bool = False
     default_supplier_id: int | None = None
     lead_time_days: int | None = None
+    wait_after_minutes: int | None = None
     default_for_assemblies: bool = False
     archived: bool = False
     sort_order: int

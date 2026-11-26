@@ -133,11 +133,14 @@ def test_readiness_moments_count_on_their_vienna_day():
         2026, 7, 28
     )
     assert resolve_internal_predecessor_ready_at([LATE_EVENING_UTC], zone=UTC) == date(2026, 7, 27)
+    before_the_fixtures = date(2026, 7, 1)
     assert resolve_external_predecessor_ready_at(
-        LATE_EVENING_UTC, None, date(2026, 7, 20), zone=VIENNA
+        LATE_EVENING_UTC, None, date(2026, 7, 20), zone=VIENNA, today=before_the_fixtures
     ) == date(2026, 7, 28)
     assert resolve_input_material_ready_at(
-        [LATE_EVENING_UTC, date(2026, 7, 27)], zone=VIENNA
+        [(LATE_EVENING_UTC, None), (None, date(2026, 7, 27))],
+        zone=VIENNA,
+        today=before_the_fixtures,
     ) == date(2026, 7, 28)
 
 

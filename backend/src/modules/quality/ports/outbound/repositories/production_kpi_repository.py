@@ -58,7 +58,8 @@ class CompletedLotRow:
 class LateLotCandidateRow:
     """One open (non-terminal) lot's latest order, "latest" meaning the
     order among the lot's own whose effective end (actual_end once it has
-    finished, else its current planned_end) is furthest out.
+    finished, else its current planned_end, plus the wait after its
+    position) is furthest out.
     latest_order_id/effective_end are both None for a lot with no orders
     at all yet (e.g. still DRAFT)."""
 

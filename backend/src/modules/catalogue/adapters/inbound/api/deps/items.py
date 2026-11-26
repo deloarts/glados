@@ -1085,12 +1085,14 @@ def get_update_inspection_method_use_case(
     machine_repo: IDefaultMachineLookup = Depends(get_default_machine_lookup),
     settings: ICatalogueSettingsRepository = Depends(get_catalogue_settings_repo),
     uow: IUnitOfWork = Depends(get_unit_of_work),
+    recompute: ScheduleRecompute = Depends(get_schedule_recompute),
 ) -> UpdateInspectionMethod:
     return UpdateInspectionMethod(
         inspection_method_repo=inspection_method_repo,
         machine_repo=machine_repo,
         settings=settings,
         uow=uow,
+        recompute_schedule=recompute,
     )
 
 

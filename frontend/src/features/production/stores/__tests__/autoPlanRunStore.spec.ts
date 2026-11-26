@@ -54,6 +54,9 @@ function makeResponse(overrides: Partial<AutoPlanResponse> = {}): AutoPlanRespon
     skipped_pinned_or_in_progress: 0,
     skipped_todays_planned: 0,
     skipped: [],
+    redated: [],
+    kept_day: 0,
+    walk_failed: false,
     ...overrides,
   }
 }

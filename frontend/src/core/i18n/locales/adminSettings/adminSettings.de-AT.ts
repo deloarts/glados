@@ -1115,7 +1115,10 @@ export default {
       'Vorlaufzeit für an einen externen Lieferanten gesendete Schritte, solange noch kein auftragsspezifisches Lieferdatum gesetzt ist.',
     responseTimeDays: 'Reaktionszeit für geplanten Start (Tage)',
     responseTimeDaysHint:
-      'Nur weil ein Schritt heute fertig wird, kann der nächste nicht zwingend auch heute beginnen, dieser Puffer wird sowohl auf das Fertigstellungsdatum eines vorherigen Schritts als auch auf das Ankunftsdatum von Rohmaterial aufgeschlagen, bevor eines von beiden den frühesten Start des nächsten Schritts einschränken kann. Gilt überall, wo Zeitpläne berechnet werden, nicht nur bei Auto-Plan.',
+      'Teile, die heute ankommen, sind heute noch nicht bereit für den nächsten Schritt. Dieser Puffer wird auf das Liefer- oder Abholbereit-Datum eines Fremdbearbeitungsschritts und auf das Ankunftsdatum von Rohmaterial aufgeschlagen, bevor eines davon den frühesten Start des nächsten Schritts einschränken kann, und für die geplante Abholung von Fremdbearbeitung auf das Fertigstellungsdatum des Schritts davor. Gilt überall, wo Zeitpläne berechnet werden, nicht nur bei Auto-Plan.',
+    internalHandoffMinutes: 'Übergabe zwischen Schritten der Eigenfertigung (Minuten)',
+    internalHandoffMinutesHint:
+      'Zeit, um die Teile von einem Schritt der Eigenfertigung zum nächsten zu bringen. Der nächste Schritt beginnt frühestens so viele Minuten nach dem Ende des Schritts davor, bei 0 beginnt er sofort.',
     externalSafetyMarginDays: 'Sicherheitsabstand für Fremdbearbeitung (Tage)',
     externalSafetyMarginDaysHint:
       'So viele Tage bleiben vor dem Zieltermin eines Loses frei, wenn der späteste Versandtag seiner Fremdbearbeitung zurückgerechnet wird. Die Rechnung kennt keine Wartezeit an den Maschinen, der Abstand fängt sie auf.',

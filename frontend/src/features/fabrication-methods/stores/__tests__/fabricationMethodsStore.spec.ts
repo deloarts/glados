@@ -51,6 +51,7 @@ function makeMethod(overrides: Partial<FabricationMethodResponse> = {}): Fabrica
     creator_id: 1,
     creator: null,
     lead_time_days: null,
+    wait_after_minutes: null,
     ...overrides,
   }
 }

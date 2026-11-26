@@ -23,6 +23,7 @@ class CreateInspectionMethodCommand(BaseModel):
     # inspection_method_rules.seed_inspection_estimates).
     default_setup_minutes: int | None = Field(default=None, ge=0)
     default_minutes_per_piece: float | None = Field(default=None, ge=0)
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     requires_evidence: bool = False
     # Optional QA machine pre-filled onto this method's steps at lot
     # creation (see create_lot.py). None = genuinely machine-less manual
@@ -39,6 +40,7 @@ class UpdateInspectionMethodCommand(BaseModel):
     # inspection_method_rules.seed_inspection_estimates).
     default_setup_minutes: int | None = Field(default=None, ge=0)
     default_minutes_per_piece: float | None = Field(default=None, ge=0)
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     requires_evidence: bool = False
     # Optional QA machine pre-filled onto this method's steps at lot
     # creation (see create_lot.py). None = genuinely machine-less manual
@@ -62,6 +64,7 @@ class InspectionMethodResult(ResultBase):
     changed_by: PublicUserResult | None
     default_setup_minutes: int | None = None
     default_minutes_per_piece: float | None = None
+    wait_after_minutes: int | None = None
     requires_evidence: bool = False
     archived: bool = False
     sort_order: int

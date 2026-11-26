@@ -1,8 +1,10 @@
 """How the three dates of a position of external work come about, as terms
 the procurement list shows on hover: the ready date of the step before, or
-of the raw material, plus the response time for "ready from"; the lot's
+of the raw material, counted as today once an expected arrival has
+passed, plus the response time for "ready from"; the lot's
 target date less the safety margin, the steps after it and its lead days
-for the latest pickup; the supplier's date, else the latest pickup plus the
+for the latest pickup, with the days its pieces wait after each of those
+steps; the supplier's date, else the latest pickup plus the
 lead days, for "back by". The arithmetic is the walk's (walk_context and
 external_work), so a term list that does not end on the stored date means
 the plan is still being updated."""
@@ -17,8 +19,13 @@ from src.modules.catalogue.domain.value_objects.step_role import StepRole
 from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
+from src.modules.fulfillment.domain.policies.wait_after import latest_ready_moment
+from src.modules.fulfillment.domain.policies.wait_after import position_wait_after_minutes
+from src.modules.fulfillment.domain.policies.wait_after import step_waits
+from src.modules.fulfillment.domain.policies.wait_after import wait_days
 from src.modules.fulfillment.domain.services.scheduling._shared import as_day
 from src.modules.fulfillment.domain.services.scheduling.candidate_ordering import position_lead_days
+from src.modules.fulfillment.domain.services.scheduling.earliest_start import expected_arrival_day
 from src.modules.fulfillment.domain.services.scheduling.earliest_start import (
     resolve_external_predecessor_ready_at,
 )
@@ -40,6 +47,7 @@ from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionS
 from src.modules.fulfillment.domain.value_objects.production_status import (
     ACTIVE_PRODUCTION_ORDER_STATUSES,
 )
+from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.shared_kernel.domain.value_objects.value_enum import StrValueEnum
 
 _CLOSED = frozenset({LotPositionStatus.COMPLETED, LotPositionStatus.CANCELED})
@@ -56,6 +64,8 @@ class DateTermKind(StrValueEnum):
     AFTER_STEP = "after_step"
     # The raw material's delivery, or its expected delivery.
     RAW_MATERIAL = "raw_material"
+    # The expected arrival above has passed, so it counts as today, `date`.
+    LATE_ARRIVAL = "late_arrival"
     RESPONSE_TIME = "response_time"
     # The lot's own target date, or the desired date of demand `reference`.
     TARGET_LOT = "target_lot"
@@ -63,6 +73,8 @@ class DateTermKind(StrValueEnum):
     SAFETY_MARGIN = "safety_margin"
     # A step after this one, `minutes` of work in `days` days.
     LATER_STEP = "later_step"
+    # The pieces wait `minutes` after that step, counted as `days` days.
+    WAIT_AFTER = "wait_after"
     # The day it has to be back.
     BACK_BY = "back_by"
     # The lead days, from the supplier, the methods or the default.
@@ -97,7 +109,8 @@ class ExternalWorkExplanation:
 @dataclass(frozen=True)
 class ExplanationInputs:
     """What the explanation reads besides the lot: the target date with its
-    source, the settings the walk used and the tenant's timezone."""
+    source, the settings the walk used, the tenant's timezone and today in
+    it."""
 
     target_date: date | None
     target_demand_id: int | None
@@ -105,6 +118,7 @@ class ExplanationInputs:
     safety_margin_days: int
     default_external_lead_days: int
     zone: tzinfo
+    today: date
 
 
 def remaining_minutes(position: LotPosition, orders: list[ProductionOrder]) -> int:
@@ -143,54 +157,118 @@ def _lead_days(position: LotPosition, default: int) -> tuple[int, LeadDaysSource
     return resolve_position_lead_days_with_source(position.steps, override, default)
 
 
-def _ready_at(position: LotPosition, zone: tzinfo) -> date | None:
-    """An earlier position's ready day, as position_ready_at_in_run reads it
-    with the walk's forecast for an undated external one."""
-    internal = resolve_internal_predecessor_ready_at(
-        [o.planned_end for o in position.production_orders], zone=zone
+def _wait(position: LotPosition) -> int:
+    return position_wait_after_minutes(position.kind, step_waits(position.steps))
+
+
+def _completed_ready_day(position: LotPosition, inputs: ExplanationInputs) -> date | None:
+    """The day the pieces of the position's completed orders are ready, the
+    latest actual end plus the wait, while that is today or later, as the
+    walk reads it."""
+    wait = _wait(position)
+    if wait <= 0:
+        return None
+    moment = latest_ready_moment(
+        (o.actual_end, wait)
+        for o in position.production_orders
+        if o.status == ProductionOrderStatus.COMPLETED
     )
+    if moment is None:
+        return None
+    day = moment.astimezone(inputs.zone).date()
+    return day if day >= inputs.today else None
+
+
+def _counts_before(position: LotPosition, inputs: ExplanationInputs) -> bool:
+    """Whether an earlier position still holds the pieces back: an open one,
+    or a completed one whose wait after it still runs."""
+    if position.status not in _CLOSED:
+        return True
+    return (
+        position.status == LotPositionStatus.COMPLETED
+        and _completed_ready_day(position, inputs) is not None
+    )
+
+
+def _internal_ready_day(position: LotPosition, inputs: ExplanationInputs) -> date | None:
+    """The day the in-house pieces are ready, the latest planned end plus the
+    wait, with the completed orders' wait on top, as the walk reads it."""
+    completed = _completed_ready_day(position, inputs)
+    if position.status == LotPositionStatus.COMPLETED:
+        return completed
+    wait = _wait(position)
+    moment = latest_ready_moment((o.planned_end, wait) for o in position.production_orders)
+    internal = resolve_internal_predecessor_ready_at([moment], zone=inputs.zone)
+    if internal is None or completed is None:
+        return internal
+    return max(internal, completed)
+
+
+def _ready_at(position: LotPosition, inputs: ExplanationInputs) -> tuple[date, date] | None:
+    """An earlier position's ready day, as position_ready_at_in_run reads it
+    with the walk's forecast for an undated external one, and the day to
+    show for it: the passed expected delivery when that counts as today,
+    else the ready day itself. None for a position without a ready day."""
+    internal = _internal_ready_day(position, inputs)
     external = None
+    expected = None
     if position.order_item_id is not None:
         external = resolve_external_predecessor_ready_at(
             position.order_item_delivery_date,
             position.order_item_ready_for_pickup_date,
             position.expected_delivery_date,
-            zone=zone,
+            zone=inputs.zone,
+            today=inputs.today,
         )
+        if (
+            position.order_item_delivery_date is None
+            and position.order_item_ready_for_pickup_date is None
+        ):
+            expected = position.expected_delivery_date
     external = external or position.planned_delivery_date
+    ready: date | None = None
     if position.kind == LotPositionKind.INTERNAL:
-        return internal
-    if position.kind == LotPositionKind.EXTERNAL:
-        return external
-    if position.kind == LotPositionKind.MIXED:
-        return resolve_mixed_predecessor_ready_at(external, internal)
-    return None
+        ready = internal
+    elif position.kind == LotPositionKind.EXTERNAL:
+        ready = external
+    elif position.kind == LotPositionKind.MIXED:
+        ready = resolve_mixed_predecessor_ready_at(external, internal)
+    if ready is None:
+        return None
+    if expected is not None and expected < ready and ready == external:
+        return ready, expected
+    return ready, ready
 
 
 def _explain_ready_from(
     position: LotPosition, lot: ProductionLot, inputs: ExplanationInputs
 ) -> tuple[DateTerm, ...]:
     earlier = [
-        p for p in lot.positions if p.sequence < position.sequence and p.status not in _CLOSED
+        p for p in lot.positions if p.sequence < position.sequence and _counts_before(p, inputs)
     ]
     base: DateTerm | None = None
+    ready: date | None = None
     if position.sequence <= 1:
-        material = (
-            as_day(lot.source_delivery_date, inputs.zone) or lot.source_expected_delivery_date
-        )
+        delivered = as_day(lot.source_delivery_date, inputs.zone)
+        material = delivered or lot.source_expected_delivery_date
         if material is not None:
             base = DateTerm(DateTermKind.RAW_MATERIAL, date=material)
+            ready = (
+                material if delivered is not None else expected_arrival_day(material, inputs.today)
+            )
     else:
-        dated = [(ready, p) for p in earlier if (ready := _ready_at(p, inputs.zone)) is not None]
+        dated = [(days, p) for p in earlier if (days := _ready_at(p, inputs)) is not None]
         if dated:
-            ready, source = max(dated, key=lambda pair: (pair[0], pair[1].sequence))
-            base = DateTerm(DateTermKind.AFTER_STEP, date=ready, methods=_methods(source))
-    if base is None or base.date is None:
+            (ready, shown), source = max(dated, key=lambda pair: (pair[0][0], pair[1].sequence))
+            base = DateTerm(DateTermKind.AFTER_STEP, date=shown, methods=_methods(source))
+    if base is None or ready is None:
         return ()
+    late = [DateTerm(DateTermKind.LATE_ARRIVAL, date=ready)] if base.date != ready else []
     return (
         base,
+        *late,
         DateTerm(DateTermKind.RESPONSE_TIME, days=inputs.response_time_days),
-        DateTerm(DateTermKind.RESULT, date=base.date + timedelta(days=inputs.response_time_days)),
+        DateTerm(DateTermKind.RESULT, date=ready + timedelta(days=inputs.response_time_days)),
     )
 
 
@@ -227,6 +305,29 @@ def _explain_latest_pickup(
                 )
             )
         back_by -= timedelta(days=days)
+        wait = _wait(step)
+        if wait > 0:
+            terms.append(
+                DateTerm(
+                    DateTermKind.WAIT_AFTER,
+                    days=wait_days(wait),
+                    minutes=wait,
+                    methods=_methods(step),
+                )
+            )
+            back_by -= timedelta(days=wait_days(wait))
+    # The in-house share of a MIXED position waits before it is back too.
+    own_wait = _wait(position)
+    if own_wait > 0:
+        terms.append(
+            DateTerm(
+                DateTermKind.WAIT_AFTER,
+                days=wait_days(own_wait),
+                minutes=own_wait,
+                methods=_methods(position),
+            )
+        )
+        back_by -= timedelta(days=wait_days(own_wait))
     lead, source = _lead_days(position, inputs.default_external_lead_days)
     terms += [
         DateTerm(DateTermKind.BACK_BY, date=back_by),

@@ -125,6 +125,7 @@ function makeMachine(overrides: Partial<ProductionMachineResponse> = {}): Produc
         creator_id: 1,
         creator: null,
         lead_time_days: null,
+        wait_after_minutes: null,
       },
     ],
     max_part_dimension: null,

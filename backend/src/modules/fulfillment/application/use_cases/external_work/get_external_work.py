@@ -94,6 +94,7 @@ class GetExternalWork:
                 safety_margin_days=settings.external_safety_margin_days,
                 default_external_lead_days=default_lead_days,
                 zone=zone,
+                today=today,
             )
             items.append(
                 _row(lot, position, default_lead_days, supplier_names, inputs, today=today)

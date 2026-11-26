@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-24T14:04:05.014Z
+ * Generated: 2026-11-26T09:48:24.132Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -12466,6 +12466,8 @@ export interface components {
             frozen_window_hours: number;
             /** Id */
             id: number;
+            /** Internal Handoff Minutes */
+            internal_handoff_minutes: number;
             /** Overwrite Item Material On Approval */
             overwrite_item_material_on_approval: boolean;
             /** Production Order Number Format */
@@ -13269,8 +13271,15 @@ export interface components {
         };
         /** AutoPlanResponse */
         AutoPlanResponse: {
+            /**
+             * Kept Day
+             * @default 0
+             */
+            kept_day: number;
             /** Proposals */
             proposals: components["schemas"]["AutoPlanOrderDiffResponse"][];
+            /** Redated */
+            redated: components["schemas"]["RedatedOrderResponse"][];
             /** Skipped */
             skipped: components["schemas"]["AutoPlanSkippedOrderResponse"][];
             /**
@@ -13283,6 +13292,11 @@ export interface components {
              * @default 0
              */
             skipped_todays_planned: number;
+            /**
+             * Walk Failed
+             * @default false
+             */
+            walk_failed: boolean;
         };
         /**
          * AutoPlanRunResponse
@@ -15644,7 +15658,7 @@ export interface components {
          * @description One line of a date's explanation.
          * @enum {string}
          */
-        DateTermKind: "after_step" | "raw_material" | "response_time" | "target_lot" | "target_demand" | "safety_margin" | "later_step" | "back_by" | "lead_time" | "latest_pickup" | "supplier_date" | "result";
+        DateTermKind: "after_step" | "raw_material" | "late_arrival" | "response_time" | "target_lot" | "target_demand" | "safety_margin" | "later_step" | "wait_after" | "back_by" | "lead_time" | "latest_pickup" | "supplier_date" | "result";
         /**
          * DateTermResult
          * @description One line of how a date comes about (external_work_explanation).
@@ -16422,6 +16436,8 @@ export interface components {
              * @default true
              */
             requires_machine: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /** FabricationMethodResponse */
         FabricationMethodResponse: {
@@ -16547,6 +16563,8 @@ export interface components {
             requires_machine: boolean;
             /** Sort Order */
             sort_order: number;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** FabricationMethodUpdateRequest */
         FabricationMethodUpdateRequest: {
@@ -16587,12 +16605,16 @@ export interface components {
              * @default true
              */
             requires_machine: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /**
          * FabricationMethodWebResponse
          * @description The web shape: `name` and `description` as language maps, plus
-         *     lead_time_days, which feeds the scheduler's external lead-time forecast
-         *     and has no pat use (the SolidWorks add-in never reads or sets it).
+         *     lead_time_days, which feeds the scheduler's external lead-time forecast,
+         *     and wait_after_minutes, the wait the scheduler adds after a step of the
+         *     method. Neither has a pat use (the SolidWorks add-in never reads or sets
+         *     them).
          */
         FabricationMethodWebResponse: {
             /**
@@ -16654,6 +16676,8 @@ export interface components {
              * @default true
              */
             requires_machine: boolean;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** FeatureFlags */
         FeatureFlags: {
@@ -17453,6 +17477,8 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /** InspectionMethodResponse */
         InspectionMethodResponse: {
@@ -17542,10 +17568,14 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean | null;
+            /** Wait After Minutes */
+            wait_after_minutes?: number | null;
         };
         /**
          * InspectionMethodWebResponse
-         * @description The web shape: `name` and `description` as language maps.
+         * @description The web shape: `name` and `description` as language maps, plus
+         *     wait_after_minutes, the wait the scheduler adds after a check of the
+         *     method, which has no pat use.
          */
         InspectionMethodWebResponse: {
             /**
@@ -17601,6 +17631,8 @@ export interface components {
              * @default false
              */
             requires_evidence: boolean;
+            /** Wait After Minutes */
+            wait_after_minutes: number | null;
         };
         /** IntegrationStatusResponse */
         IntegrationStatusResponse: {
@@ -26736,6 +26768,91 @@ export interface components {
             reject_reason?: components["schemas"]["ScrapReason"] | null;
             scrap_reason?: components["schemas"]["ScrapReason"] | null;
         };
+        /** RedatedOrderReasonResponse */
+        RedatedOrderReasonResponse: {
+            /** Arrived */
+            arrived: boolean;
+            /** Day */
+            day: string | null;
+            /** Expected Date */
+            expected_date: string | null;
+            /** Forecast */
+            forecast: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ready_now" | "queue" | "predecessor" | "order_line" | "raw_material" | "not_before" | "in_progress" | "pinned" | "frozen" | "undated";
+            /** Late */
+            late: boolean;
+            /** Method Name */
+            method_name: {
+                [key: string]: string;
+            };
+            /** Moment */
+            moment: string | null;
+            /** Order Item Id */
+            order_item_id: number | null;
+            /** Overrun */
+            overrun: boolean;
+            /** Pieces Processed */
+            pieces_processed: number | null;
+            /** Predecessor Order Number */
+            predecessor_order_number: string | null;
+            /** Predecessor Sequence */
+            predecessor_sequence: number | null;
+            /** Previous Order Id */
+            previous_order_id: number | null;
+            /** Previous Order Number */
+            previous_order_number: string | null;
+            /** Previous Overrun */
+            previous_overrun: boolean;
+            /** Previous Pieces Processed */
+            previous_pieces_processed: number | null;
+            /** Previous Quantity */
+            previous_quantity: number | null;
+            /** Previous Running */
+            previous_running: boolean;
+            /** Quantity */
+            quantity: number | null;
+            /** Response Time Days */
+            response_time_days: number;
+            /** Wait After Minutes */
+            wait_after_minutes: number;
+        };
+        /** RedatedOrderResponse */
+        RedatedOrderResponse: {
+            /** After Planned End */
+            after_planned_end: string | null;
+            /** After Planned Start */
+            after_planned_start: string | null;
+            /** Before Planned End */
+            before_planned_end: string | null;
+            /** Before Planned Start */
+            before_planned_start: string | null;
+            /**
+             * Column
+             * @enum {string}
+             */
+            column: "machine" | "pool" | "manual" | "inspection" | "unassigned";
+            /** Lot Id */
+            lot_id: number | null;
+            /** Lot Number */
+            lot_number: string;
+            /** Machine Id */
+            machine_id: number | null;
+            /** Machine Pool Id */
+            machine_pool_id: number | null;
+            /** Made Item Part Number */
+            made_item_part_number: string;
+            /** Made Item Revision */
+            made_item_revision: string;
+            /** Order Id */
+            order_id: number;
+            /** Production Order Number */
+            production_order_number: string;
+            reason: components["schemas"]["RedatedOrderReasonResponse"] | null;
+        };
         /** RegroupLotPositionsRequest */
         RegroupLotPositionsRequest: {
             /** Groups */
@@ -30391,6 +30508,8 @@ export interface components {
             external_safety_margin_days?: number | null;
             /** Frozen Window Hours */
             frozen_window_hours?: number | null;
+            /** Internal Handoff Minutes */
+            internal_handoff_minutes?: number | null;
             /** Overwrite Item Material On Approval */
             overwrite_item_material_on_approval?: boolean | null;
             /** Production Order Number Format */

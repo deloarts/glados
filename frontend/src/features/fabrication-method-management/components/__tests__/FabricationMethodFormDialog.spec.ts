@@ -82,6 +82,7 @@ const method: FabricationMethodResponse = {
   required_external: true,
   default_supplier_id: 9,
   lead_time_days: 5,
+  wait_after_minutes: null,
   default_for_assemblies: false,
   archived: true,
   creator_id: 1,
@@ -274,6 +275,38 @@ describe('FabricationMethodFormDialog', () => {
     expect(leadTimeInput?.value).toBe('5')
 
     editWrapper.unmount()
+  })
+
+  async function submitNewMethod(wait: string | null) {
+    postMock.mockClear()
+    const wrapper = mountWithApp(FabricationMethodFormDialog, {
+      attachTo: document.body,
+      props: { visible: true, method: undefined },
+    })
+    await flushPromises()
+    await flushPromises()
+
+    await new DOMWrapper(document.body.querySelector(NAME_INPUT)!).setValue('Gluing')
+    if (wait !== null) {
+      const input = new DOMWrapper(document.body.querySelector('#fm-wait-after-minutes')!)
+      await input.setValue(wait)
+      await input.trigger('blur')
+      await flushPromises()
+    }
+    await new DOMWrapper(document.body.querySelector('form.method-form')!).trigger('submit')
+    await flushPromises()
+
+    const [, payload] = postMock.mock.calls[0]!
+    wrapper.unmount()
+    return payload
+  }
+
+  it('sends the wait after the step', async () => {
+    expect((await submitNewMethod('720')).wait_after_minutes).toBe(720)
+  })
+
+  it('sends no wait while the field is empty', async () => {
+    expect((await submitNewMethod(null)).wait_after_minutes).toBe(null)
   })
 
   // Referencing an already-archived supplier as a method's default supplier

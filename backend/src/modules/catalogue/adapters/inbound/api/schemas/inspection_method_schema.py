@@ -45,6 +45,7 @@ class _InspectionMethodWriteRequest(LabeledCatalogueWriteRequest):
     # missing value to coerce.
     default_setup_minutes: int | None = Field(default=None, ge=0)
     default_minutes_per_piece: float | None = Field(default=None, ge=0)
+    wait_after_minutes: int | None = Field(default=None, ge=0)
     requires_evidence: bool | None = False
     default_machine_id: int | None = None
 
@@ -88,7 +89,11 @@ class InspectionMethodResponse(_InspectionMethodFields[ResolvedLabel]):
 
 
 class InspectionMethodWebResponse(_InspectionMethodFields[dict[str, str]]):
-    """The web shape: `name` and `description` as language maps."""
+    """The web shape: `name` and `description` as language maps, plus
+    wait_after_minutes, the wait the scheduler adds after a check of the
+    method, which has no pat use."""
+
+    wait_after_minutes: int | None = None
 
 
 # ── Filter params ─────────────────────────────────────────────────────

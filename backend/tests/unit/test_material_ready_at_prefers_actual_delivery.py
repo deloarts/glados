@@ -45,6 +45,9 @@ from src.modules.fulfillment.domain.value_objects.source_item_demand_status impo
 )
 from tests.unit._tenant_settings import TenantSettings
 
+# A day before every fixture date, so no expected delivery here counts as late.
+_BEFORE_THE_FIXTURES = date(2026, 7, 1)
+
 
 def make_lot(input_demand_id: int | None) -> ProductionLot:
     return ProductionLot(
@@ -201,7 +204,9 @@ def make_demand(id: int) -> SourceItemDemandItem:
     )
 
 
-async def test_resolve_material_ready_at_uses_stale_expected_date_when_not_yet_delivered():
+async def test_resolve_material_ready_at_counts_a_passed_expected_date_as_today():
+    """Material expected on 2026-08-17 that has not arrived by 2026-09-01
+    can arrive no earlier than that day, so it counts as today."""
     demand = make_demand(19)
     order_item = make_order_item(94, delivery_date=None, expected_delivery_date=date(2026, 8, 17))
     lot = make_lot(input_demand_id=19)
@@ -213,7 +218,8 @@ async def test_resolve_material_ready_at_uses_stale_expected_date_when_not_yet_d
         ],
     )
 
-    assert await resolve_material_ready_at(lot, repos, zone=UTC) == date(2026, 8, 17)
+    today = date(2026, 9, 1)
+    assert await resolve_material_ready_at(lot, repos, zone=UTC, today=today) == today
 
 
 async def test_resolve_material_ready_at_prefers_actual_delivery_over_stale_expected_date():
@@ -339,13 +345,15 @@ def _two_lines_one_delivered() -> tuple[ProductionLot, SchedulingRepos]:
 async def test_material_ready_at_mixes_a_delivered_moment_with_an_expected_day():
     lot, repos = _two_lines_one_delivered()
 
-    assert await resolve_material_ready_at(lot, repos, zone=UTC) == date(2026, 8, 10)
+    assert await resolve_material_ready_at(
+        lot, repos, zone=UTC, today=_BEFORE_THE_FIXTURES
+    ) == date(2026, 8, 10)
 
 
 async def test_prefetched_material_ready_at_mixes_a_delivered_moment_with_an_expected_day():
     lot, repos = _two_lines_one_delivered()
 
-    assert await _prefetch_material_ready_at_by_lot([lot], repos, zone=UTC) == {
+    assert await _prefetch_material_ready_at_by_lot([lot], repos, UTC, _BEFORE_THE_FIXTURES) == {
         lot.id: date(2026, 8, 10)
     }
 

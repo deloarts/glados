@@ -14,7 +14,9 @@ Only waits that move a date count. A running order keeps its anchor and a
 pinned or frozen order its window, so nothing they wait on moves them, and
 a paused order takes no capacity, so the next order does not wait on it.
 Pool queues are left out, since a pool places each order on whichever
-member finishes it first rather than behind a fixed predecessor.
+member finishes it first rather than behind a fixed predecessor. Manual
+orders without a machine share no queue either, so only the waits on their
+lot's earlier positions count for them.
 """
 
 from collections.abc import Iterable
@@ -28,7 +30,6 @@ type _Node = tuple[str, int, int]
 
 def cycle_blocked_order_ids(
     machine_queues: dict[int, list[OrderSchedulingContext]],
-    manual_queue: list[OrderSchedulingContext],
     every_context: Iterable[OrderSchedulingContext],
 ) -> frozenset[int]:
     """The ids of the orders on a wait cycle. `every_context` is every
@@ -38,7 +39,6 @@ def cycle_blocked_order_ids(
     edges: dict[_Node, set[_Node]] = {}
     for key, queue in sorted(machine_queues.items()):
         _add_queue_waits(edges, key, queue)
-    _add_queue_waits(edges, -1, manual_queue)
     _add_predecessor_waits(edges, contexts)
     return frozenset(
         node[1]

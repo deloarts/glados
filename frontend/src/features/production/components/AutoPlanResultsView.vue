@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Results step of the Auto-Plan dialog: the before and after placement of
-// every moved order, the counts of orders left alone and the orders the
-// planner could not place.
+// every moved order, the counts of orders left alone, the orders the
+// planner could not place, and the orders the walk after the run re-dated.
 import { useI18n } from 'vue-i18n'
 
 import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
@@ -14,6 +14,9 @@ import {
   conflictTooltipKey,
 } from '../utils/productionOrderConflicts'
 import { skipReasonLabelKey, skipReasonTooltipKey } from '../utils/autoPlanSkipReasons'
+import AutoPlanRedatedTable from './AutoPlanRedatedTable.vue'
+
+import type { RedatedOrder } from '../utils/autoPlanRedated'
 
 import type {
   AutoPlanOrderDiffResponse,
@@ -26,6 +29,9 @@ const props = defineProps<{
     skipped: number
     skippedTodaysPlanned: number
     skippedOrders: AutoPlanSkippedOrderResponse[]
+    redated: RedatedOrder[]
+    keptDay: number
+    walkFailed: boolean
   }
   machineNameById: Record<number, string>
   poolNameById: Record<number, string>
@@ -171,6 +177,14 @@ function poolChanged(row: AutoPlanOrderDiffResponse): boolean {
         </li>
       </ul>
     </div>
+
+    <AutoPlanRedatedTable
+      :rows="results.redated"
+      :kept-day="results.keptDay"
+      :walk-failed="results.walkFailed"
+      :machine-name-by-id="machineNameById"
+      :pool-name-by-id="poolNameById"
+    />
   </div>
 </template>
 

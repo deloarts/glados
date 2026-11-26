@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import Field
 
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReasonKind
 from src.modules.fulfillment.domain.value_objects.auto_plan_algorithm import AutoPlanAlgorithm
 
 # ══════════════════════════════════════════════════════════════════════
@@ -130,11 +131,76 @@ class AutoPlanSkippedOrder(BaseModel):
     reason: str  # AutoPlanSkipReason
 
 
+# The board column an order sits in, as the queue board groups it.
+BoardColumn = Literal["machine", "pool", "manual", "inspection", "unassigned"]
+
+
+class RedatedOrderReason(BaseModel):
+    """Why the walk dated a re-dated order where it did
+    (scheduling.PlacementReason), with what it refers to resolved for the
+    planner. Each field is set only for the kinds that name it."""
+
+    kind: PlacementReasonKind
+    day: date | None = None
+    moment: datetime | None = None
+    # queue: the order ahead on the queue, and when it runs, its progress.
+    previous_order_id: int | None = None
+    previous_order_number: str | None = None
+    previous_running: bool = False
+    previous_overrun: bool = False
+    previous_pieces_processed: float | None = None
+    previous_quantity: float | None = None
+    # predecessor and order_line: the earlier position, its latest order and
+    # the method of its last step, whose wait it is.
+    predecessor_sequence: int | None = None
+    predecessor_order_number: str | None = None
+    method_name: dict[str, str] = Field(default_factory=dict)
+    wait_after_minutes: int = 0
+    # order_line: the line and the day it is expected, late once passed,
+    # the day it arrived once it did, or the forecast without a supplier date.
+    order_item_id: int | None = None
+    expected_date: date | None = None
+    late: bool = False
+    arrived: bool = False
+    forecast: bool = False
+    response_time_days: int = 0
+    # in_progress: the order's own progress.
+    pieces_processed: float | None = None
+    quantity: float | None = None
+    overrun: bool = False
+
+
+class RedatedOrder(BaseModel):
+    """An open order the walk after Auto-Plan moved to another day without
+    Auto-Plan placing it, with its window before and after the walk."""
+
+    order_id: int
+    production_order_number: str
+    lot_id: int | None
+    lot_number: str
+    made_item_part_number: str
+    made_item_revision: str
+    column: BoardColumn
+    machine_id: int | None
+    machine_pool_id: int | None
+    before_planned_start: datetime | None
+    before_planned_end: datetime | None
+    after_planned_start: datetime | None
+    after_planned_end: datetime | None
+    reason: RedatedOrderReason | None = None
+
+
 class AutoPlanResult(BaseModel):
     proposals: list[AutoPlanOrderDiff] = Field(default_factory=list)
     skipped_pinned_or_in_progress: int = 0
     skipped_todays_planned: int = 0
     skipped: list[AutoPlanSkippedOrder] = Field(default_factory=list)
+    # The orders the walk after the run moved to another day without the run
+    # placing them, and how many other open orders kept their day.
+    redated: list[RedatedOrder] = Field(default_factory=list)
+    kept_day: int = 0
+    # The walk after the run failed, so the dates were not refreshed.
+    walk_failed: bool = False
 
 
 # ══════════════════════════════════════════════════════════════════════

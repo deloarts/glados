@@ -43,6 +43,8 @@ interface FormState {
   required_external: boolean
   default_supplier_id: number | null
   lead_time_days: number | null
+  // null means the pieces wait nothing after the step.
+  wait_after_minutes: number | null
   default_for_assemblies: boolean
 }
 
@@ -56,6 +58,7 @@ function createEmptyForm(): FormState {
     required_external: false,
     default_supplier_id: null,
     lead_time_days: null,
+    wait_after_minutes: null,
     default_for_assemblies: false,
   }
 }
@@ -70,6 +73,7 @@ function formFromMethod(method: FabricationMethodResponse): FormState {
     required_external: method.required_external,
     default_supplier_id: method.default_supplier_id ?? null,
     lead_time_days: method.lead_time_days ?? null,
+    wait_after_minutes: method.wait_after_minutes ?? null,
     default_for_assemblies: method.default_for_assemblies,
   }
 }
@@ -94,6 +98,7 @@ const { form, submitting, errorMessage, isEditMode, onSubmit, onCancel } = useEn
       required_external: form.required_external,
       default_supplier_id: form.default_supplier_id,
       lead_time_days: form.lead_time_days,
+      wait_after_minutes: form.wait_after_minutes,
       default_for_assemblies: form.default_for_assemblies,
     }
     return isEditMode && method
@@ -208,6 +213,22 @@ watch(visible, (isVisible) => {
           />
           <small class="hint">{{
             t('resources.fabricationMethods.fields.leadTimeDaysHint')
+          }}</small>
+        </div>
+
+        <div class="field">
+          <label for="fm-wait-after-minutes">{{
+            t('resources.fabricationMethods.fields.waitAfterMinutes')
+          }}</label>
+          <InputNumber
+            input-id="fm-wait-after-minutes"
+            v-model="form.wait_after_minutes"
+            :min="0"
+            show-buttons
+            fluid
+          />
+          <small class="hint">{{
+            t('resources.fabricationMethods.fields.waitAfterMinutesHint')
           }}</small>
         </div>
 

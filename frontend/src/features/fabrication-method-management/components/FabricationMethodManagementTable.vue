@@ -157,6 +157,10 @@ const detailFields = computed(() => {
       value: supplierName(m.default_supplier_id),
     },
     {
+      label: t('resources.fabricationMethods.columns.waitAfterMinutes'),
+      value: m.wait_after_minutes === null ? null : String(m.wait_after_minutes),
+    },
+    {
       label: t('resources.fabricationMethods.columns.defaultForAssemblies'),
       value: m.default_for_assemblies ? t('common.yes') : t('common.no'),
     },

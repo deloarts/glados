@@ -32,6 +32,9 @@ from tests.unit.scheduling_service._helpers import make_context
 from tests.unit.scheduling_service._helpers import walk_machine_queue
 from tests.unit.scheduling_service._helpers import walk_pool_queue
 
+# A day before every fixture date, so no expected arrival here counts as late.
+_TODAY = date(2026, 7, 1)
+
 
 def test_resolve_weekly_minutes_uses_machine_override_when_present():
     default = WEEKDAY_HOURS
@@ -93,9 +96,15 @@ def test_resolve_internal_predecessor_ready_at_ignores_unknown_orders():
 def test_resolve_external_predecessor_ready_at_prefers_pickup_over_expected_delivery():
     pickup = date(2026, 7, 20)
     expected = date(2026, 7, 25)
-    assert resolve_external_predecessor_ready_at(None, pickup, expected, zone=UTC) == pickup
-    assert resolve_external_predecessor_ready_at(None, None, expected, zone=UTC) == expected
-    assert resolve_external_predecessor_ready_at(None, None, None, zone=UTC) is None
+    assert (
+        resolve_external_predecessor_ready_at(None, pickup, expected, zone=UTC, today=_TODAY)
+        == pickup
+    )
+    assert (
+        resolve_external_predecessor_ready_at(None, None, expected, zone=UTC, today=_TODAY)
+        == expected
+    )
+    assert resolve_external_predecessor_ready_at(None, None, None, zone=UTC, today=_TODAY) is None
 
 
 def test_resolve_external_predecessor_ready_at_prefers_actual_delivery_over_estimates():
@@ -105,9 +114,17 @@ def test_resolve_external_predecessor_ready_at_prefers_actual_delivery_over_esti
     actual = date(2026, 8, 3)
     pickup = date(2026, 7, 20)
     expected = date(2026, 8, 17)
-    assert resolve_external_predecessor_ready_at(actual, pickup, expected, zone=UTC) == actual
-    assert resolve_external_predecessor_ready_at(actual, None, expected, zone=UTC) == actual
-    assert resolve_external_predecessor_ready_at(actual, None, None, zone=UTC) == actual
+    assert (
+        resolve_external_predecessor_ready_at(actual, pickup, expected, zone=UTC, today=_TODAY)
+        == actual
+    )
+    assert (
+        resolve_external_predecessor_ready_at(actual, None, expected, zone=UTC, today=_TODAY)
+        == actual
+    )
+    assert (
+        resolve_external_predecessor_ready_at(actual, None, None, zone=UTC, today=_TODAY) == actual
+    )
 
 
 def test_resolve_external_predecessor_ready_at_collapses_event_timestamps_to_a_day():
@@ -122,12 +139,14 @@ def test_resolve_external_predecessor_ready_at_collapses_event_timestamps_to_a_d
     expected = date(2026, 8, 17)
 
     from_delivery = resolve_external_predecessor_ready_at(
-        delivered_at, pickup_at, expected, zone=UTC
+        delivered_at, pickup_at, expected, zone=UTC, today=_TODAY
     )
     assert from_delivery == date(2026, 8, 3)
     assert type(from_delivery) is date
 
-    from_pickup = resolve_external_predecessor_ready_at(None, pickup_at, expected, zone=UTC)
+    from_pickup = resolve_external_predecessor_ready_at(
+        None, pickup_at, expected, zone=UTC, today=_TODAY
+    )
     assert from_pickup == date(2026, 7, 20)
     assert type(from_pickup) is date
 
@@ -139,7 +158,7 @@ def test_waiting_on_predecessor_flag_survives_a_timestamped_delivery():
     """End-to-end shape of the crash: a context built from a timestamped
     delivery must flow through conflict computation without a TypeError."""
     ready_at = resolve_external_predecessor_ready_at(
-        datetime(2026, 9, 1, 13, 30, tzinfo=UTC), None, None, zone=UTC
+        datetime(2026, 9, 1, 13, 30, tzinfo=UTC), None, None, zone=UTC, today=_TODAY
     )
     ctx = make_context(order_id=1, predecessor_ready_at=ready_at)
     now = datetime(2026, 8, 6, 8, 0, tzinfo=UTC)
@@ -299,8 +318,12 @@ def test_resolve_mixed_predecessor_ready_at_takes_the_later_known_date():
 def test_resolve_input_material_ready_at_takes_latest_allocation_date():
     d1 = date(2026, 7, 20)
     d2 = date(2026, 7, 22)
-    assert resolve_input_material_ready_at([d1, d2, None], zone=UTC) == d2
-    assert resolve_input_material_ready_at([None, None], zone=UTC) is None
+    lines = [(None, d1), (None, d2), (None, None)]
+    assert resolve_input_material_ready_at(lines, zone=UTC, today=_TODAY) == d2
+    assert (
+        resolve_input_material_ready_at([(None, None), (None, None)], zone=UTC, today=_TODAY)
+        is None
+    )
 
 
 def test_compute_earliest_start_takes_max_of_known_constraints():

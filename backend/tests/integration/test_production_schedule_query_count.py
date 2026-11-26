@@ -127,7 +127,9 @@ _BOARD_STATEMENTS = 128
 # The recompute, and Auto-Plan through it, also reads the ids of the lots
 # with external work; their rows come with the walk's own batch reads.
 _RECOMPUTE_STATEMENTS = 123
-_AUTO_PLAN_STATEMENTS = 310
+# Auto-Plan also reads the open orders before and after its walk, and the lots
+# of the orders the walk re-dated.
+_AUTO_PLAN_STATEMENTS = 346
 
 
 @pytest.fixture(autouse=True)

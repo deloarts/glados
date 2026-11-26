@@ -28,6 +28,7 @@ class InspectionMethodMapper:
             else None,
             default_setup_minutes=entity.default_setup_minutes,
             default_minutes_per_piece=entity.default_minutes_per_piece,
+            wait_after_minutes=entity.wait_after_minutes,
             requires_evidence=entity.requires_evidence,
             archived=entity.archived,
             default_machine_id=entity.default_machine_id,

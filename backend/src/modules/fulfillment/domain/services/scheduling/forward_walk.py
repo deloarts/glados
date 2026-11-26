@@ -2,7 +2,9 @@
 
 The walk places each machine's orders in queue_sequence order, each
 starting at max(previous planned_end, earliest_start), never before now for
-a queued order, and snapped into working windows. Running orders anchor at
+a queued order, and snapped into working windows. A manual order without a
+machine shares no queue: it is placed on its own against the admin default
+calendar, so manual orders take no capacity from each other. Running orders anchor at
 their latest start, and pinned and frozen orders keep their window without
 moving the cursor backwards; a kept window that overlaps the order before it
 is flagged. A machine whose calendar holds no working time leaves its own
@@ -41,6 +43,7 @@ from datetime import tzinfo
 from typing import Literal
 
 from src.modules.fulfillment.domain.errors import NoWorkingTimeError
+from src.modules.fulfillment.domain.policies.wait_after import ready_after_wait
 from src.modules.fulfillment.domain.services.scheduling._shared import as_day
 from src.modules.fulfillment.domain.services.scheduling._shared import day_of
 from src.modules.fulfillment.domain.services.scheduling._shared import day_start
@@ -51,6 +54,9 @@ from src.modules.fulfillment.domain.services.scheduling.earliest_start import (
 )
 from src.modules.fulfillment.domain.services.scheduling.machine_calendar import MachineCalendar
 from src.modules.fulfillment.domain.services.scheduling.machine_calendar import place
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReason
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import queued_reason
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import running_reason
 from src.modules.fulfillment.domain.services.scheduling.walk_context import ExternalForecast
 from src.modules.fulfillment.domain.services.scheduling.walk_context import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling.walk_context import ScheduledOrder
@@ -109,10 +115,11 @@ def _with_waiting_and_target_flags(
     now: datetime,
 ) -> list[str]:
     """Adds the flags that compare a day: waiting while the predecessor's
-    ready day lies after today, and past the target date while the planned
-    end falls on a later day. Both days are the tenant's, so in Vienna an
-    order ending at 23:30 UTC on its target date ends on the next local day
-    and is late."""
+    ready day lies after today, and past the target date while the pieces
+    are ready on a later day, the planned end plus the wait after the
+    order's position. Both days are the tenant's, so in Vienna an order
+    ending at 23:30 UTC on its target date ends on the next local day and
+    is late."""
     result = list(conflicts)
     # _static_conflicts may already have flagged the same blockage.
     if (
@@ -124,7 +131,8 @@ def _with_waiting_and_target_flags(
     if (
         ctx.target_date is not None
         and planned_end is not None
-        and day_of(planned_end, ctx.zone) > ctx.target_date
+        and day_of(ready_after_wait(planned_end, ctx.wait_after_minutes), ctx.zone)
+        > ctx.target_date
     ):
         result.append(ScheduleConflictReason.PAST_TARGET_DATE.value)
     return result
@@ -188,7 +196,9 @@ def _running_since(ctx: OrderSchedulingContext) -> datetime | None:
     return max(as_utc(ctx.actual_start), as_utc(ctx.last_resumed_at))
 
 
-def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanation:
+def explain_earliest_start(
+    ctx: OrderSchedulingContext, *, on_queue: bool = True
+) -> EarliestStartExplanation:
     """Names the advance_machine_queue branch that governs ctx's earliest
     start, so a read model can never disagree with the forward walk.
 
@@ -196,6 +206,8 @@ def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanat
     readiness, except that `queue` is reported when the persisted
     planned_start lies later than that date, because the machine queue
     pushed the start out. The date reported then stays the constraint's.
+    A manual order without a machine waits behind no other order, so the
+    caller passes `on_queue=False` for it and `queue` is never reported.
     Every date is a day of the tenant's timezone."""
     running_since = _running_since(ctx)
     if running_since is not None:
@@ -221,7 +233,8 @@ def explain_earliest_start(ctx: OrderSchedulingContext) -> EarliestStartExplanat
     if earliest_start_date is None:
         return EarliestStartExplanation("none", None)
     if (
-        ctx.existing_planned_start is not None
+        on_queue
+        and ctx.existing_planned_start is not None
         and day_of(ctx.existing_planned_start, ctx.zone) > earliest_start_date
     ):
         return EarliestStartExplanation("queue", earliest_start_date)
@@ -263,6 +276,8 @@ class QueuePlacement:
     no_working_time: bool = False
     overlap: bool = False
     before_predecessor: bool = False
+    # What set the start, for the planner (placement_reason.py).
+    reason: PlacementReason | None = None
 
 
 def advance_machine_queue(
@@ -288,7 +303,8 @@ def place_on_queue(
     """Places one order against an already-known cursor.
 
     PAUSED orders consume no capacity. A running order anchors at its
-    latest start or resume, which may lie in the past, and a pinned or
+    latest start or resume, which may lie in the past, and ends no earlier
+    than its progress forecasts (_running_window), and a pinned or
     frozen order keeps its window, and so does a running order its anchor;
     neither moves the cursor backwards, and one that starts before the
     cursor is flagged as an overlap. An order whose predecessor chain is unknown (with nothing
@@ -301,21 +317,26 @@ def place_on_queue(
     order undated and flagged.
     """
     if ctx.status == ProductionOrderStatus.PAUSED:
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
     running_since = _running_since(ctx)
     if ctx.status == ProductionOrderStatus.IN_PROGRESS and running_since is not None:
         try:
-            planned_start, planned_end = place(
-                running_since, ctx.estimated_duration_minutes, calendar
-            )
+            planned_start, planned_end, overrun = _running_window(ctx, running_since, calendar, now)
         except NoWorkingTimeError:
-            return QueuePlacement(None, None, cursor, no_working_time=True)
+            return QueuePlacement(
+                None, None, cursor, no_working_time=True, reason=PlacementReason(kind="undated")
+            )
+        running = running_reason(ctx, overrun)
         if cursor is None:
-            return QueuePlacement(planned_start, planned_end, planned_end)
+            return QueuePlacement(planned_start, planned_end, planned_end, reason=running)
         cursor = as_utc(cursor)
         return QueuePlacement(
-            planned_start, planned_end, max(cursor, planned_end), overlap=planned_start < cursor
+            planned_start,
+            planned_end,
+            max(cursor, planned_end),
+            overlap=planned_start < cursor,
+            reason=running,
         )
 
     if (
@@ -327,8 +348,11 @@ def place_on_queue(
         pinned_end = as_utc(ctx.existing_planned_end)
         ready = _predecessor_ready(ctx)
         early = ready is not None and pinned_start < ready
+        kept = PlacementReason(kind="pinned" if ctx.pinned else "frozen", moment=pinned_start)
         if cursor is None:
-            return QueuePlacement(pinned_start, pinned_end, pinned_end, before_predecessor=early)
+            return QueuePlacement(
+                pinned_start, pinned_end, pinned_end, before_predecessor=early, reason=kept
+            )
         cursor = as_utc(cursor)
         return QueuePlacement(
             pinned_start,
@@ -336,6 +360,7 @@ def place_on_queue(
             max(cursor, pinned_end),
             overlap=pinned_start < cursor,
             before_predecessor=early,
+            reason=kept,
         )
 
     if (
@@ -343,23 +368,67 @@ def place_on_queue(
         and not ctx.upstream_input_available
         and ctx.position_sequence > 1
     ):
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
     if is_unplannable_for_missing_material(ctx):
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
-    _not_before, _predecessor_ready_at, earliest_start_date = _earliest_start_days(ctx)
+    not_before, _predecessor_ready_at, earliest_start_date = _earliest_start_days(ctx)
     earliest = day_start(earliest_start_date, ctx.zone) if earliest_start_date else as_utc(now)
     if ctx.predecessor_ready_moment is not None:
         earliest = max(earliest, as_utc(ctx.predecessor_ready_moment))
+    now_floors = ctx.status == ProductionOrderStatus.QUEUED or earliest_start_date is None
     if ctx.status == ProductionOrderStatus.QUEUED:
         earliest = max(earliest, as_utc(now))
     floor = max(as_utc(cursor), earliest) if cursor is not None else earliest
     try:
         planned_start, planned_end = place(floor, ctx.estimated_duration_minutes, calendar)
     except NoWorkingTimeError:
-        return QueuePlacement(None, None, cursor, no_working_time=True)
-    return QueuePlacement(planned_start, planned_end, planned_end)
+        return QueuePlacement(
+            None, None, cursor, no_working_time=True, reason=PlacementReason(kind="undated")
+        )
+    reason = queued_reason(
+        ctx,
+        cursor,
+        earliest_start_date,
+        not_before,
+        as_day(ctx.material_ready_at, ctx.zone),
+        now if now_floors else None,
+    )
+    return QueuePlacement(planned_start, planned_end, planned_end, reason=reason)
+
+
+def _running_window(
+    ctx: OrderSchedulingContext, running_since: datetime, calendar: MachineCalendar, now: datetime
+) -> tuple[datetime, datetime, bool]:
+    """A running order's window on its calendar: from its latest start or
+    resume to the later of its original end and the end its progress
+    forecasts, so an order that overruns pushes the steps after it.
+
+    The original end is the start plus the estimate, or after a resume with
+    pieces already processed by then, the resume plus the pieces left at
+    the resume, so a pause does not count the whole estimate again. With pieces processed the
+    forecast is now plus the pieces left, without setup, since the machine
+    is set up already. Without any processed, or without minutes per piece,
+    the progress is unknown and the forecast is now, so an order that
+    reports only at its end is not pushed while it is on time. The flag says
+    whether the forecast stretched the end past the original one."""
+    left = max(ctx.quantity - ctx.pieces_processed, 0.0)
+    progress = ctx.pieces_processed > 0 and ctx.minutes_per_piece > 0
+    left_minutes = round(left * ctx.minutes_per_piece) if progress else 0
+    if (
+        ctx.last_resumed_at is not None
+        and ctx.pieces_processed_at_resume > 0
+        and ctx.minutes_per_piece > 0
+    ):
+        left_at_resume = max(ctx.quantity - ctx.pieces_processed_at_resume, 0.0)
+        planned_start, original_end = place(
+            running_since, round(left_at_resume * ctx.minutes_per_piece), calendar
+        )
+    else:
+        planned_start, original_end = place(running_since, ctx.estimated_duration_minutes, calendar)
+    _forecast_start, forecast_end = place(now, left_minutes, calendar)
+    return planned_start, max(original_end, forecast_end), forecast_end > original_end
 
 
 def _predecessor_ready(ctx: OrderSchedulingContext) -> datetime | None:
@@ -389,9 +458,9 @@ def _walk_machine_queue(
     orders: list[OrderSchedulingContext],
     calendar: MachineCalendar,
     now: datetime,
-) -> tuple[list[ScheduledOrder], datetime | None]:
+) -> tuple[list[ScheduledOrder], datetime | None, int | None]:
     """Walks one machine's non-terminal orders and returns the placements
-    plus the final cursor. Running orders come first, since the machine is
+    plus the final cursor and the order whose end it is. Running orders come first, since the machine is
     busy with them now wherever they sit in the queue (a pool start appends
     the started order, and an operator may start one that is not at the
     head); the others follow in queue order. order_id breaks ties, so the
@@ -399,19 +468,62 @@ def _walk_machine_queue(
     results: list[ScheduledOrder] = []
     cursor: datetime | None = None
 
+    # The order whose end the cursor is, named by a placement it holds back.
+    cursor_order_id: int | None = None
     for ctx in sorted(orders, key=lambda o: (not _is_running(o), o.queue_sequence, o.order_id)):
         static_conflicts = _static_conflicts(ctx)
         placement = place_on_queue(ctx, cursor, calendar, now)
+        reason = placement.reason
+        if reason is not None and reason.kind == "queue":
+            reason = replace(reason, previous_order_id=cursor_order_id)
+        if placement.next_cursor != cursor:
+            cursor_order_id = ctx.order_id
         cursor = placement.next_cursor
         conflicts = _with_waiting_and_target_flags(
             static_conflicts, ctx, placement.planned_end, now
         )
         conflicts += _placement_conflicts(placement)
         results.append(
-            ScheduledOrder(ctx.order_id, placement.planned_start, placement.planned_end, conflicts)
+            ScheduledOrder(
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                reason=reason,
+            )
         )
 
-    return results, cursor
+    return results, cursor, cursor_order_id
+
+
+def _walk_manual_orders(
+    orders: list[OrderSchedulingContext],
+    calendar: MachineCalendar,
+    now: datetime,
+) -> list[ScheduledOrder]:
+    """Places every manual order without a machine on its own against the
+    admin default calendar. There is no shared cursor, so one order never
+    waits for another and queue_sequence changes no date: each starts at
+    the latest of its earliest start, its predecessor's ready moment and
+    now. Running, pinned and frozen orders keep their anchor or window as
+    on a machine queue, without an overlap to flag."""
+    results: list[ScheduledOrder] = []
+    for ctx in sorted(orders, key=lambda o: o.order_id):
+        placement = place_on_queue(ctx, None, calendar, now)
+        conflicts = _with_waiting_and_target_flags(
+            _static_conflicts(ctx), ctx, placement.planned_end, now
+        )
+        conflicts += _placement_conflicts(placement)
+        results.append(
+            ScheduledOrder(
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                reason=placement.reason,
+            )
+        )
+    return results
 
 
 def schedule_unassigned_orders(orders: list[OrderSchedulingContext]) -> list[ScheduledOrder]:
@@ -509,20 +621,28 @@ def schedule_all(
     then merged as an earliest-finish merge of FIFO queues: each round
     trials every pool's head, commits all undated heads at once (so one
     undated head cannot stall another pool), and otherwise commits only the
-    single earliest finish, ties broken by pool id then member id. The
-    manual queue walks against the admin default calendar and unassigned
-    orders get no dates.
+    single earliest finish, ties broken by pool id then member id. Each
+    manual order is placed on its own against the admin default calendar
+    (_walk_manual_orders), and unassigned orders get no dates.
     """
     _assert_machine_queues_have_calendars(machine_queues, machine_calendars)
-    by_machine, machine_cursors = _walk_all_machine_queues(machine_queues, machine_calendars, now)
+    by_machine, machine_cursors, cursor_order_ids = _walk_all_machine_queues(
+        machine_queues, machine_calendars, now
+    )
     by_pool, pool_member_calendars, pool_sorted_orders, pool_heads = _seed_pool_walk_state(
         pool_queues, pool_members, machine_calendars
     )
     _merge_pool_queues(
-        by_pool, pool_member_calendars, pool_sorted_orders, pool_heads, machine_cursors, now
+        by_pool,
+        pool_member_calendars,
+        pool_sorted_orders,
+        pool_heads,
+        machine_cursors,
+        cursor_order_ids,
+        now,
     )
 
-    manual, _ = _walk_machine_queue(manual_queue, manual_calendar, now)
+    manual = _walk_manual_orders(manual_queue, manual_calendar, now)
     unassigned_results = schedule_unassigned_orders(unassigned)
 
     return ScheduleWalkResult(
@@ -549,19 +669,22 @@ def _walk_all_machine_queues(
     machine_queues: dict[int, list[OrderSchedulingContext]],
     machine_calendars: dict[int, MachineCalendar],
     now: datetime,
-) -> tuple[dict[int, list[ScheduledOrder]], dict[int, datetime | None]]:
+) -> tuple[dict[int, list[ScheduledOrder]], dict[int, datetime | None], dict[int, int | None]]:
     """Walks every machine queue. Every machine with a calendar gets a
     cursor entry, even with an empty queue, so the pool merge can seed
-    from it."""
+    from it, and the order whose end the cursor is, so a pool order held
+    by it can name it."""
     by_machine: dict[int, list[ScheduledOrder]] = {}
     machine_cursors: dict[int, datetime | None] = {}
+    cursor_order_ids: dict[int, int | None] = {}
     for machine_id in sorted(machine_calendars):
-        results, cursor = _walk_machine_queue(
+        results, cursor, cursor_order_id = _walk_machine_queue(
             machine_queues.get(machine_id, []), machine_calendars[machine_id], now
         )
         by_machine[machine_id] = results
         machine_cursors[machine_id] = cursor
-    return by_machine, machine_cursors
+        cursor_order_ids[machine_id] = cursor_order_id
+    return by_machine, machine_cursors, cursor_order_ids
 
 
 def _seed_pool_walk_state(
@@ -600,10 +723,13 @@ def _merge_pool_queues(
     pool_sorted_orders: dict[int, list[OrderSchedulingContext]],
     pool_heads: dict[int, int],
     machine_cursors: dict[int, datetime | None],
+    cursor_order_ids: dict[int, int | None],
     now: datetime,
 ) -> None:
     """Earliest-finish merge of the pool queues (see schedule_all),
-    mutating by_pool, machine_cursors and pool_heads in place. The winning
+    mutating by_pool, machine_cursors, cursor_order_ids and pool_heads in
+    place. A placement the member's cursor holds back names the order whose
+    end that cursor is. The winning
     member is reported only as trial_machine_id and the order's machine_id
     stays unset, because the concrete machine is chosen later by Auto-Plan
     or the shop-floor Start dialog."""
@@ -641,11 +767,21 @@ def _merge_pool_queues(
             static_conflicts, ctx, placement.planned_end, now
         )
         conflicts += _placement_conflicts(placement)
+        reason = placement.reason
+        if reason is not None and reason.kind == "queue":
+            reason = replace(reason, previous_order_id=cursor_order_ids.get(member_id))
         by_pool[best_pool_id].append(
             ScheduledOrder(
-                ctx.order_id, placement.planned_start, placement.planned_end, conflicts, member_id
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                member_id,
+                reason=reason,
             )
         )
+        if placement.next_cursor != machine_cursors.get(member_id):
+            cursor_order_ids[member_id] = ctx.order_id
         machine_cursors[member_id] = placement.next_cursor
         pool_heads[best_pool_id] += 1
 
@@ -662,9 +798,9 @@ def placed_ends_by_position(
     contexts: Iterable[OrderSchedulingContext], result: ScheduleWalkResult
 ) -> dict[int, date | None]:
     """Each position's in-run ready date from one pass, the tenant day of
-    its latest planned end. A position whose orders are all undated maps to
-    None rather than being absent, and callers must tell the two apart (see
-    position_ready_at_in_run)."""
+    its latest planned end plus the wait after the position. A position
+    whose orders are all undated maps to None rather than being absent, and
+    callers must tell the two apart (see position_ready_at_in_run)."""
     scheduled_by_id = {s.order_id: s for s in result.all_orders()}
     ends_by_position: dict[int, list[datetime | None]] = {}
     zone_by_position: dict[int, tzinfo] = {}
@@ -673,7 +809,12 @@ def placed_ends_by_position(
             continue
         scheduled = scheduled_by_id.get(ctx.order_id)
         planned_end = scheduled.planned_end if scheduled is not None else None
-        ends_by_position.setdefault(ctx.lot_position_id, []).append(planned_end)
+        ready = (
+            ready_after_wait(planned_end, ctx.wait_after_minutes)
+            if planned_end is not None
+            else None
+        )
+        ends_by_position.setdefault(ctx.lot_position_id, []).append(ready)
         zone_by_position[ctx.lot_position_id] = ctx.zone
     return {
         position_id: resolve_internal_predecessor_ready_at(ends, zone=zone_by_position[position_id])
@@ -684,16 +825,21 @@ def placed_ends_by_position(
 def placed_end_moments_by_position(
     contexts: Iterable[OrderSchedulingContext], result: ScheduleWalkResult
 ) -> dict[int, datetime | None]:
-    """Each position's latest planned end in one pass as a moment, the
-    floor of its successors (predecessor_ready_moment). A position whose
-    orders are all undated maps to None, as in placed_ends_by_position."""
+    """Each position's latest planned end in one pass as a moment, plus the
+    wait after the position, the floor of its successors
+    (predecessor_ready_moment). A position whose orders are all undated maps
+    to None, as in placed_ends_by_position."""
     scheduled_by_id = {s.order_id: s for s in result.all_orders()}
     ends: dict[int, datetime | None] = {}
     for ctx in contexts:
         if ctx.lot_position_id is None:
             continue
         scheduled = scheduled_by_id.get(ctx.order_id)
-        end = scheduled.planned_end if scheduled is not None else None
+        end = (
+            ready_after_wait(scheduled.planned_end, ctx.wait_after_minutes)
+            if scheduled is not None and scheduled.planned_end is not None
+            else None
+        )
         known = ends.get(ctx.lot_position_id)
         if end is not None:
             ends[ctx.lot_position_id] = max(known, as_utc(end)) if known else as_utc(end)
@@ -870,7 +1016,7 @@ def _schedule_all_propagated(
     also_blocked: frozenset[int],
 ) -> tuple[ScheduleWalkResult, int]:
     every_context = _all_propagated_contexts(machine_queues, pool_queues, manual_queue, unassigned)
-    blocked = cycle_blocked_order_ids(machine_queues, manual_queue, every_context) | also_blocked
+    blocked = cycle_blocked_order_ids(machine_queues, every_context) | also_blocked
     if blocked:
         # Walked as orders without a queue, which get no dates, so their
         # positions read as undated and the later steps of their lots wait.

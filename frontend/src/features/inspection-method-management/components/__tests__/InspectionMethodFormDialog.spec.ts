@@ -64,6 +64,7 @@ const method: InspectionMethodResponse = {
   label_font_color: '#000000',
   default_setup_minutes: 10,
   default_minutes_per_piece: 2.5,
+  wait_after_minutes: null,
   requires_evidence: true,
   default_machine_id: null,
   default_machine_name: null,
@@ -234,6 +235,31 @@ describe('InspectionMethodFormDialog', () => {
     const [, payload] = postMock.mock.calls[0]!
     expect(payload.default_setup_minutes).toBe(15)
     expect(payload.default_minutes_per_piece).toBe(3.5)
+
+    wrapper.unmount()
+  })
+
+  it('sends the wait after the check', async () => {
+    postMock.mockClear()
+    const wrapper = mountWithApp(InspectionMethodFormDialog, {
+      attachTo: document.body,
+      props: { visible: true, method: undefined },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    await new DOMWrapper(document.body.querySelector(NAME_INPUT)!).setValue('Lab result')
+    const wait = new DOMWrapper(document.body.querySelector('#im-wait-after-minutes')!)
+    await wait.setValue('240')
+    await wait.trigger('blur')
+    await flushPromises()
+
+    await new DOMWrapper(document.body.querySelector('form.method-form')!).trigger('submit')
+    await flushPromises()
+
+    const [, payload] = postMock.mock.calls[0]!
+    expect(payload.wait_after_minutes).toBe(240)
 
     wrapper.unmount()
   })

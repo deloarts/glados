@@ -1089,7 +1089,10 @@ export default {
       'Fallback lead time for steps sent to an external supplier when no order-specific delivery date is set yet.',
     responseTimeDays: 'Response Time for Planned Start (days)',
     responseTimeDaysHint:
-      "A step finishing today doesn't mean the next one can start today too. This buffer is added on top of both a predecessor step's finish date and a raw material's arrival date before either can gate the next step's earliest start. Applies everywhere schedules are computed, not just Auto-Plan.",
+      "Pieces that arrive today aren't ready for the next step today. This buffer is added to an external step's delivery or ready-for-pickup date and to a raw material's arrival date before either can gate the next step's earliest start, and to the finish date of the step before external work for its planned pickup. Applies everywhere schedules are computed, not just Auto-Plan.",
+    internalHandoffMinutes: 'Handoff Between In-House Steps (minutes)',
+    internalHandoffMinutesHint:
+      'Time to carry the pieces from one in-house step to the next. The next step starts no earlier than this many minutes after the step before it ends, 0 lets it start right away.',
     externalSafetyMarginDays: 'Safety Margin for External Work (days)',
     externalSafetyMarginDaysHint:
       "These days stay free before a lot's target date when the latest send-out day of its external work is counted back. The count knows no waiting at the machines, and the margin absorbs it.",

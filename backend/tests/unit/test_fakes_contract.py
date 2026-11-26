@@ -198,6 +198,7 @@ CONTRACTS: list[Contract] = [
     # tests/unit/auto_plan/fakes.py
     _contract(auto_plan_fakes.FakeOrderRepo, IProductionOrderRepository, partial=True),
     _contract(auto_plan_fakes.FakeLotRepo, IProductionLotRepository, partial=True),
+    _contract(auto_plan_fakes.FakeOrderItemRepo, IOrderItemRepository, partial=True),
     _contract(
         auto_plan_fakes.FakeEmptyRepo,
         IOrderItemRepository,

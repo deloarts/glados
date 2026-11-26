@@ -276,10 +276,15 @@ class RecomputeMachineSchedule:
         if response_time_days is None:
             response_time_days = settings.response_time_days
         zone = await tenant_zone(self._settings)
+        now = now_utc()
         if not orders:
             # A lot of external work only still needs its forecast.
             prefetch = await prefetch_scheduling_data(
-                [], self._repos, extra_lot_ids=external_work_lot_ids, zone=zone
+                [],
+                self._repos,
+                extra_lot_ids=external_work_lot_ids,
+                zone=zone,
+                today=now.astimezone(zone).date(),
             )
             chains = await describe_external_work_chains(
                 external_work_lot_ids,
@@ -296,7 +301,6 @@ class RecomputeMachineSchedule:
             await self._uow.commit()
             return _empty_schedule_walk_result()
 
-        now = now_utc()
         inputs = await build_schedule_walk_inputs(
             orders,
             self._repos,

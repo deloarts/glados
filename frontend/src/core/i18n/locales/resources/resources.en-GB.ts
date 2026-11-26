@@ -462,6 +462,7 @@ export default {
       requiredExternal: 'Typically outsourced',
       defaultSupplier: 'Default supplier',
       defaultForAssemblies: 'Default for assemblies',
+      waitAfterMinutes: 'Wait after the step [min]',
       archived: 'Archived',
     },
     fields: {
@@ -484,6 +485,9 @@ export default {
       leadTimeDays: 'Lead time (days)',
       leadTimeDaysHint:
         'Calendar days this method typically takes at an external supplier, used to forecast a position’s delivery date. Falls back to the admin default when empty.',
+      waitAfterMinutes: 'Wait after the step [min]',
+      waitAfterMinutesHint:
+        'Minutes the pieces have to wait after a step of this method before the next step may start, such as for curing. The wait runs on clock time, overnight and over weekends too. Leave empty for no wait.',
       defaultForAssemblies: 'Default for assemblies',
       defaultForAssembliesHint:
         'Preselected for assemblies. Only one method can be the default, so ticking it here removes it from the current one. Archived methods cannot be the default.',
@@ -531,6 +535,7 @@ export default {
       defaultMachine: 'Default Machine',
       flags: 'Flags',
       requiresEvidence: 'Requires evidence',
+      waitAfterMinutes: 'Wait after the check [min]',
       archived: 'Archived',
     },
     fields: {
@@ -544,6 +549,9 @@ export default {
       defaultMinutesPerPiece: 'Default per piece [min]',
       defaultDurationsHint:
         'Seeded onto new steps using this method, and editable per step afterwards. Leave empty for no default - such a step carries no time estimate.',
+      waitAfterMinutes: 'Wait after the check [min]',
+      waitAfterMinutesHint:
+        'Minutes the pieces have to wait after a check of this method before the next step may start, such as for a lab result. The wait runs on clock time, overnight and over weekends too. Leave empty for no wait.',
       defaultMachine: 'Default QA machine',
       defaultMachinePlaceholder: 'No machine (manual QA)',
       defaultMachineHint:

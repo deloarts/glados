@@ -50,6 +50,7 @@ class SqlAlchemyInspectionMethodRepository(
             "creator_id": entity.creator_id,
             "default_setup_minutes": entity.default_setup_minutes,
             "default_minutes_per_piece": entity.default_minutes_per_piece,
+            "wait_after_minutes": entity.wait_after_minutes,
             "requires_evidence": entity.requires_evidence,
             "archived": entity.archived,
             "sort_order": entity.sort_order,

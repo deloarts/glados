@@ -22,6 +22,7 @@ import AutoPlanRunningView from './AutoPlanRunningView.vue'
 import AutoPlanObserverView from './AutoPlanObserverView.vue'
 import AutoPlanResultsView from './AutoPlanResultsView.vue'
 
+import type { RedatedOrder } from '../utils/autoPlanRedated'
 import type { MachinePoolResponse, ProductionMachineResponse } from '@/features/production-machines'
 import type {
   AutoPlanAlgorithm,
@@ -83,11 +84,19 @@ const results = reactive<{
   // Orders the planner could not place, as opposed to the two counters of
   // orders deliberately left alone.
   skippedOrders: AutoPlanSkippedOrderResponse[]
+  // Orders the walk after the run moved to another day without the run
+  // placing them, and how many other open orders kept their day.
+  redated: RedatedOrder[]
+  keptDay: number
+  walkFailed: boolean
 }>({
   proposals: [],
   skipped: 0,
   skippedTodaysPlanned: 0,
   skippedOrders: [],
+  redated: [],
+  keptDay: 0,
+  walkFailed: false,
 })
 
 // True while this dialog's own onConfirm() runs, so the attach watcher does
@@ -122,6 +131,9 @@ function showResults(response: AutoPlanResponse): void {
   results.skipped = response.skipped_pinned_or_in_progress
   results.skippedTodaysPlanned = response.skipped_todays_planned
   results.skippedOrders = response.skipped ?? []
+  results.redated = response.redated ?? []
+  results.keptDay = response.kept_day ?? 0
+  results.walkFailed = response.walk_failed ?? false
   step.value = 'results'
   emit('applied')
 }

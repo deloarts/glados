@@ -9,14 +9,14 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/production_order/split_production_order.py
   - backend/src/modules/fulfillment/application/use_cases/production_order/merge_production_orders.py
   - backend/src/modules/fulfillment/application/use_cases/production_order/record_manufacturing_assessment.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 Der Reiter **Warteschlange** unter Produktion zeigt jeden offenen Fertigungsauftrag als Karte, eine Spalte je Maschine, und aktualisiert sich von selbst, wenn jemand einen Auftrag ändert.
 
 ## Spalten und Tage {#columns}
 
-**Manuelle Arbeit** sammelt Schritte, die keine Maschine brauchen, und **Prüfung** die QS-Schritte, danach folgen die Pools und Maschinen alphabetisch. **Keine Maschine zugewiesen** erscheint nur für alte Aufträge ohne Maschine und ohne Pool. Ein Klick auf einen Maschinennamen öffnet ihre [Maschinenseite](/handbook/production/machines).
+**Manuelle Arbeit** sammelt Schritte, die keine Maschine brauchen, und **Prüfung** die QS-Schritte, danach folgen die Pools und Maschinen alphabetisch. Jeder Schritt unter **Manuelle Arbeit** und **Prüfung** wird für sich geplant, ein wartender Schritt hält also keinen anderen auf, und beide Spalten listen ihre Karten nach geplantem Start. **Keine Maschine zugewiesen** erscheint nur für alte Aufträge ohne Maschine und ohne Pool. Ein Klick auf einen Maschinennamen öffnet ihre [Maschinenseite](/handbook/production/machines).
 
 In einer Spalte listet **In Bearbeitung** die laufenden Aufträge, danach folgen die wartenden nach geplantem Starttag. Der **Zeitraum** in der Leiste reicht anfangs von heute bis Sonntag und umfasst bis zu 31 Tage. Was vor dem Zeitraum geplant ist, steht unter **Überfällig**, und was danach geplant ist, bleibt von der Tafel weg.
 

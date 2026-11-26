@@ -54,13 +54,16 @@ from src.modules.fulfillment.domain.services.scheduling import apply_downtimes
 from src.modules.fulfillment.domain.services.scheduling import build_machine_calendar
 from src.modules.fulfillment.domain.services.scheduling import compute_order_conflicts
 from src.modules.fulfillment.domain.services.scheduling import explain_earliest_start
+from src.modules.fulfillment.domain.services.scheduling import latest_ready_moment
+from src.modules.fulfillment.domain.services.scheduling import position_wait_after_minutes
 from src.modules.fulfillment.domain.services.scheduling import predecessor_ready_moment
+from src.modules.fulfillment.domain.services.scheduling import ready_after_wait
 from src.modules.fulfillment.domain.services.scheduling import resolve_external_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_input_material_ready_at
-from src.modules.fulfillment.domain.services.scheduling import resolve_internal_predecessor_ready_at
-from src.modules.fulfillment.domain.services.scheduling import resolve_mixed_predecessor_ready_at
 from src.modules.fulfillment.domain.services.scheduling import resolve_position_lead_days
 from src.modules.fulfillment.domain.services.scheduling import stale_external_predecessor
+from src.modules.fulfillment.domain.services.scheduling import step_waits
+from src.modules.fulfillment.domain.services.scheduling import stored_predecessor_readiness
 from src.modules.fulfillment.domain.services.scheduling.external_work import ExternalWorkChain
 from src.modules.fulfillment.domain.services.scheduling.external_work import (
     is_outsourced_unassigned,
@@ -78,6 +81,7 @@ from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.production_status import (
     ACTIVE_PRODUCTION_ORDER_STATUSES,
 )
+from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.domain.value_objects.schedule_conflict import ScheduleConflictReason
 from src.modules.fulfillment.ports.outbound.fulfillment_settings_repository import (
     IFulfillmentSettingsRepository,
@@ -121,6 +125,7 @@ from src.modules.platform.domain.services.quantities import quantity_gt
 from src.modules.platform.infrastructure.logging.logger import log
 from src.shared_kernel.domain.services.clock import as_utc
 from src.shared_kernel.domain.services.clock import now_utc
+from src.shared_kernel.domain.services.clock import today_in
 from src.shared_kernel.domain.value_objects.lifecycle_action import LifecycleAction
 
 
@@ -234,6 +239,7 @@ async def _external_ready_at(
     order_items_by_position: dict[int, OrderItem] | None = None,
     *,
     zone: tzinfo,
+    today: date,
 ) -> date | None:
     order_item = await _live_order_line(position_id, repos, order_items_by_position)
     if not order_item:
@@ -243,6 +249,7 @@ async def _external_ready_at(
         order_item.ready_for_pickup_date,
         order_item.expected_delivery_date,
         zone=zone,
+        today=today,
     )
 
 
@@ -260,21 +267,6 @@ async def _typed_external_date(
     if order_item.delivery_date is not None or order_item.ready_for_pickup_date is not None:
         return None
     return order_item.expected_delivery_date or order_item.expected_pickup_date
-
-
-async def _internal_ready_at(
-    position_id: int,
-    repos: SchedulingRepos,
-    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
-    *,
-    zone: tzinfo,
-) -> date | None:
-    sibling_orders = (
-        sibling_orders_by_position.get(position_id, [])
-        if sibling_orders_by_position is not None
-        else await repos.orders.get_by_lot_position_id(position_id)
-    )
-    return resolve_internal_predecessor_ready_at([o.planned_end for o in sibling_orders], zone=zone)
 
 
 async def _internal_ready_moment(
@@ -299,28 +291,6 @@ _TERMINAL_POSITION_STATUSES = {
 }
 
 
-async def _position_ready_at(
-    position: LotPosition,
-    repos: SchedulingRepos,
-    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None = None,
-    order_items_by_position: dict[int, OrderItem] | None = None,
-    *,
-    zone: tzinfo,
-) -> date | None:
-    """One open position's own ready date, per position kind."""
-    kind = position.kind
-    if kind == LotPositionKind.EXTERNAL:
-        return await _external_ready_at(position.id, repos, order_items_by_position, zone=zone)
-    if kind == LotPositionKind.INTERNAL:
-        return await _internal_ready_at(position.id, repos, sibling_orders_by_position, zone=zone)
-    if kind == LotPositionKind.MIXED:
-        return resolve_mixed_predecessor_ready_at(
-            await _external_ready_at(position.id, repos, order_items_by_position, zone=zone),
-            await _internal_ready_at(position.id, repos, sibling_orders_by_position, zone=zone),
-        )
-    return None
-
-
 async def resolve_predecessor_ready_at(
     position: LotPosition,
     lot: ProductionLot,
@@ -329,30 +299,33 @@ async def resolve_predecessor_ready_at(
     order_items_by_position: dict[int, OrderItem] | None = None,
     *,
     zone: tzinfo,
+    today: date | None = None,
+    response_time_days: int = 0,
 ) -> tuple[date | None, bool]:
     """Readiness over every earlier position of the lot, so an undated
-    position in the middle of the chain cannot be seen through.
+    position in the middle of the chain cannot be seen through. `today` is
+    the day of `zone` a passed expected delivery counts as, the current one
+    unless the caller walks against its own clock. `response_time_days` is
+    added to every external arrival, not to an in-house end
+    (scheduling.buffered_ready_day).
 
-    Returns the latest day in `zone` contributed by open earlier positions
-    and whether any open earlier position had no date signal at all.
-    Completed and canceled positions contribute nothing and never make the
-    chain unknown. The optional prefetched maps avoid per-position
-    queries."""
-    earlier_positions = [p for p in lot.positions if p.sequence < position.sequence]
-    contributed: list[date] = []
-    chain_unknown = False
-    for earlier in earlier_positions:
-        if earlier.status in _TERMINAL_POSITION_STATUSES:
-            continue
-        ready_at = await _position_ready_at(
-            earlier, repos, sibling_orders_by_position, order_items_by_position, zone=zone
-        )
-        if ready_at is None:
-            chain_unknown = True
-            continue
-        contributed.append(ready_at)
-    predecessor_ready_at = max(contributed) if contributed else None
-    return predecessor_ready_at, chain_unknown
+    Returns the latest day in `zone` contributed by open earlier positions,
+    each in-house share with the wait after it, and whether any open earlier
+    position had no date signal at all. Canceled positions contribute
+    nothing, and so do completed ones once their wait is over; neither ever
+    makes the chain unknown. It reads the snapshot describe_predecessor_
+    positions builds, the one the walk refreshes, so both agree. The
+    optional prefetched maps avoid per-position queries."""
+    predecessors = await describe_predecessor_positions(
+        position,
+        lot,
+        repos,
+        sibling_orders_by_position,
+        order_items_by_position,
+        zone=zone,
+        today=today,
+    )
+    return stored_predecessor_readiness(predecessors, response_time_days)
 
 
 async def _predecessor_supplier_lead_days(
@@ -374,10 +347,12 @@ async def describe_predecessor_positions(
     material_ready_at_cache: dict[int, date | None] | None = None,
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> tuple[PredecessorPosition, ...]:
     """Every earlier open position of the lot as a PredecessorPosition, so
     the propagated walk can redo the chain resolution with in-run dates.
-    Its days are days of `zone`."""
+    Its days are days of `zone`, and `today` is as in
+    resolve_predecessor_ready_at."""
     return await _describe_open_positions(
         [p for p in lot.positions if p.sequence < position.sequence],
         lot,
@@ -387,6 +362,7 @@ async def describe_predecessor_positions(
         default_external_lead_days,
         material_ready_at_cache,
         zone=zone,
+        today=today if today is not None else today_in(zone),
     )
 
 
@@ -399,6 +375,7 @@ async def describe_lot_chain(
     material_ready_at_cache: dict[int, date | None] | None = None,
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> tuple[PredecessorPosition, ...]:
     """Every open position of the lot, the last one included, described as
     describe_predecessor_positions describes the earlier ones."""
@@ -411,6 +388,7 @@ async def describe_lot_chain(
         default_external_lead_days,
         material_ready_at_cache,
         zone=zone,
+        today=today if today is not None else today_in(zone),
     )
 
 
@@ -424,22 +402,39 @@ async def _describe_open_positions(
     material_ready_at_cache: dict[int, date | None] | None,
     *,
     zone: tzinfo,
+    today: date,
 ) -> tuple[PredecessorPosition, ...]:
     """The open ones of `positions` as PredecessorPositions, in days of
-    `zone`. An outsourced UNASSIGNED position carries the lead days of its
-    steps, since it has no order line yet."""
+    `zone`, a passed expected arrival counted as `today`, plus each
+    completed one whose wait after it still runs. An in-house share is ready
+    at its end plus the position's wait, and the completed orders of a
+    position hold it until their wait is over too. An outsourced UNASSIGNED
+    position carries the lead days of its steps, since it has no order line
+    yet."""
     described: list[PredecessorPosition] = []
     for earlier in positions:
-        if earlier.status in _TERMINAL_POSITION_STATUSES:
+        wait = position_wait_after_minutes(earlier.kind, step_waits(earlier.steps))
+        completed_ready_moment = await _completed_ready_moment(
+            earlier.id, repos, sibling_orders_by_position, wait, zone=zone, today=today
+        )
+        closed = earlier.status in _TERMINAL_POSITION_STATUSES
+        if closed and (
+            earlier.status != LotPositionStatus.COMPLETED or completed_ready_moment is None
+        ):
             continue
         external_ready_at = None
         stored_internal_ready_at = None
         typed_external_date = None
         lead_days = None
+        order_item_id = None
+        arrival_late = False
         outsourced_unassigned = is_outsourced_unassigned(earlier)
         if earlier.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
+            order_item_id, arrival_late = _arrival_facts(
+                await _live_order_line(earlier.id, repos, order_items_by_position), today
+            )
             external_ready_at = await _external_ready_at(
-                earlier.id, repos, order_items_by_position, zone=zone
+                earlier.id, repos, order_items_by_position, zone=zone, today=today
             )
             typed_external_date = await _typed_external_date(
                 earlier.id, repos, order_items_by_position
@@ -453,10 +448,9 @@ async def _describe_open_positions(
         elif outsourced_unassigned:
             lead_days = resolve_position_lead_days(earlier.steps, None, default_external_lead_days)
         stored_internal_ready_moment = None
-        if earlier.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED):
-            stored_internal_ready_moment = await _internal_ready_moment(
-                earlier.id, repos, sibling_orders_by_position
-            )
+        if earlier.kind in (LotPositionKind.INTERNAL, LotPositionKind.MIXED) and not closed:
+            end = await _internal_ready_moment(earlier.id, repos, sibling_orders_by_position)
+            stored_internal_ready_moment = ready_after_wait(end, wait) if end is not None else None
             stored_internal_ready_at = (
                 stored_internal_ready_moment.astimezone(zone).date()
                 if stored_internal_ready_moment is not None
@@ -465,7 +459,7 @@ async def _describe_open_positions(
         material_ready_at = None
         if earlier.sequence == 1:
             material_ready_at = await resolve_material_ready_at(
-                lot, repos, material_ready_at_cache, zone=zone
+                lot, repos, material_ready_at_cache, zone=zone, today=today
             )
         described.append(
             PredecessorPosition(
@@ -479,9 +473,63 @@ async def _describe_open_positions(
                 material_ready_at=material_ready_at,
                 stored_internal_ready_moment=stored_internal_ready_moment,
                 outsourced_unassigned=outsourced_unassigned,
+                wait_after_minutes=wait,
+                completed_ready_at=(
+                    completed_ready_moment.astimezone(zone).date()
+                    if completed_ready_moment is not None
+                    else None
+                ),
+                completed_ready_moment=completed_ready_moment,
+                completed=closed,
+                order_item_id=order_item_id,
+                arrival_late=arrival_late,
             )
         )
     return tuple(described)
+
+
+def _arrival_facts(line: OrderItem | None, today: date) -> tuple[int | None, bool]:
+    """The live order line of an external share and whether its expected
+    arrival has passed without the delivery or a ready-for-pickup event."""
+    if line is None:
+        return None, False
+    late = (
+        line.delivery_date is None
+        and line.ready_for_pickup_date is None
+        and line.expected_delivery_date is not None
+        and line.expected_delivery_date < today
+    )
+    return line.id, late
+
+
+async def _completed_ready_moment(
+    position_id: int,
+    repos: SchedulingRepos,
+    sibling_orders_by_position: dict[int, list[ProductionOrder]] | None,
+    wait_after_minutes: int,
+    *,
+    zone: tzinfo,
+    today: date,
+) -> datetime | None:
+    """When the pieces of the position's completed orders are ready, the
+    latest actual end plus the wait after the position, while that day is
+    `today` or later. None without a wait, since a completed order without
+    one holds nothing back, and None once the wait is over."""
+    if wait_after_minutes <= 0:
+        return None
+    sibling_orders = (
+        sibling_orders_by_position.get(position_id, [])
+        if sibling_orders_by_position is not None
+        else await repos.orders.get_by_lot_position_id(position_id)
+    )
+    moment = latest_ready_moment(
+        (o.actual_end, wait_after_minutes)
+        for o in sibling_orders
+        if o.status == ProductionOrderStatus.COMPLETED
+    )
+    if moment is None or as_utc(moment).astimezone(zone).date() < today:
+        return None
+    return moment
 
 
 async def describe_external_work_chains(
@@ -511,6 +559,7 @@ async def describe_external_work_chains(
             default_external_lead_days,
             prefetch.material_ready_at_by_lot,
             zone=zone,
+            today=prefetch.today,
         )
         chains.append(
             ExternalWorkChain(
@@ -535,21 +584,26 @@ async def resolve_material_ready_at(
     cache: dict[int, date | None] | None = None,
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> date | None:
     """Raw-material readiness for a sequence-1 position, a day of `zone`.
     None without a linked demand (rework lots), for an unresolvable demand,
     or when no order-item allocation carries a date (stock-fulfilled lots).
-    The cache is keyed by lot so a lot without a demand caches too."""
+    A passed expected delivery counts as `today`, the current day unless
+    the caller walks against its own clock. The cache is keyed by lot so a
+    lot without a demand caches too."""
     if cache is not None and lot.id in cache:
         return cache[lot.id]
-    result = await _resolve_material_ready_at_uncached(lot, repos, zone)
+    result = await _resolve_material_ready_at_uncached(
+        lot, repos, zone, today if today is not None else today_in(zone)
+    )
     if cache is not None:
         cache[lot.id] = result
     return result
 
 
 async def _resolve_material_ready_at_uncached(
-    lot: ProductionLot, repos: SchedulingRepos, zone: tzinfo
+    lot: ProductionLot, repos: SchedulingRepos, zone: tzinfo, today: date
 ) -> date | None:
     if lot.input_demand_id is None:
         return None
@@ -562,7 +616,9 @@ async def _resolve_material_ready_at_uncached(
         return None
     order_items = await repos.order_items.get_by_ids(order_item_ids)
     return resolve_input_material_ready_at(
-        [oi.delivery_date or oi.expected_delivery_date for oi in order_items], zone=zone
+        [(oi.delivery_date, oi.expected_delivery_date) for oi in order_items],
+        zone=zone,
+        today=today,
     )
 
 
@@ -666,7 +722,7 @@ async def _prefetch_order_item_ids_by_demand(
 
 
 async def _prefetch_material_ready_at_by_lot(
-    lots: list[ProductionLot], repos: SchedulingRepos, zone: tzinfo
+    lots: list[ProductionLot], repos: SchedulingRepos, zone: tzinfo, today: date
 ) -> dict[int, date | None]:
     """resolve_material_ready_at for every lot, in three queries."""
     result: dict[int, date | None] = {lot.id: None for lot in lots}
@@ -688,7 +744,9 @@ async def _prefetch_material_ready_at_by_lot(
             continue
         order_items = [order_items_by_id[i] for i in order_item_ids if i in order_items_by_id]
         result[lot.id] = resolve_input_material_ready_at(
-            [oi.delivery_date or oi.expected_delivery_date for oi in order_items], zone=zone
+            [(oi.delivery_date, oi.expected_delivery_date) for oi in order_items],
+            zone=zone,
+            today=today,
         )
     return result
 
@@ -718,6 +776,9 @@ class SchedulingPrefetch:
     material_ready_at_by_lot: dict[int, date | None]
     raw_material_arrived_by_demand: dict[int, float]
     pools_by_id: dict[int, MachinePool | None]
+    # The day of the tenant's timezone the prefetch counted a passed
+    # expected arrival as, so every context built from it agrees.
+    today: date
 
 
 async def prefetch_scheduling_data(
@@ -728,11 +789,16 @@ async def prefetch_scheduling_data(
     extra_lot_ids: Iterable[int] = (),
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> SchedulingPrefetch:
     """Loads everything build_order_context reads for the active orders in
     a fixed number of queries. `lots_by_id` pre-seeds lots the caller holds,
     `extra_lot_ids` adds lots no active order belongs to, such as the lots
-    of external work, and material readiness is a day of `zone`."""
+    of external work, and material readiness is a day of `zone`. A passed
+    expected arrival counts as `today`, the current day of `zone` unless
+    the caller walks against its own clock."""
+    if today is None:
+        today = today_in(zone)
     active = [o for o in orders if o.status in ACTIVE_PRODUCTION_ORDER_STATUSES]
     lot_cache: dict[int, ProductionLot | None] = dict(lots_by_id or {})
     wanted_lot_ids = {o.lot_id for o in active} | set(extra_lot_ids)
@@ -746,7 +812,9 @@ async def prefetch_scheduling_data(
     sibling_orders_by_position = await _prefetch_sibling_orders_by_position(lots_loaded, repos)
     order_items_by_position = await _prefetch_order_items_by_position(lots_loaded, repos)
     target_dates = await describe_lot_target_dates(lots_loaded, repos)
-    material_ready_at_by_lot = await _prefetch_material_ready_at_by_lot(lots_loaded, repos, zone)
+    material_ready_at_by_lot = await _prefetch_material_ready_at_by_lot(
+        lots_loaded, repos, zone, today
+    )
 
     arrived_demand_ids = sorted(
         {
@@ -775,6 +843,7 @@ async def prefetch_scheduling_data(
         material_ready_at_by_lot=material_ready_at_by_lot,
         raw_material_arrived_by_demand=raw_material_arrived_by_demand,
         pools_by_id=pools_by_id,
+        today=today,
     )
 
 
@@ -855,16 +924,15 @@ async def _resolve_position_ready_dates(
     default_external_lead_days: int,
     material_ready_at_cache: dict[int, date | None] | None,
     zone: tzinfo,
+    today: date,
 ) -> tuple[date | None, bool, tuple[PredecessorPosition, ...], date | None]:
-    """The buffered predecessor and material ready days in `zone`, plus the
-    predecessor snapshot for the propagated walk."""
+    """The predecessor and material ready days in `zone`, with the response
+    time added to every arrival, plus the predecessor snapshot for the
+    propagated walk."""
     predecessor_ready_at = None
     predecessor_chain_unknown = False
     predecessor_positions: tuple[PredecessorPosition, ...] = ()
     if position is not None and position.sequence > 1:
-        predecessor_ready_at, predecessor_chain_unknown = await resolve_predecessor_ready_at(
-            position, lot, repos, sibling_orders_by_position, order_items_by_position, zone=zone
-        )
         predecessor_positions = await describe_predecessor_positions(
             position,
             lot,
@@ -874,14 +942,16 @@ async def _resolve_position_ready_dates(
             default_external_lead_days,
             material_ready_at_cache,
             zone=zone,
+            today=today,
         )
-    if predecessor_ready_at is not None:
-        predecessor_ready_at += timedelta(days=response_time_days)
+        predecessor_ready_at, predecessor_chain_unknown = stored_predecessor_readiness(
+            predecessor_positions, response_time_days
+        )
 
     material_ready_at = None
     if position is not None and position.sequence == 1:
         material_ready_at = await resolve_material_ready_at(
-            lot, repos, material_ready_at_cache, zone=zone
+            lot, repos, material_ready_at_cache, zone=zone, today=today
         )
         if material_ready_at is not None:
             material_ready_at += timedelta(days=response_time_days)
@@ -971,14 +1041,20 @@ async def build_order_context(
     default_external_lead_days: int = 0,
     material_ready_at_cache: dict[int, date | None] | None = None,
     machine_down: bool = False,
+    internal_handoff_minutes: int = 0,
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> OrderSchedulingContext:
     """Flattens one order and its lot into an OrderSchedulingContext whose
-    days are days of the tenant's timezone `zone`.
+    days are days of the tenant's timezone `zone`. A passed expected arrival
+    counts as `today`, the current day unless the caller walks against its
+    own clock.
 
-    response_time_days buffers the predecessor and material dates but never
-    not_before, a deliberate planner override; read-only callers pass 0.
+    response_time_days buffers an external predecessor's and the raw
+    material's arrival but never not_before, a deliberate planner override,
+    and internal_handoff_minutes the end of an in-house predecessor;
+    read-only callers pass 0 for both.
     Without `pool`, a pool-assigned order's capability goes unchecked."""
     position = next((p for p in lot.positions if p.id == order.lot_position_id), None)
     steps = position.steps if position else []
@@ -998,6 +1074,7 @@ async def build_order_context(
         default_external_lead_days,
         material_ready_at_cache,
         zone,
+        today if today is not None else today_in(zone),
     )
 
     capability_mismatch = _resolve_capability_mismatch(order, machine, pool, steps)
@@ -1040,13 +1117,36 @@ async def build_order_context(
         lot_position_id=position.id if position is not None else None,
         predecessor_positions=predecessor_positions,
         response_time_days=response_time_days,
+        internal_handoff_minutes=internal_handoff_minutes,
+        wait_after_minutes=(
+            position_wait_after_minutes(position.kind, step_waits(steps))
+            if position is not None
+            else 0
+        ),
+        quantity=order.quantity,
+        pieces_processed=order.pieces_processed,
+        pieces_processed_at_resume=_pieces_processed_at_resume(order),
+        minutes_per_piece=sum(
+            production_order_rules.resolve_effective_per_piece_minutes(step)[0] for step in steps
+        ),
         # From persisted dates; the propagated walk re-derives it every pass.
         stale_external_predecessor=stale_external_predecessor(predecessor_positions, None),
-        predecessor_ready_moment=predecessor_ready_moment(predecessor_positions, None),
+        predecessor_ready_moment=predecessor_ready_moment(
+            predecessor_positions, None, internal_handoff_minutes
+        ),
         machine_down=machine_down,
         last_resumed_at=last_resumed_at(order.interruptions),
         zone=zone,
     )
+
+
+def _pieces_processed_at_resume(order: ProductionOrder) -> float:
+    """The pieces the order had processed when it last went back to work,
+    from the completions recorded before that resume; 0 before any resume."""
+    resumed = last_resumed_at(order.interruptions)
+    if resumed is None:
+        return 0.0
+    return sum((c.quantity for c in order.completions if as_utc(c.created) <= as_utc(resumed)), 0.0)
 
 
 async def _resolve_pool(
@@ -1072,17 +1172,20 @@ async def build_contexts(
     default_external_lead_days: int = 0,
     down_machine_ids: set[int] | None = None,
     prefetch: SchedulingPrefetch | None = None,
+    internal_handoff_minutes: int = 0,
     *,
     zone: tzinfo,
+    today: date | None = None,
 ) -> list[OrderSchedulingContext]:
     """One OrderSchedulingContext per active order, its days in the
     tenant's timezone `zone`. `prefetch` may cover a superset of `orders`
     and must have been built in the same zone; without it one is built for
-    them."""
+    them. A passed expected arrival counts as `today`, else as the day the
+    prefetch counted it as."""
     down_ids = down_machine_ids or set()
     active = [o for o in orders if o.status in ACTIVE_PRODUCTION_ORDER_STATUSES]
     if prefetch is None:
-        prefetch = await prefetch_scheduling_data(active, repos, pool_repo, zone=zone)
+        prefetch = await prefetch_scheduling_data(active, repos, pool_repo, zone=zone, today=today)
     target_date_cache = dict(prefetch.target_date_by_lot)
     pool_cache = dict(prefetch.pools_by_id)
     material_ready_at_cache = dict(prefetch.material_ready_at_by_lot)
@@ -1110,7 +1213,9 @@ async def build_contexts(
                 default_external_lead_days=default_external_lead_days,
                 material_ready_at_cache=material_ready_at_cache,
                 machine_down=order.machine_id in down_ids,
+                internal_handoff_minutes=internal_handoff_minutes,
                 zone=zone,
+                today=today if today is not None else prefetch.today,
             )
         )
     return contexts
@@ -1173,6 +1278,7 @@ async def _build_order_contexts(
             raw_material_arrived_by_demand,
             material_ready_at_cache,
             zone,
+            prefetch.today,
         )
 
     return result
@@ -1192,6 +1298,7 @@ async def _build_one_order_context(
     raw_material_arrived_by_demand: dict[int, float],
     material_ready_at_cache: dict[int, date | None],
     zone: tzinfo,
+    today: date,
 ) -> tuple[ProductionLot, OrderSchedulingContext]:
     """One order's (lot, context) pair, filling the caches on first use."""
     machine = None
@@ -1215,6 +1322,7 @@ async def _build_one_order_context(
         pool=await _resolve_pool(order.machine_pool_id, pool_repo, pool_cache),
         material_ready_at_cache=material_ready_at_cache,
         zone=zone,
+        today=today,
     )
     return lot, ctx
 
@@ -1306,8 +1414,16 @@ async def compute_schedule_explanations_for_orders(
     pool_repo: IMachinePoolRepository | None = None,
 ) -> dict[int, EarliestStartExplanation]:
     """What governs each order's earliest start, from the same contexts as
-    compute_conflicts_for_orders. Orders without a context have no entry."""
+    compute_conflicts_for_orders. Orders without a context have no entry. A
+    manual order without a machine waits behind no other order, so its
+    start is never explained by a queue."""
     built = await _build_order_contexts(
         orders, repos, machine_repo, lots_by_id, pool_repo, zone=await tenant_zone(repos.settings)
     )
-    return {order_id: explain_earliest_start(ctx) for order_id, (_lot, ctx) in built.items()}
+    machineless_ids = {o.id for o in orders if o.machine_id is None and o.machine_pool_id is None}
+    return {
+        order_id: explain_earliest_start(
+            ctx, on_queue=not (ctx.is_manual_step and order_id in machineless_ids)
+        )
+        for order_id, (_lot, ctx) in built.items()
+    }

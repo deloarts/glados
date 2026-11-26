@@ -22,9 +22,11 @@ class AdminProductionSettings(Entity):
     production_order_number_format: str  # e.g. "PON-{yy}-{seq:05d}"; {seq} must be the last token
     default_weekly_hours: dict[int, DayHours]
     default_external_lead_days: int  # backward-pass lead time assumed for EXTERNAL successors
-    # Days added to a predecessor's or the raw material's ready date before
-    # it gates the next step, because finishing today does not mean the next
-    # step starts today. Never applied to a manual not_before.
+    # Days added to an arrival before it gates the next step, an external
+    # position's delivery or ready-for-pickup and the raw material's arrival,
+    # since pieces that arrive today are not ready for the next step today.
+    # The forecast pickup of external work adds it to the ready day of the
+    # chain before it too. Never applied to a manual not_before.
     response_time_days: int
     # New lots get a trailing inspection step unless the routing already ends
     # with one; it can be deleted afterwards.
@@ -54,3 +56,7 @@ class AdminProductionSettings(Entity):
     # of its external work is counted back, since that count assumes no
     # waiting at the machines.
     external_safety_margin_days: int = 2
+    # Minutes between the end of an in-house position and the start of an
+    # in-house order after it, for carrying the pieces over; 0 lets the next
+    # step start right away.
+    internal_handoff_minutes: int = 0

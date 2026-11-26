@@ -45,6 +45,8 @@ interface FormState {
   // null means no default; a step then starts without an estimate.
   default_setup_minutes: number | null
   default_minutes_per_piece: number | null
+  // null means the pieces wait nothing after the check.
+  wait_after_minutes: number | null
   requires_evidence: boolean
   // null means manual QA work without a machine.
   default_machine_id: number | null
@@ -58,6 +60,7 @@ function createEmptyForm(): FormState {
     label_font_color: DEFAULT_LABEL_FONT_COLOR,
     default_setup_minutes: null,
     default_minutes_per_piece: null,
+    wait_after_minutes: null,
     requires_evidence: false,
     default_machine_id: null,
   }
@@ -71,6 +74,7 @@ function formFromMethod(method: InspectionMethodResponse): FormState {
     label_font_color: method.label_font_color ?? DEFAULT_LABEL_FONT_COLOR,
     default_setup_minutes: method.default_setup_minutes,
     default_minutes_per_piece: method.default_minutes_per_piece,
+    wait_after_minutes: method.wait_after_minutes ?? null,
     requires_evidence: method.requires_evidence,
     default_machine_id: method.default_machine_id,
   }
@@ -118,6 +122,7 @@ const { form, submitting, errorMessage, isEditMode, onSubmit, onCancel } = useEn
       label_font_color: form.label_font_color,
       default_setup_minutes: form.default_setup_minutes,
       default_minutes_per_piece: form.default_minutes_per_piece,
+      wait_after_minutes: form.wait_after_minutes,
       requires_evidence: form.requires_evidence,
       default_machine_id: form.default_machine_id,
     }
@@ -205,6 +210,21 @@ const selectedMachine = computed<ProductionMachineResponse | null>(
         <div class="field field-wide">
           <small class="hint">{{
             t('resources.inspectionMethods.fields.defaultDurationsHint')
+          }}</small>
+        </div>
+
+        <div class="field field-wide">
+          <label for="im-wait-after-minutes">{{
+            t('resources.inspectionMethods.fields.waitAfterMinutes')
+          }}</label>
+          <InputNumber
+            input-id="im-wait-after-minutes"
+            v-model="form.wait_after_minutes"
+            :min="0"
+            fluid
+          />
+          <small class="hint">{{
+            t('resources.inspectionMethods.fields.waitAfterMinutesHint')
           }}</small>
         </div>
 

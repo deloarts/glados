@@ -84,6 +84,7 @@ class CreateFabricationMethod:
             required_external=cmd.required_external,
             default_supplier_id=cmd.default_supplier_id,
             lead_time_days=cmd.lead_time_days,
+            wait_after_minutes=cmd.wait_after_minutes,
             default_for_assemblies=cmd.default_for_assemblies,
             sort_order=await self._fabrication_methods.next_sort_order(),
         )

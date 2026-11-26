@@ -7,7 +7,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/domain/services/scheduling/external_work_explanation.py
   - frontend/src/features/procurement/components/ExternalWorkTable.vue
   - frontend/src/features/procurement/composables/useExternalWorkRowMenu.ts
-lastVerified: 2026-11-24
+lastVerified: 2026-11-26
 ---
 
 **Fremdbearbeitung** im Einkauf listet jedes Teil eines offenen Loses, das für eine Bearbeitung außer Haus zu einem Lieferanten geht, etwa zum Härten oder Verzinken. Sie zeigt dir, wann das Teil gehen kann, bis wann es gehen muss, damit die Schritte danach nicht zu spät kommen, und wann es zurückkommt. So kannst du Teile für einen Lieferanten sammeln und gemeinsam schicken.
@@ -18,7 +18,7 @@ Ein Teil erscheint, sobald sein Losschritt auf einer Bestellung bei einem Liefer
 
 ## Was die Termine bedeuten
 
-**Bereit ab** ist, wann der Schritt davor fertig ist oder das Rohmaterial da ist, plus die Reaktionszeit. **Spätestens weg** rechnet vom Zieltermin des Loses zurück: abzüglich des Sicherheitsabstands, der Schritte danach und der Lieferzeit. **Zurück bis** ist der Termin des Lieferanten, sobald die Bestellposition einen hat, sonst **Spätestens weg** plus die Lieferzeit. Fahre über die kleine Zeile unter einem Termin, dann siehst du, wie er gerechnet wurde. Den Sicherheitsabstand stellst du in den Produktionseinstellungen unter **Sicherheitsabstand für Fremdbearbeitung (Tage)** ein.
+**Bereit ab** ist, wann die Teile des Schritts davor bereit sind, mit einer Wartezeit nach diesem Schritt, oder wann das Rohmaterial da ist, plus die Reaktionszeit. Eine verspätete Lieferung zählt als heute. **Spätestens weg** rechnet vom Zieltermin des Loses zurück: abzüglich des Sicherheitsabstands, der Schritte danach mit ihren Wartezeiten und der Lieferzeit. **Zurück bis** ist der Termin des Lieferanten, sobald die Bestellposition einen hat, sonst **Spätestens weg** plus die Lieferzeit. Fahre über die kleine Zeile unter einem Termin, dann siehst du, wie er gerechnet wurde. Den Sicherheitsabstand stellst du in den Produktionseinstellungen unter **Sicherheitsabstand für Fremdbearbeitung (Tage)** ein.
 
 Ein Hinweis in der Spalte **Hinweis** markiert ein Teil, das bis zu seinem Tag **Spätestens weg** nicht fertig wird, eines, dessen Tag **Spätestens weg** schon vorbei ist, und ein Los ohne Zieltermin.
 

@@ -463,6 +463,7 @@ export default {
       requiredExternal: 'Üblicherweise extern',
       defaultSupplier: 'Standardlieferant',
       defaultForAssemblies: 'Standard für Baugruppen',
+      waitAfterMinutes: 'Wartezeit nach dem Schritt [min]',
       archived: 'Archiviert',
     },
     fields: {
@@ -485,6 +486,9 @@ export default {
       leadTimeDays: 'Lieferzeit (Tage)',
       leadTimeDaysHint:
         'Kalendertage, die diese Methode bei einem externen Lieferanten üblicherweise braucht, für die Prognose des Liefertermins einer Position. Bleibt leer, gilt der Standardwert aus den Einstellungen.',
+      waitAfterMinutes: 'Wartezeit nach dem Schritt [min]',
+      waitAfterMinutesHint:
+        'Minuten, die die Teile nach einem Schritt mit dieser Methode warten müssen, bevor der nächste Schritt beginnen kann, etwa zum Aushärten. Die Wartezeit läuft nach der Uhr, also auch über Nacht und am Wochenende. Leer lassen für keine Wartezeit.',
       defaultForAssemblies: 'Standard für Baugruppen',
       defaultForAssembliesHint:
         'Wird für Baugruppen vorausgewählt. Nur eine Methode kann der Standard sein, wenn du sie hier aktivierst, verliert die bisherige Methode diese Einstellung. Archivierte Methoden können nicht der Standard sein.',
@@ -533,6 +537,7 @@ export default {
       defaultMachine: 'Standardmaschine',
       flags: 'Merkmale',
       requiresEvidence: 'Nachweis erforderlich',
+      waitAfterMinutes: 'Wartezeit nach der Prüfung [min]',
       archived: 'Archiviert',
     },
     fields: {
@@ -546,6 +551,9 @@ export default {
       defaultMinutesPerPiece: 'Standard-Stückzeit [min]',
       defaultDurationsHint:
         'Wird auf neue Schritte mit dieser Methode übernommen und bleibt je Schritt änderbar. Leer lassen für keinen Standardwert - solche Schritte haben dann keine Zeitschätzung.',
+      waitAfterMinutes: 'Wartezeit nach der Prüfung [min]',
+      waitAfterMinutesHint:
+        'Minuten, die die Teile nach einer Prüfung mit dieser Methode warten müssen, bevor der nächste Schritt beginnen kann, etwa auf ein Laborergebnis. Die Wartezeit läuft nach der Uhr, also auch über Nacht und am Wochenende. Leer lassen für keine Wartezeit.',
       defaultMachine: 'Standard-QS-Maschine',
       defaultMachinePlaceholder: 'Keine Maschine (manuelle Prüfung)',
       defaultMachineHint:

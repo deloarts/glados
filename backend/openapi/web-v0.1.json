@@ -1660,6 +1660,10 @@
             "title": "Id",
             "type": "integer"
           },
+          "internal_handoff_minutes": {
+            "title": "Internal Handoff Minutes",
+            "type": "integer"
+          },
           "overwrite_item_material_on_approval": {
             "title": "Overwrite Item Material On Approval",
             "type": "boolean"
@@ -1693,6 +1697,7 @@
           "default_weekly_hours",
           "default_external_lead_days",
           "response_time_days",
+          "internal_handoff_minutes",
           "external_safety_margin_days",
           "require_qa",
           "frozen_window_hours",
@@ -3971,11 +3976,23 @@
       },
       "AutoPlanResponse": {
         "properties": {
+          "kept_day": {
+            "default": 0,
+            "title": "Kept Day",
+            "type": "integer"
+          },
           "proposals": {
             "items": {
               "$ref": "#/components/schemas/AutoPlanOrderDiffResponse"
             },
             "title": "Proposals",
+            "type": "array"
+          },
+          "redated": {
+            "items": {
+              "$ref": "#/components/schemas/RedatedOrderResponse"
+            },
+            "title": "Redated",
             "type": "array"
           },
           "skipped": {
@@ -3994,13 +4011,21 @@
             "default": 0,
             "title": "Skipped Todays Planned",
             "type": "integer"
+          },
+          "walk_failed": {
+            "default": false,
+            "title": "Walk Failed",
+            "type": "boolean"
           }
         },
         "required": [
           "proposals",
           "skipped_pinned_or_in_progress",
           "skipped_todays_planned",
-          "skipped"
+          "skipped",
+          "redated",
+          "kept_day",
+          "walk_failed"
         ],
         "title": "AutoPlanResponse",
         "type": "object"
@@ -11912,11 +11937,13 @@
         "enum": [
           "after_step",
           "raw_material",
+          "late_arrival",
           "response_time",
           "target_lot",
           "target_demand",
           "safety_margin",
           "later_step",
+          "wait_after",
           "back_by",
           "lead_time",
           "latest_pickup",
@@ -14270,6 +14297,18 @@
             ],
             "default": true,
             "title": "Requires Machine"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14533,6 +14572,17 @@
           "sort_order": {
             "title": "Sort Order",
             "type": "integer"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14552,6 +14602,7 @@
           "required_external",
           "default_supplier_id",
           "lead_time_days",
+          "wait_after_minutes",
           "default_for_assemblies",
           "archived",
           "sort_order"
@@ -14668,6 +14719,18 @@
             ],
             "default": true,
             "title": "Requires Machine"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14677,7 +14740,7 @@
         "type": "object"
       },
       "FabricationMethodWebResponse": {
-        "description": "The web shape: `name` and `description` as language maps, plus\nlead_time_days, which feeds the scheduler's external lead-time forecast\nand has no pat use (the SolidWorks add-in never reads or sets it).",
+        "description": "The web shape: `name` and `description` as language maps, plus\nlead_time_days, which feeds the scheduler's external lead-time forecast,\nand wait_after_minutes, the wait the scheduler adds after a step of the\nmethod. Neither has a pat use (the SolidWorks add-in never reads or sets\nthem).",
         "properties": {
           "archived": {
             "default": false,
@@ -14796,6 +14859,17 @@
             "default": true,
             "title": "Requires Machine",
             "type": "boolean"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -14816,7 +14890,8 @@
           "default_supplier_id",
           "default_for_assemblies",
           "archived",
-          "lead_time_days"
+          "lead_time_days",
+          "wait_after_minutes"
         ],
         "title": "FabricationMethodWebResponse",
         "type": "object"
@@ -17697,6 +17772,18 @@
             ],
             "default": false,
             "title": "Requires Evidence"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -17958,6 +18045,18 @@
             ],
             "default": false,
             "title": "Requires Evidence"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -17967,7 +18066,7 @@
         "type": "object"
       },
       "InspectionMethodWebResponse": {
-        "description": "The web shape: `name` and `description` as language maps.",
+        "description": "The web shape: `name` and `description` as language maps, plus\nwait_after_minutes, the wait the scheduler adds after a check of the\nmethod, which has no pat use.",
         "properties": {
           "archived": {
             "default": false,
@@ -18098,6 +18197,17 @@
             "default": false,
             "title": "Requires Evidence",
             "type": "boolean"
+          },
+          "wait_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wait After Minutes"
           }
         },
         "required": [
@@ -18118,7 +18228,8 @@
           "requires_evidence",
           "archived",
           "default_machine_id",
-          "default_machine_name"
+          "default_machine_name",
+          "wait_after_minutes"
         ],
         "title": "InspectionMethodWebResponse",
         "type": "object"
@@ -47150,6 +47261,370 @@
         "title": "RecordProductionOrderCompletionRequest",
         "type": "object"
       },
+      "RedatedOrderReasonResponse": {
+        "properties": {
+          "arrived": {
+            "title": "Arrived",
+            "type": "boolean"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "expected_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Date"
+          },
+          "forecast": {
+            "title": "Forecast",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "ready_now",
+              "queue",
+              "predecessor",
+              "order_line",
+              "raw_material",
+              "not_before",
+              "in_progress",
+              "pinned",
+              "frozen",
+              "undated"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "late": {
+            "title": "Late",
+            "type": "boolean"
+          },
+          "method_name": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Method Name",
+            "type": "object"
+          },
+          "moment": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moment"
+          },
+          "order_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Item Id"
+          },
+          "overrun": {
+            "title": "Overrun",
+            "type": "boolean"
+          },
+          "pieces_processed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pieces Processed"
+          },
+          "predecessor_order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predecessor Order Number"
+          },
+          "predecessor_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predecessor Sequence"
+          },
+          "previous_order_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Order Id"
+          },
+          "previous_order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Order Number"
+          },
+          "previous_overrun": {
+            "title": "Previous Overrun",
+            "type": "boolean"
+          },
+          "previous_pieces_processed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Pieces Processed"
+          },
+          "previous_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Quantity"
+          },
+          "previous_running": {
+            "title": "Previous Running",
+            "type": "boolean"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "response_time_days": {
+            "title": "Response Time Days",
+            "type": "integer"
+          },
+          "wait_after_minutes": {
+            "title": "Wait After Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "day",
+          "moment",
+          "previous_order_id",
+          "previous_order_number",
+          "previous_running",
+          "previous_overrun",
+          "previous_pieces_processed",
+          "previous_quantity",
+          "predecessor_sequence",
+          "predecessor_order_number",
+          "method_name",
+          "wait_after_minutes",
+          "order_item_id",
+          "expected_date",
+          "late",
+          "arrived",
+          "forecast",
+          "response_time_days",
+          "pieces_processed",
+          "quantity",
+          "overrun"
+        ],
+        "title": "RedatedOrderReasonResponse",
+        "type": "object"
+      },
+      "RedatedOrderResponse": {
+        "properties": {
+          "after_planned_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Planned End"
+          },
+          "after_planned_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Planned Start"
+          },
+          "before_planned_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Planned End"
+          },
+          "before_planned_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Planned Start"
+          },
+          "column": {
+            "enum": [
+              "machine",
+              "pool",
+              "manual",
+              "inspection",
+              "unassigned"
+            ],
+            "title": "Column",
+            "type": "string"
+          },
+          "lot_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Id"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "machine_pool_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Pool Id"
+          },
+          "made_item_part_number": {
+            "title": "Made Item Part Number",
+            "type": "string"
+          },
+          "made_item_revision": {
+            "title": "Made Item Revision",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "production_order_number": {
+            "title": "Production Order Number",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RedatedOrderReasonResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "production_order_number",
+          "lot_id",
+          "lot_number",
+          "made_item_part_number",
+          "made_item_revision",
+          "column",
+          "machine_id",
+          "machine_pool_id",
+          "before_planned_start",
+          "before_planned_end",
+          "after_planned_start",
+          "after_planned_end",
+          "reason"
+        ],
+        "title": "RedatedOrderResponse",
+        "type": "object"
+      },
       "RegroupLotPositionsRequest": {
         "properties": {
           "groups": {
@@ -59127,6 +59602,18 @@
               }
             ],
             "title": "Frozen Window Hours"
+          },
+          "internal_handoff_minutes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Handoff Minutes"
           },
           "overwrite_item_material_on_approval": {
             "anyOf": [

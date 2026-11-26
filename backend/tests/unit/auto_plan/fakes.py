@@ -8,6 +8,7 @@ from src.modules.fulfillment.domain.entities.admin_settings.production import (
     AdminProductionSettings,
 )
 from src.modules.fulfillment.domain.entities.machine_pool import MachinePool
+from src.modules.fulfillment.domain.entities.order_item import OrderItem
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_machine import ProductionMachine
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
@@ -189,6 +190,25 @@ class FakeEmptyRepo:
         self, demand_item_ids: list[int], *, refresh: bool = False
     ) -> list:
         return [a for d in demand_item_ids for a in await self.get_by_demand_item_id(d)]
+
+
+class FakeOrderItemRepo:
+    """The order line lookups the scheduling context reads, by id and by
+    lot position."""
+
+    def __init__(self, items: list[OrderItem]) -> None:
+        self.items = items
+
+    async def get_by_ids(self, ids: list[int], *, refresh: bool = False) -> list:
+        return [i for i in self.items if i.id in ids]
+
+    async def get_by_lot_position_id(self, lot_position_id: int):
+        return next((i for i in self.items if i.lot_position_id == lot_position_id), None)
+
+    async def get_by_lot_position_ids(
+        self, lot_position_ids: list[int], *, refresh: bool = False
+    ) -> list:
+        return [i for i in self.items if i.lot_position_id in lot_position_ids]
 
 
 class FakeMachineRepo:

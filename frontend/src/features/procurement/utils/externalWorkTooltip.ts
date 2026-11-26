@@ -34,6 +34,8 @@ export function externalWorkDateTooltip(
         return t(`${KEY}.afterStep`, { methods: methods(term), date })
       case 'raw_material':
         return t(`${KEY}.rawMaterial`, { date })
+      case 'late_arrival':
+        return t(`${KEY}.lateArrival`, { date })
       case 'response_time':
         return t(`${KEY}.responseTime`, { days }, days)
       case 'target_lot':
@@ -46,6 +48,8 @@ export function externalWorkDateTooltip(
         return term.minutes !== null
           ? t(`${KEY}.laterStepMinutes`, { days, methods: methods(term), minutes: term.minutes }, days)
           : t(`${KEY}.laterStep`, { days, methods: methods(term) }, days)
+      case 'wait_after':
+        return t(`${KEY}.waitAfter`, { days, methods: methods(term), minutes: term.minutes ?? 0 }, days)
       case 'back_by':
         return t(`${KEY}.backBy`, { date })
       case 'lead_time':

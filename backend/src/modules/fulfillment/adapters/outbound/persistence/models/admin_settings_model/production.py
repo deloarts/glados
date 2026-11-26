@@ -44,6 +44,9 @@ class AdminProductionSettingsOrmModel(Base):
     response_time_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1"
     )
+    internal_handoff_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     external_safety_margin_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=2, server_default="2"
     )

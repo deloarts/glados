@@ -7,7 +7,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/domain/services/scheduling/external_work_explanation.py
   - frontend/src/features/procurement/components/ExternalWorkTable.vue
   - frontend/src/features/procurement/composables/useExternalWorkRowMenu.ts
-lastVerified: 2026-11-24
+lastVerified: 2026-11-26
 ---
 
 **External Work** in Procurement lists every part of an open lot that goes to a supplier for an outside process, such as hardening or galvanizing. It tells you when the part can go, by when it must go so the steps after it are not late, and when it comes back, so you can collect parts for one supplier and send them together.
@@ -18,7 +18,7 @@ A part appears once its lot step is on a supplier's order, or while it waits for
 
 ## What the dates mean
 
-**Ready From** is when the step before is done, or the raw material is in, plus the response time. **Send By** counts back from the lot's target date: less the safety margin, less the steps after this one and less the lead time. **Back By** is the supplier's date once the order line has one, else **Send By** plus the lead time. Hover the small line under a date to see how it was counted. The safety margin is **Safety Margin for External Work (days)** in the production settings.
+**Ready From** is when the pieces of the step before are ready, with any wait after that step, or when the raw material is in, plus the response time. A delivery that is late counts as today. **Send By** counts back from the lot's target date: less the safety margin, less the steps after this one with the waits after them, and less the lead time. **Back By** is the supplier's date once the order line has one, else **Send By** plus the lead time. Hover the small line under a date to see how it was counted. The safety margin is **Safety Margin for External Work (days)** in the production settings.
 
 A note in the **Note** column marks a part that cannot be ready by its **Send By** day, one whose **Send By** day has passed, and a lot without a target date.
 

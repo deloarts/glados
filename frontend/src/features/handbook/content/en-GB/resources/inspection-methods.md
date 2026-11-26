@@ -7,7 +7,8 @@ sourceRefs:
   - backend/src/modules/catalogue/domain/policies/inspection_method_rules.py
   - backend/src/modules/catalogue/domain/services/label_name_rules.py
   - backend/src/modules/catalogue/application/services/catalogue_list_order.py
-lastVerified: 2026-11-10
+  - backend/src/modules/fulfillment/domain/policies/wait_after.py
+lastVerified: 2026-11-26
 ---
 
 An inspection method is a kind of quality check, such as a visual check, a thread gauge check or a measurement on the coordinate measuring machine. Every inspection step of a lot uses one. The method carries the defaults a new inspection step starts with and decides whether a completion needs a measurement report. The list lives under Resources, **Inspection Methods**.
@@ -28,16 +29,22 @@ Each method has a **Name** and a **Description** in every language of the interf
 
 Tick **Requires evidence** when a check must be documented. A completion for a step with this method can only be recorded once at least one measurement report file is attached to the production order.
 
+## Waiting after the check {#wait-after}
+
+**Wait after the check [min]** is optional and empty for new methods. Enter the minutes the pieces have to wait after a check of this method before the next step may start, such as for a lab result. The wait runs on the clock, overnight and over weekends too, and the next step is planned for when it is over, also once the check itself is reported complete. When the check is the last step of a lot, the lot counts as late until the wait is over, and saving a change replans the schedule.
+
 ## Managing the list
 
 You need the permission **Write Inspection Methods** to create, edit, move, archive and restore methods. Without it the buttons show disabled. Methods are archived, not deleted, so existing steps keep theirs. A method cannot be archived while it is the **Default Inspection Method** of the production settings; choose another default there first. **Show Archived** lists archived methods again, and restoring is refused while a live method already uses the same name. A click on a row opens its details.
 
-The order of the list is the order the pickers offer. If you may edit inspection methods, the first column shows a grip in every row. Hold the grip and drag the row to its new place; a line shows where it will land. The grip shows only while no sort, search or filter is active, since those show the rows in another order. New methods go to the end.
+The order of the list is the order the pickers offer. If you may edit inspection methods, drag a row by the grip in its first column to its new place. The grip shows only while no sort, search or filter is active. New methods go to the end.
 
 ## Examples
 
 **A visual check.** Create Visual check with 0 in **Default setup [min]** and 0.5 in **Default per piece [min]**. A new inspection step for 40 pieces starts with an estimate of 20 minutes, and the inspector can adjust it on the step.
 
 **Measuring with evidence.** Create CMM measurement, choose your measuring machine as **Default QA machine** and tick **Requires evidence**. New lots put their inspection on that machine, and the step cannot be completed until the report is attached.
+
+**Waiting for a lab result.** Create Salt spray test with 2880 in **Wait after the check [min]**, two days. A final check that ends on Monday at 10:00 has its result on Wednesday at 10:00, so a lot due on Wednesday is on time. Ending on Tuesday afternoon, the same lot counts as late.
 
 **Retiring the default.** You try to archive Final inspection, which is the **Default Inspection Method**. Glados refuses. Set another default in the production settings, then archive it.

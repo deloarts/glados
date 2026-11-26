@@ -21,6 +21,7 @@ function makeInspectionMethod(
     label_font_color: '#ffffff',
     default_setup_minutes: null,
     default_minutes_per_piece: null,
+    wait_after_minutes: null,
     requires_evidence: false,
     default_machine_id: null,
     default_machine_name: null,

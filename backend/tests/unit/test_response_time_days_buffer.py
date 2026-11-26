@@ -163,7 +163,7 @@ class FakeOrderItemRepo:
         return [self._by_id[i] for i in ids if i in self._by_id]
 
     async def get_by_lot_position_id(self, lot_position_id: int) -> OrderItem | None:
-        return None
+        return next((i for i in self._by_id.values() if i.lot_position_id == lot_position_id), None)
 
 
 class FakeSourceItemDemandRepo:
@@ -233,7 +233,10 @@ def build_repos(
     )
 
 
-async def test_predecessor_ready_at_is_buffered_by_response_time_days():
+async def test_an_in_house_predecessor_is_not_buffered_by_response_time_days():
+    """The response time is a buffer after an arrival. The pieces of an
+    in-house step are ready when it ends, so its end day gates the next
+    step whatever the response time is."""
     lot = make_lot()
     predecessor_position = make_position(id=1, sequence=1)
     successor_position = make_position(id=2, sequence=2)
@@ -263,7 +266,65 @@ async def test_predecessor_ready_at_is_buffered_by_response_time_days():
     )
 
     assert unbuffered.predecessor_ready_at == date(2026, 1, 10)
+    assert buffered.predecessor_ready_at == date(2026, 1, 10)
+
+
+async def test_an_external_predecessor_is_buffered_by_response_time_days():
+    lot = make_lot()
+    predecessor_position = make_position(id=1, sequence=1)
+    predecessor_position.kind = LotPositionKind.EXTERNAL
+    successor_position = make_position(id=2, sequence=2)
+    lot.positions = [predecessor_position, successor_position]
+    delivered = make_order_item(30, delivery_date=date(2026, 1, 10))
+    delivered.lot_position_id = 1
+    successor_order = make_order(id=20, lot_position_id=2)
+    repos = build_repos(orders=[successor_order], order_items=[delivered])
+
+    unbuffered = await build_order_context(
+        successor_order,
+        lot,
+        machine=None,
+        repos=repos,
+        target_date=None,
+        response_time_days=0,
+        zone=UTC,
+    )
+    buffered = await build_order_context(
+        successor_order,
+        lot,
+        machine=None,
+        repos=repos,
+        target_date=None,
+        response_time_days=3,
+        zone=UTC,
+    )
+
+    assert unbuffered.predecessor_ready_at == date(2026, 1, 10)
     assert buffered.predecessor_ready_at == date(2026, 1, 13)
+
+
+async def test_an_in_house_predecessor_hands_over_after_the_handoff_minutes():
+    lot = make_lot()
+    predecessor_position = make_position(id=1, sequence=1)
+    successor_position = make_position(id=2, sequence=2)
+    lot.positions = [predecessor_position, successor_position]
+    predecessor_order = make_order(id=10, lot_position_id=1)
+    predecessor_order.planned_end = datetime(2026, 1, 10, 14, 0, tzinfo=UTC)
+    successor_order = make_order(id=20, lot_position_id=2)
+    repos = build_repos(orders=[predecessor_order, successor_order])
+
+    ctx = await build_order_context(
+        successor_order,
+        lot,
+        machine=None,
+        repos=repos,
+        target_date=None,
+        internal_handoff_minutes=45,
+        zone=UTC,
+    )
+
+    assert ctx.internal_handoff_minutes == 45
+    assert ctx.predecessor_ready_moment == datetime(2026, 1, 10, 14, 45, tzinfo=UTC)
 
 
 async def test_material_ready_at_is_buffered_by_response_time_days():

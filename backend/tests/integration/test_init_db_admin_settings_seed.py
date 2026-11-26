@@ -400,6 +400,7 @@ def _expected_fresh_install() -> dict[str, dict[str, Any] | None]:
             },
             "default_external_lead_days": 0,
             "response_time_days": 1,
+            "internal_handoff_minutes": 0,
             "external_safety_margin_days": 2,
             "require_qa": False,
             "require_source_item_approval": False,

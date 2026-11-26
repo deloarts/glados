@@ -112,6 +112,7 @@ def fabrication_method_orm_to_entity(orm: FabricationMethodOrmModel) -> Fabricat
         required_external=orm.required_external,
         default_supplier_id=orm.default_supplier_id,
         lead_time_days=orm.lead_time_days,
+        wait_after_minutes=orm.wait_after_minutes,
         default_for_assemblies=orm.default_for_assemblies,
     )
 
@@ -131,6 +132,7 @@ def inspection_method_orm_to_entity(orm: InspectionMethodOrmModel) -> Inspection
         **changed_by_kwargs(orm.changed_by_id, orm.changed_by),
         default_setup_minutes=orm.default_setup_minutes,
         default_minutes_per_piece=orm.default_minutes_per_piece,
+        wait_after_minutes=orm.wait_after_minutes,
         requires_evidence=orm.requires_evidence,
         default_machine_id=orm.default_machine_id,
         default_machine_name=orm.default_machine_name,

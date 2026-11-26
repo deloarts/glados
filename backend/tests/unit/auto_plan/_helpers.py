@@ -17,6 +17,7 @@ from src.modules.fulfillment.domain.entities.admin_settings.production import (
 from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.lot_step import LotStep
 from src.modules.fulfillment.domain.entities.machine_pool import MachinePool
+from src.modules.fulfillment.domain.entities.order_item import OrderItem
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_machine import ProductionMachine
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
@@ -37,6 +38,7 @@ from tests.unit.auto_plan.fakes import FakeCalendarRepo
 from tests.unit.auto_plan.fakes import FakeEmptyRepo
 from tests.unit.auto_plan.fakes import FakeLotRepo
 from tests.unit.auto_plan.fakes import FakeMachineRepo
+from tests.unit.auto_plan.fakes import FakeOrderItemRepo
 from tests.unit.auto_plan.fakes import FakeOrderRepo
 from tests.unit.auto_plan.fakes import FakePoolRepo
 from tests.unit.auto_plan.fakes import FakeSettingsRepo
@@ -228,12 +230,15 @@ def build_auto_plan(
     machines: list[ProductionMachine],
     pools: list[MachinePool] | None = None,
     response_time_days: int = 0,
+    order_items: list[OrderItem] | None = None,
 ) -> tuple[AutoPlan, FakeOrderRepo]:
     order_repo = FakeOrderRepo(orders)
     repos = SchedulingRepos(
         orders=order_repo,  # type: ignore[arg-type]
         lots=FakeLotRepo(lots),  # type: ignore[arg-type]
-        order_items=FakeEmptyRepo(),  # type: ignore[arg-type]
+        order_items=(  # type: ignore[arg-type]
+            FakeOrderItemRepo(order_items) if order_items is not None else FakeEmptyRepo()
+        ),
         source_item_demands=FakeEmptyRepo(),  # type: ignore[arg-type]
         source_item_allocations=FakeEmptyRepo(),  # type: ignore[arg-type]
         made_item_allocations=FakeEmptyRepo(),  # type: ignore[arg-type]
