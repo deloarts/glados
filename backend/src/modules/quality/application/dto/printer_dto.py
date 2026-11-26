@@ -9,6 +9,7 @@ from pydantic import Field
 
 from src.modules.catalogue.application.dto.bought_item_dto import BoughtItemResult
 from src.modules.platform.application.dto.base import ResultBase
+from src.modules.quality.domain.value_objects.printer_kind import PrinterKind
 
 # ══════════════════════════════════════════════════════════════════════
 # Printer (catalogue)
@@ -40,7 +41,9 @@ class CreatePrinterCommand(BaseModel):
 class UpdatePrinterCommand(BaseModel):
     name: str | None = None
     internal_name: str | None = None
-    kind: str | None = None
+    # Typed as the enum so the use case can copy it onto the entity as is,
+    # since the repository writes the entity's kind through its enum value.
+    kind: PrinterKind | None = None
     host: str | None = None
     port: int | None = Field(default=None, ge=1, le=65535)
     timeout_seconds: float | None = Field(default=None, gt=0)

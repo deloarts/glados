@@ -108,6 +108,69 @@ async def test_update_printer(auth_client) -> None:
     assert resp.json()["name"] == "Renamed"
 
 
+async def test_saving_the_edit_dialog_payload_with_default_on_succeeds(auth_client) -> None:
+    """The printer dialog always sends every field, `kind` included. A kind
+    arriving as a plain string used to crash the repository with a 500."""
+    client: TestClient = await auth_client(permissions=["write:printers"])
+    created = await _create(client, name="Office", kind="ipp_document", port=631, transport="ipp")
+    payload = {
+        "name": "Office",
+        "internal_name": None,
+        "kind": "ipp_document",
+        "host": "10.0.0.50",
+        "port": 631,
+        "timeout_seconds": 5.0,
+        "transport": "ipp",
+        "ipp_uri_path": "/",
+        "head_dpi": None,
+        "format_convert_factor": None,
+        "default_media": None,
+        "location": None,
+        "vendor": None,
+        "model": None,
+        "firmware": None,
+        "bought_item_ids": [],
+        "enabled": True,
+        "is_default": True,
+        "note": None,
+    }
+
+    resp = await client.patch(f"/api/v1/web/printers/{created['id']}", json=payload)
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["is_default"] is True
+    assert resp.json()["kind"] == "ipp_document"
+
+
+async def _default_ids(client: TestClient) -> list[int]:
+    resp = await client.get("/api/v1/web/printers/", params={"include_archived": True})
+    assert resp.status_code == 200
+    return [p["id"] for p in resp.json()["items"] if p["is_default"]]
+
+
+async def test_setting_a_new_default_clears_the_old_one(auth_client) -> None:
+    client: TestClient = await auth_client(permissions=["write:printers"])
+    a = await _create(client, name="Printer A")
+    b = await _create(client, name="Printer B")
+
+    first = await client.patch(f"/api/v1/web/printers/{a['id']}", json={"is_default": True})
+    second = await client.patch(f"/api/v1/web/printers/{b['id']}", json={"is_default": True})
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert await _default_ids(client) == [b["id"]]
+
+
+async def test_creating_a_default_clears_the_old_one(auth_client) -> None:
+    client: TestClient = await auth_client(permissions=["write:printers"])
+    await _create(client, name="Printer A", is_default=True)
+
+    b = await _create(client, name="Printer B", is_default=True)
+
+    assert b["is_default"] is True
+    assert await _default_ids(client) == [b["id"]]
+
+
 async def test_archive_printer_requires_write_permission(auth_client) -> None:
     creator: TestClient = await auth_client(
         username="creator", email="creator@example.com", permissions=["write:printers"]

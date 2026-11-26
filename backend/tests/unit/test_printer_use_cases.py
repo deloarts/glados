@@ -150,6 +150,11 @@ class FakePrinterRepository:
         item.archived = True
         await self.save(item)
 
+    async def clear_default_except(self, id: int) -> None:
+        for printer in self._printers.values():
+            if printer.id != id:
+                printer.is_default = False
+
 
 class FakeBoughtItemRepository:
     def __init__(self, items: list[BoughtItem] | None = None):
@@ -260,6 +265,25 @@ class TestCreatePrinter:
         result = await self.use_case.execute(actor=self.actor, cmd=self._cmd(internal_name=None))
         assert result.internal_name is None
 
+    async def test_creating_a_default_clears_the_previous_default(self):
+        previous = make_printer(id=7)
+        previous.is_default = True
+        await self.printer_repo.save(previous)
+
+        result = await self.use_case.execute(actor=self.actor, cmd=self._cmd(is_default=True))
+
+        assert result.is_default is True
+        assert previous.is_default is False
+
+    async def test_creating_a_non_default_keeps_the_existing_default(self):
+        previous = make_printer(id=7)
+        previous.is_default = True
+        await self.printer_repo.save(previous)
+
+        await self.use_case.execute(actor=self.actor, cmd=self._cmd(is_default=False))
+
+        assert previous.is_default is True
+
     async def test_missing_bought_item_raises(self):
         with pytest.raises(BoughtItemNotFoundError):
             await self.use_case.execute(actor=self.actor, cmd=self._cmd(bought_item_ids=[999]))
@@ -295,6 +319,37 @@ class TestUpdatePrinter:
             actor=self.actor, printer_id=1, cmd=UpdatePrinterCommand(bought_item_ids=[1])
         )
         assert result.bought_item_ids == [1]
+
+    async def test_kind_reaches_the_entity_as_the_enum(self):
+        """The endpoint builds the command from plain JSON strings, and the
+        repository writes the kind through its enum value."""
+        await self.use_case.execute(
+            actor=self.actor, printer_id=1, cmd=UpdatePrinterCommand(kind="ipp_document")
+        )
+        assert self.printer.kind is PrinterKind.IPP_DOCUMENT
+
+    async def test_setting_a_default_clears_the_previous_default(self):
+        previous = make_printer(id=2)
+        previous.is_default = True
+        await self.printer_repo.save(previous)
+
+        result = await self.use_case.execute(
+            actor=self.actor, printer_id=1, cmd=UpdatePrinterCommand(is_default=True)
+        )
+
+        assert result.is_default is True
+        assert previous.is_default is False
+
+    async def test_updating_another_field_keeps_the_existing_default(self):
+        previous = make_printer(id=2)
+        previous.is_default = True
+        await self.printer_repo.save(previous)
+
+        await self.use_case.execute(
+            actor=self.actor, printer_id=1, cmd=UpdatePrinterCommand(name="Renamed")
+        )
+
+        assert previous.is_default is True
 
     async def test_missing_bought_item_raises(self):
         with pytest.raises(BoughtItemNotFoundError):
