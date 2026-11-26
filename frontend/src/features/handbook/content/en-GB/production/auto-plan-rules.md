@@ -5,7 +5,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/production_schedule/auto_plan.py
   - backend/src/modules/fulfillment/domain/services/scheduling/candidate_ordering.py
   - backend/src/modules/fulfillment/domain/services/scheduling/machine_selection.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 [Auto-Plan](/handbook/production/auto-plan) works through the queued orders one at a time. Each order it places takes the earliest free time it can get, so the order in which it considers them decides who gets the early slots. Everything it may not move stays where it is and becomes a fixed point that the rest is planned around. The dates themselves come from the rules on [When an order can start](/handbook/production/auto-plan-timing).
@@ -20,7 +20,7 @@ The orders that stay keep their queue places, and the moved orders are appended 
 
 ## In which order {#ordering}
 
-A lot's target date belongs to its last step. Each earlier step is due when the next one has to start, counted back by a rough lead time. An internal step counts its estimated minutes in whole working days of eight hours, at least one. An external step counts the supplier's lead time, or the lead time of its fabrication methods, or the **Default External Lead Time (days)**. A lot without a target date gives its steps no due date, and those sort last wherever the algorithm sorts by due date.
+A lot's target date belongs to its last step. Each earlier step is due when the next one has to start, counted back by a rough lead time. An internal step counts its estimated minutes in whole working days of eight hours, at least one. An external step counts the supplier's lead time, or the lead time of its fabrication methods, or the **Default External Lead Time (days)**. When the pieces of a step wait after it, such as for curing or a lab result, the step is due that many whole days earlier, so its wait still ends in time. A lot without a target date gives its steps no due date, and those sort last wherever the algorithm sorts by due date.
 
 The algorithm then sorts the orders, and creation order breaks every tie. Whatever the algorithm, the steps of one lot keep their order, so a later step is never placed ahead of its own previous step.
 

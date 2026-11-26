@@ -7,7 +7,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/domain/services/scheduling/machine_calendar.py
   - backend/src/modules/fulfillment/domain/services/scheduling/forward_walk.py
   - frontend/src/features/production/utils/capacityUtilization.ts
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 Der Tab Kapazität zeigt denselben Produktionszeitplan wie die Warteschlange, nur anders gelesen. Statt einer Karte je Auftrag zeigt er verplante und verfügbare Stunden je Tag, damit du auf einen Blick siehst, welche Maschinen und Pools noch Luft haben und welche knapp sind. Die Tage wählst du mit **Zeitraum**, und [Auto-Planen](/handbook/production/auto-plan) startest du mit dem Button **Auto-Planen** in derselben Leiste.
@@ -34,6 +34,6 @@ Nach einer Änderung, die Plantermine verschiebt, arbeitet Glados die neuen Term
 
 ## Warum ist ein Platz frei? {#free-slots}
 
-Ein freier Tag heißt nicht, wer zuerst kommt, mahlt zuerst. Die Warteschlange jeder Maschine wird in ihrer festen Reihenfolge geplant, und jeder Auftrag startet zum frühesten Zeitpunkt, den seine eigene Reihe erlaubt, ein späterer Auftrag springt also nie in eine Lücke, die ein früherer gelassen hat. Eine Lücke bleibt auch leer, wenn der nächste Auftrag auf seinen vorherigen Schritt plus die Reaktionszeit oder auf sein Rohmaterial wartet, oder wenn ein Auftrag im fixierten Zeitraum seinen Platz behält. Die Regeln stehen unter [Wann ein Auftrag starten kann](/handbook/production/auto-plan-timing).
+Ein freier Tag heißt nicht, wer zuerst kommt, mahlt zuerst. Die Warteschlange jeder Maschine wird in ihrer festen Reihenfolge geplant, und jeder Auftrag startet zum frühesten Zeitpunkt, den seine eigene Reihe erlaubt, ein späterer Auftrag springt also nie in eine Lücke, die ein früherer gelassen hat. Eine Lücke bleibt auch leer, wenn der nächste Auftrag auf seinen vorherigen Schritt, auf eine Lieferung plus die Reaktionszeit oder auf sein Rohmaterial wartet, oder wenn ein Auftrag im fixierten Zeitraum seinen Platz behält. Die Regeln stehen unter [Wann ein Auftrag starten kann](/handbook/production/auto-plan-timing).
 
-Ein Beispiel: Eine Drehmaschine zeigt den Mittwoch frei, obwohl ein Auftrag auf ihr wartet. Sein vorheriger Schritt, ein Frässchritt, endet am Mittwochnachmittag, und mit einem Tag Reaktionszeit kann der Drehauftrag nicht vor Donnerstag starten.
+Ein Beispiel: Eine Drehmaschine zeigt den Mittwoch frei, obwohl ein Auftrag auf ihr wartet. Sein vorheriger Schritt, ein Härteschritt bei einem Lieferanten, wird am Mittwoch zurückerwartet, und mit einem Tag Reaktionszeit kann der Drehauftrag nicht vor Donnerstag starten.

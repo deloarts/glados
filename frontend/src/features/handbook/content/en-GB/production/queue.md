@@ -9,14 +9,14 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/production_order/split_production_order.py
   - backend/src/modules/fulfillment/application/use_cases/production_order/merge_production_orders.py
   - backend/src/modules/fulfillment/application/use_cases/production_order/record_manufacturing_assessment.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 The **Queue** tab under Production shows every open production order as a card, one column per machine, and updates by itself when someone changes an order.
 
 ## Columns and days {#columns}
 
-**Manual Work** holds steps that need no machine and **Inspection** the QA steps, followed by the pools and machines in alphabetical order. **No Machine Assigned** appears only for old orders with neither machine nor pool. Click a machine name to open its [machine page](/handbook/production/machines).
+**Manual Work** holds steps that need no machine and **Inspection** the QA steps, followed by the pools and machines in alphabetical order. Each step in **Manual Work** and **Inspection** is planned on its own, so a step that waits holds back no other, and both columns list their cards by planned start. **No Machine Assigned** appears only for old orders with neither machine nor pool. Click a machine name to open its [machine page](/handbook/production/machines).
 
 In a column, **In Process** lists the running orders, and the waiting ones follow by planned start day. The date range on the bar starts as today through Sunday and spans up to 31 days. Work planned before the range sits under **Overdue**, and work planned after it stays off the board.
 

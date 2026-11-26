@@ -5,7 +5,7 @@ sourceRefs:
   - frontend/src/features/production/planning/views/ProductionPlanningView.vue
   - frontend/src/features/production/utils/productionPlanningTasks.ts
   - backend/src/modules/fulfillment/application/use_cases/production_schedule/recompute_machine_schedule.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 The **Planning** tab under Production draws every queued, running and paused production order as a bar on a timeline, grouped by machine. It answers when each order is expected to run and what it waits for. The chart only reads the plan, so you cannot drag bars here. It updates by itself when an order, a lot or a machine changes.
@@ -24,7 +24,7 @@ A bar with an orange outline has a scheduling conflict, for example **Past targe
 
 ## Where the dates come from {#dates}
 
-The dates are the production schedule itself, worked out from each machine's queue, its working hours, the lot's steps and the material. A new order that the schedule has not dated yet gets a rough estimate until it has. The [Capacity](/handbook/production/capacity) tab shows the same schedule as booked and free hours per day.
+The dates are the production schedule itself, worked out from each machine's queue, its working hours, the lot's steps and the material. A new order that the schedule has not dated yet gets a rough estimate until it has. A running order that runs late is drawn up to its later planned end, so the bar grows while the work overruns. The [Capacity](/handbook/production/capacity) tab shows the same schedule as booked and free hours per day.
 
 ## Changing the plan {#changes}
 

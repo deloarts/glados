@@ -5,7 +5,8 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/production_schedule/auto_plan.py
   - backend/src/modules/fulfillment/domain/value_objects/auto_plan_algorithm.py
   - frontend/src/features/production/components/AutoPlanDialog.vue
-lastVerified: 2026-11-10
+  - backend/src/modules/fulfillment/application/use_cases/production_schedule/_redated.py
+lastVerified: 2026-11-26
 ---
 
 <script setup lang="ts">
@@ -20,7 +21,7 @@ Auto-Planen schreibt sein Ergebnis sofort. Es gibt keine Vorschau und keinen Bes
 
 ## Ausführen {#run}
 
-Du öffnest Auto-Planen mit dem Button **Auto-Planen** im Tab Lose oder im Tab Kapazität. Der Button braucht **Fertigungsaufträge schreiben** und ist ohne diese Berechtigung deaktiviert, mit einem Tooltip. Im Dialog wählst du den **Planungsalgorithmus** und die **Planungsebene**, und unter **Einzubeziehende Maschinen** nimmst du das Häkchen bei jeder Maschine weg, die der Lauf in Ruhe lassen soll. **Maschinenzuweisung erlauben** ist standardmäßig aus, ein Auftrag bewegt sich also nur innerhalb seiner Maschine. **Überschreiben von manuell geplanten Terminen erlauben** ist standardmäßig aus, angeheftete Aufträge bleiben also, wo sie sind. **Heute geplante Aufträge ausschließen** ist standardmäßig an, damit die heutige Warteschlange in der Werkstatt nicht durcheinanderkommt. **Reaktionszeit für geplanten Start (Tage)** ist aus der Admin-Einstellung vorbefüllt, und eine Änderung hier gilt nur für diesen Lauf.
+Du öffnest Auto-Planen mit dem Button **Auto-Planen** im Tab Lose oder im Tab Kapazität. Der Button braucht **Fertigungsaufträge schreiben** und ist ohne diese Berechtigung deaktiviert, mit einem Tooltip. Im Dialog wählst du den **Planungsalgorithmus** und die **Planungsebene**, und unter **Einzubeziehende Maschinen** nimmst du das Häkchen bei jeder Maschine weg, die der Lauf in Ruhe lassen soll. **Maschinenzuweisung erlauben** ist standardmäßig aus, ein Auftrag bewegt sich also nur innerhalb seiner Maschine. **Überschreiben von manuell geplanten Terminen erlauben** ist standardmäßig aus, angeheftete Aufträge bleiben also, wo sie sind. **Heute geplante Aufträge ausschließen** ist standardmäßig an, damit die heutige Warteschlange in der Werkstatt nicht durcheinanderkommt. **Reaktionszeit für geplanten Start (Tage)** ist aus der Admin-Einstellung vorbefüllt, und eine Änderung hier gilt nur für diesen Lauf. Sie kommt nach der Lieferung eines Lieferanten und nach der Ankunft des Rohmaterials dazu, nicht nach einem Schritt in der Eigenfertigung. Jeder Lauf plant am Ende alle Termine neu, auch ein Lauf, der nichts verschiebt.
 
 Es kann immer nur ein Lauf gleichzeitig laufen. Während der Lauf eines anderen läuft, zeigt der Dialog, wer ihn wann gestartet hat, und **Auto-Plan ausführen** bleibt deaktiviert, bis dieser Lauf fertig ist. Schließt du den Dialog während deines eigenen Laufs, läuft der Lauf im Hintergrund weiter, und der Button zeigt ein drehendes Symbol, bis er endet.
 
@@ -29,6 +30,8 @@ Es kann immer nur ein Lauf gleichzeitig laufen. Während der Lauf eines anderen 
 Die Ergebnistabelle zeigt jeden Auftrag, den der Lauf verschoben hat, mit Maschine oder Pool und Zeitfenster **Vorher** und **Nachher**, und jeden Konflikt, den er jetzt hat. Unter der Tabelle nennen zwei Zahlen die Aufträge, die absichtlich unangetastet blieben: angeheftete oder laufende Aufträge und Aufträge, die schon für heute geplant sind.
 
 Aufträge, die der Lauf nicht einplanen konnte, stehen getrennt mit einem Grund darunter. **Wartet auf Material** heißt, das Rohmaterial ist weder eingetroffen noch mit einem Liefertermin bestellt. **Keine geeignete Maschine** und **Kein geeigneter Pool** heißen, nichts im Lauf kann die Arbeit machen. **Kein Pool-Mitglied im Bereich** heißt, es gibt einen geeigneten Pool, aber keine seiner Maschinen war angehakt. **Maschine ausgefallen** heißt, eine geeignete Maschine gibt es, sie hat aber eine offene Ausfallzeit, daher hat der Lauf sie ausgelassen. **Während der Planung geändert** heißt, jemand hat diese Warteschlange während des Laufs geändert, starte Auto-Planen also erneut, um den Auftrag einzuplanen.
+
+**Vom Terminlauf neu datiert** listet die Aufträge, die der Lauf nicht eingeplant hat, deren Tag sich beim Neuplanen der Termine aber geändert hat, etwa ein manueller Schritt, der heute beginnen kann, oder ein Schritt nach einer verspäteten Lieferung. Jede Zeile zeigt **Vorher** und **Nachher**, die **Verschiebung** in Tagen und den **Grund** für den neuen Termin. **Alle**, **Früher** und **Später** filtern die Liste, ein Klick auf eine Zeile öffnet den Auftrag, und eine Zeile darunter zählt die Aufträge, die ihren Tag behalten haben. Ist das Neuplanen fehlgeschlagen, sagt das ein Hinweis, und die Termine folgen mit dem nächsten Neuplanen.
 
 ## Planungsebene {#planning-level}
 

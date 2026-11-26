@@ -5,7 +5,7 @@ sourceRefs:
   - frontend/src/features/production/planning/views/ProductionPlanningView.vue
   - frontend/src/features/production/utils/productionPlanningTasks.ts
   - backend/src/modules/fulfillment/application/use_cases/production_schedule/recompute_machine_schedule.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 Der Reiter **Planung** unter Produktion zeichnet jeden eingeplanten, laufenden und pausierten Fertigungsauftrag als Balken auf einer Zeitachse, gruppiert nach Maschine. Er zeigt, wann jeder Auftrag voraussichtlich läuft und worauf er wartet. Das Diagramm liest den Plan nur, Balken lassen sich hier nicht ziehen. Es aktualisiert sich von selbst, wenn sich ein Auftrag, ein Los oder eine Maschine ändert.
@@ -24,7 +24,7 @@ Ein Balken mit orangem Rand hat einen Planungskonflikt, zum Beispiel **Zieltermi
 
 ## Woher die Termine kommen {#dates}
 
-Die Termine sind der Fertigungsplan selbst, berechnet aus der Warteschlange jeder Maschine, ihren Arbeitszeiten, den Schritten des Loses und dem Material. Ein neuer Auftrag, den der Plan noch nicht terminiert hat, bekommt bis dahin eine grobe Schätzung. Der Reiter [Kapazität](/handbook/production/capacity) zeigt denselben Plan als gebuchte und freie Stunden je Tag.
+Die Termine sind der Fertigungsplan selbst, berechnet aus der Warteschlange jeder Maschine, ihren Arbeitszeiten, den Schritten des Loses und dem Material. Ein neuer Auftrag, den der Plan noch nicht terminiert hat, bekommt bis dahin eine grobe Schätzung. Ein laufender Auftrag, der zu lange läuft, wird bis zu seinem späteren geplanten Ende gezeichnet, der Balken wächst also, solange die Arbeit überzieht. Der Reiter [Kapazität](/handbook/production/capacity) zeigt denselben Plan als gebuchte und freie Stunden je Tag.
 
 ## Den Plan ändern {#changes}
 

@@ -7,7 +7,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/domain/services/scheduling/machine_calendar.py
   - backend/src/modules/fulfillment/domain/services/scheduling/forward_walk.py
   - frontend/src/features/production/utils/capacityUtilization.ts
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 The Capacity tab shows the same production schedule as the queue board, read a different way. Instead of one card per order, it shows booked and available hours per day, so you can see at a glance which machines and pools have room and which are stretched. Pick the days with **Date range**, and start [Auto-Plan](/handbook/production/auto-plan) from the **Auto-Plan** button in the same bar.
@@ -34,6 +34,6 @@ After a change that moves planned dates, Glados works the new dates into every o
 
 ## Why is a slot free? {#free-slots}
 
-A free day is not first come, first served. Each machine's queue is planned in its fixed order, and every order starts at the earliest point its own turn allows, so a later order never jumps into a gap an earlier one left. A gap also stays empty when the next order waits for its previous step plus the response time, or for its raw material, or when an order within the frozen planning window keeps its place. The rules are on [When an order can start](/handbook/production/auto-plan-timing).
+A free day is not first come, first served. Each machine's queue is planned in its fixed order, and every order starts at the earliest point its own turn allows, so a later order never jumps into a gap an earlier one left. A gap also stays empty when the next order waits for its previous step, for a delivery plus the response time, or for its raw material, or when an order within the frozen planning window keeps its place. The rules are on [When an order can start](/handbook/production/auto-plan-timing).
 
-For example, a lathe shows Wednesday free although an order is queued on it. Its previous step, a milling step, ends on Wednesday afternoon, and with one day of response time the turning order cannot start before Thursday.
+For example, a lathe shows Wednesday free although an order is queued on it. Its previous step, a hardening step at a supplier, is expected back on Wednesday, and with one day of response time the turning order cannot start before Thursday.

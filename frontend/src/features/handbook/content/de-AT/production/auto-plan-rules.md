@@ -5,7 +5,7 @@ sourceRefs:
   - backend/src/modules/fulfillment/application/use_cases/production_schedule/auto_plan.py
   - backend/src/modules/fulfillment/domain/services/scheduling/candidate_ordering.py
   - backend/src/modules/fulfillment/domain/services/scheduling/machine_selection.py
-lastVerified: 2026-11-10
+lastVerified: 2026-11-26
 ---
 
 [Auto-Planen](/handbook/production/auto-plan) arbeitet die wartenden Aufträge einen nach dem anderen ab. Jeder eingeplante Auftrag bekommt die früheste freie Zeit, die er kriegen kann, also entscheidet die Reihenfolge, wer die frühen Plätze bekommt. Alles, was der Lauf nicht bewegen darf, bleibt, wo es ist, und wird zum fixen Punkt, um den herum der Rest geplant wird. Die Termine selbst ergeben sich aus den Regeln unter [Wann ein Auftrag starten kann](/handbook/production/auto-plan-timing).
@@ -20,7 +20,7 @@ Die Aufträge, die bleiben, behalten ihre Plätze in der Warteschlange, und die 
 
 ## In welcher Reihenfolge {#ordering}
 
-Das Zieldatum eines Loses gehört zu seinem letzten Schritt. Jeder frühere Schritt ist fällig, wenn der nächste beginnen muss, zurückgerechnet mit einer groben Durchlaufzeit. Ein interner Schritt zählt seine geschätzten Minuten in ganzen Arbeitstagen zu acht Stunden, mindestens einen. Ein externer Schritt zählt die Durchlaufzeit des Lieferanten, sonst die seiner Fertigungsverfahren, sonst die **Standard-Vorlaufzeit extern (Tage)**. Ein Los ohne Zieldatum gibt seinen Schritten kein Fälligkeitsdatum, und diese landen überall dort hinten, wo der Algorithmus nach Fälligkeit sortiert.
+Das Zieldatum eines Loses gehört zu seinem letzten Schritt. Jeder frühere Schritt ist fällig, wenn der nächste beginnen muss, zurückgerechnet mit einer groben Durchlaufzeit. Ein interner Schritt zählt seine geschätzten Minuten in ganzen Arbeitstagen zu acht Stunden, mindestens einen. Ein externer Schritt zählt die Durchlaufzeit des Lieferanten, sonst die seiner Fertigungsverfahren, sonst die **Standard-Vorlaufzeit extern (Tage)**. Müssen die Teile nach einem Schritt warten, etwa zum Aushärten oder auf ein Laborergebnis, ist der Schritt so viele ganze Tage früher fällig, damit seine Wartezeit trotzdem rechtzeitig endet. Ein Los ohne Zieldatum gibt seinen Schritten kein Fälligkeitsdatum, und diese landen überall dort hinten, wo der Algorithmus nach Fälligkeit sortiert.
 
 Danach sortiert der Algorithmus die Aufträge, und bei Gleichstand entscheidet die Erstellungsreihenfolge. Egal welcher Algorithmus, die Schritte eines Loses behalten ihre Reihenfolge, ein späterer Schritt wird also nie vor seinen eigenen vorherigen Schritt gelegt.
 
