@@ -49,6 +49,9 @@ const emptyStreamResponse: AutoPlanResponse = {
   skipped_pinned_or_in_progress: 0,
   skipped_todays_planned: 0,
   skipped: [],
+  redated: [],
+  kept_day: 0,
+  walk_failed: false,
 }
 
 // onConfirm() goes through runStore.run() -> streamAutoPlanSchedule, so the
@@ -139,6 +142,9 @@ function makeResponse(overrides: Partial<AutoPlanResponse> = {}): AutoPlanRespon
     skipped_pinned_or_in_progress: 0,
     skipped_todays_planned: 0,
     skipped: [],
+    redated: [],
+    kept_day: 0,
+    walk_failed: false,
     ...overrides,
   }
 }
@@ -331,6 +337,9 @@ describe('AutoPlanDialog', () => {
       skipped_pinned_or_in_progress: 0,
       skipped_todays_planned: 0,
       skipped: [],
+      redated: [],
+      kept_day: 0,
+      walk_failed: false,
     })
 
     await vm.onConfirm()

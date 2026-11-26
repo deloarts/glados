@@ -431,8 +431,19 @@ async def _describe_open_positions(
         stored_internal_ready_at = None
         typed_external_date = None
         lead_days = None
+        order_item_id = None
+        arrival_late = False
         outsourced_unassigned = is_outsourced_unassigned(earlier)
         if earlier.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
+            line = await _live_order_line(earlier.id, repos, order_items_by_position)
+            if line is not None:
+                order_item_id = line.id
+                arrival_late = (
+                    line.delivery_date is None
+                    and line.ready_for_pickup_date is None
+                    and line.expected_delivery_date is not None
+                    and line.expected_delivery_date < today
+                )
             external_ready_at = await _external_ready_at(
                 earlier.id, repos, order_items_by_position, zone=zone, today=today
             )
@@ -481,6 +492,8 @@ async def _describe_open_positions(
                 ),
                 completed_ready_moment=completed_ready_moment,
                 completed=closed,
+                order_item_id=order_item_id,
+                arrival_late=arrival_late,
             )
         )
     return tuple(described)

@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-25T13:27:07.382Z
+ * Generated: 2026-11-25T14:52:08.190Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -13271,8 +13271,15 @@ export interface components {
         };
         /** AutoPlanResponse */
         AutoPlanResponse: {
+            /**
+             * Kept Day
+             * @default 0
+             */
+            kept_day: number;
             /** Proposals */
             proposals: components["schemas"]["AutoPlanOrderDiffResponse"][];
+            /** Redated */
+            redated: components["schemas"]["RedatedOrderResponse"][];
             /** Skipped */
             skipped: components["schemas"]["AutoPlanSkippedOrderResponse"][];
             /**
@@ -13285,6 +13292,11 @@ export interface components {
              * @default 0
              */
             skipped_todays_planned: number;
+            /**
+             * Walk Failed
+             * @default false
+             */
+            walk_failed: boolean;
         };
         /**
          * AutoPlanRunResponse
@@ -26755,6 +26767,87 @@ export interface components {
             quantity_scrap: number;
             reject_reason?: components["schemas"]["ScrapReason"] | null;
             scrap_reason?: components["schemas"]["ScrapReason"] | null;
+        };
+        /** RedatedOrderReasonResponse */
+        RedatedOrderReasonResponse: {
+            /** Day */
+            day: string | null;
+            /** Expected Date */
+            expected_date: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ready_now" | "queue" | "predecessor" | "order_line" | "raw_material" | "not_before" | "in_progress" | "pinned" | "frozen" | "undated";
+            /** Late */
+            late: boolean;
+            /** Method Name */
+            method_name: {
+                [key: string]: string;
+            };
+            /** Moment */
+            moment: string | null;
+            /** Order Item Id */
+            order_item_id: number | null;
+            /** Overrun */
+            overrun: boolean;
+            /** Pieces Processed */
+            pieces_processed: number | null;
+            /** Predecessor Order Number */
+            predecessor_order_number: string | null;
+            /** Predecessor Sequence */
+            predecessor_sequence: number | null;
+            /** Previous Order Id */
+            previous_order_id: number | null;
+            /** Previous Order Number */
+            previous_order_number: string | null;
+            /** Previous Overrun */
+            previous_overrun: boolean;
+            /** Previous Pieces Processed */
+            previous_pieces_processed: number | null;
+            /** Previous Quantity */
+            previous_quantity: number | null;
+            /** Previous Running */
+            previous_running: boolean;
+            /** Quantity */
+            quantity: number | null;
+            /** Response Time Days */
+            response_time_days: number;
+            /** Wait After Minutes */
+            wait_after_minutes: number;
+        };
+        /** RedatedOrderResponse */
+        RedatedOrderResponse: {
+            /** After Planned End */
+            after_planned_end: string | null;
+            /** After Planned Start */
+            after_planned_start: string | null;
+            /** Before Planned End */
+            before_planned_end: string | null;
+            /** Before Planned Start */
+            before_planned_start: string | null;
+            /**
+             * Column
+             * @enum {string}
+             */
+            column: "machine" | "pool" | "manual" | "inspection" | "unassigned";
+            /** Lot Id */
+            lot_id: number | null;
+            /** Lot Number */
+            lot_number: string;
+            /** Machine Id */
+            machine_id: number | null;
+            /** Machine Pool Id */
+            machine_pool_id: number | null;
+            /** Made Item Part Number */
+            made_item_part_number: string;
+            /** Made Item Revision */
+            made_item_revision: string;
+            /** Order Id */
+            order_id: number;
+            /** Production Order Number */
+            production_order_number: string;
+            reason: components["schemas"]["RedatedOrderReasonResponse"] | null;
         };
         /** RegroupLotPositionsRequest */
         RegroupLotPositionsRequest: {

@@ -54,6 +54,9 @@ from src.modules.fulfillment.domain.services.scheduling.earliest_start import (
 )
 from src.modules.fulfillment.domain.services.scheduling.machine_calendar import MachineCalendar
 from src.modules.fulfillment.domain.services.scheduling.machine_calendar import place
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReason
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import queued_reason
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import running_reason
 from src.modules.fulfillment.domain.services.scheduling.walk_context import ExternalForecast
 from src.modules.fulfillment.domain.services.scheduling.walk_context import OrderSchedulingContext
 from src.modules.fulfillment.domain.services.scheduling.walk_context import ScheduledOrder
@@ -273,6 +276,8 @@ class QueuePlacement:
     no_working_time: bool = False
     overlap: bool = False
     before_predecessor: bool = False
+    # What set the start, for the planner (placement_reason.py).
+    reason: PlacementReason | None = None
 
 
 def advance_machine_queue(
@@ -312,19 +317,26 @@ def place_on_queue(
     order undated and flagged.
     """
     if ctx.status == ProductionOrderStatus.PAUSED:
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
     running_since = _running_since(ctx)
     if ctx.status == ProductionOrderStatus.IN_PROGRESS and running_since is not None:
         try:
-            planned_start, planned_end = _running_window(ctx, running_since, calendar, now)
+            planned_start, planned_end, overrun = _running_window(ctx, running_since, calendar, now)
         except NoWorkingTimeError:
-            return QueuePlacement(None, None, cursor, no_working_time=True)
+            return QueuePlacement(
+                None, None, cursor, no_working_time=True, reason=PlacementReason(kind="undated")
+            )
+        running = running_reason(ctx, overrun)
         if cursor is None:
-            return QueuePlacement(planned_start, planned_end, planned_end)
+            return QueuePlacement(planned_start, planned_end, planned_end, reason=running)
         cursor = as_utc(cursor)
         return QueuePlacement(
-            planned_start, planned_end, max(cursor, planned_end), overlap=planned_start < cursor
+            planned_start,
+            planned_end,
+            max(cursor, planned_end),
+            overlap=planned_start < cursor,
+            reason=running,
         )
 
     if (
@@ -336,8 +348,11 @@ def place_on_queue(
         pinned_end = as_utc(ctx.existing_planned_end)
         ready = _predecessor_ready(ctx)
         early = ready is not None and pinned_start < ready
+        kept = PlacementReason(kind="pinned" if ctx.pinned else "frozen", moment=pinned_start)
         if cursor is None:
-            return QueuePlacement(pinned_start, pinned_end, pinned_end, before_predecessor=early)
+            return QueuePlacement(
+                pinned_start, pinned_end, pinned_end, before_predecessor=early, reason=kept
+            )
         cursor = as_utc(cursor)
         return QueuePlacement(
             pinned_start,
@@ -345,6 +360,7 @@ def place_on_queue(
             max(cursor, pinned_end),
             overlap=pinned_start < cursor,
             before_predecessor=early,
+            reason=kept,
         )
 
     if (
@@ -352,28 +368,39 @@ def place_on_queue(
         and not ctx.upstream_input_available
         and ctx.position_sequence > 1
     ):
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
     if is_unplannable_for_missing_material(ctx):
-        return QueuePlacement(None, None, cursor)
+        return QueuePlacement(None, None, cursor, reason=PlacementReason(kind="undated"))
 
-    _not_before, _predecessor_ready_at, earliest_start_date = _earliest_start_days(ctx)
+    not_before, _predecessor_ready_at, earliest_start_date = _earliest_start_days(ctx)
     earliest = day_start(earliest_start_date, ctx.zone) if earliest_start_date else as_utc(now)
     if ctx.predecessor_ready_moment is not None:
         earliest = max(earliest, as_utc(ctx.predecessor_ready_moment))
+    now_floors = ctx.status == ProductionOrderStatus.QUEUED or earliest_start_date is None
     if ctx.status == ProductionOrderStatus.QUEUED:
         earliest = max(earliest, as_utc(now))
     floor = max(as_utc(cursor), earliest) if cursor is not None else earliest
     try:
         planned_start, planned_end = place(floor, ctx.estimated_duration_minutes, calendar)
     except NoWorkingTimeError:
-        return QueuePlacement(None, None, cursor, no_working_time=True)
-    return QueuePlacement(planned_start, planned_end, planned_end)
+        return QueuePlacement(
+            None, None, cursor, no_working_time=True, reason=PlacementReason(kind="undated")
+        )
+    reason = queued_reason(
+        ctx,
+        cursor,
+        earliest_start_date,
+        not_before,
+        as_day(ctx.material_ready_at, ctx.zone),
+        now if now_floors else None,
+    )
+    return QueuePlacement(planned_start, planned_end, planned_end, reason=reason)
 
 
 def _running_window(
     ctx: OrderSchedulingContext, running_since: datetime, calendar: MachineCalendar, now: datetime
-) -> tuple[datetime, datetime]:
+) -> tuple[datetime, datetime, bool]:
     """A running order's window on its calendar: from its latest start or
     resume to the later of its original end and the end its progress
     forecasts, so an order that overruns pushes the steps after it.
@@ -384,7 +411,8 @@ def _running_window(
     forecast is now plus the pieces left, without setup, since the machine
     is set up already. Without any processed, or without minutes per piece,
     the progress is unknown and the forecast is now, so an order that
-    reports only at its end is not pushed while it is on time."""
+    reports only at its end is not pushed while it is on time. The flag says
+    whether the forecast stretched the end past the original one."""
     left = max(ctx.quantity - ctx.pieces_processed, 0.0)
     progress = ctx.pieces_processed > 0 and ctx.minutes_per_piece > 0
     left_minutes = round(left * ctx.minutes_per_piece) if progress else 0
@@ -393,7 +421,7 @@ def _running_window(
     else:
         planned_start, original_end = place(running_since, ctx.estimated_duration_minutes, calendar)
     _forecast_start, forecast_end = place(now, left_minutes, calendar)
-    return planned_start, max(original_end, forecast_end)
+    return planned_start, max(original_end, forecast_end), forecast_end > original_end
 
 
 def _predecessor_ready(ctx: OrderSchedulingContext) -> datetime | None:
@@ -433,16 +461,29 @@ def _walk_machine_queue(
     results: list[ScheduledOrder] = []
     cursor: datetime | None = None
 
+    # The order whose end the cursor is, named by a placement it holds back.
+    cursor_order_id: int | None = None
     for ctx in sorted(orders, key=lambda o: (not _is_running(o), o.queue_sequence, o.order_id)):
         static_conflicts = _static_conflicts(ctx)
         placement = place_on_queue(ctx, cursor, calendar, now)
+        reason = placement.reason
+        if reason is not None and reason.kind == "queue":
+            reason = replace(reason, previous_order_id=cursor_order_id)
+        if placement.next_cursor != cursor:
+            cursor_order_id = ctx.order_id
         cursor = placement.next_cursor
         conflicts = _with_waiting_and_target_flags(
             static_conflicts, ctx, placement.planned_end, now
         )
         conflicts += _placement_conflicts(placement)
         results.append(
-            ScheduledOrder(ctx.order_id, placement.planned_start, placement.planned_end, conflicts)
+            ScheduledOrder(
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                reason=reason,
+            )
         )
 
     return results, cursor
@@ -467,7 +508,13 @@ def _walk_manual_orders(
         )
         conflicts += _placement_conflicts(placement)
         results.append(
-            ScheduledOrder(ctx.order_id, placement.planned_start, placement.planned_end, conflicts)
+            ScheduledOrder(
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                reason=placement.reason,
+            )
         )
     return results
 
@@ -701,7 +748,12 @@ def _merge_pool_queues(
         conflicts += _placement_conflicts(placement)
         by_pool[best_pool_id].append(
             ScheduledOrder(
-                ctx.order_id, placement.planned_start, placement.planned_end, conflicts, member_id
+                ctx.order_id,
+                placement.planned_start,
+                placement.planned_end,
+                conflicts,
+                member_id,
+                reason=placement.reason,
             )
         )
         machine_cursors[member_id] = placement.next_cursor

@@ -13,6 +13,8 @@ from pydantic import Field
 from pydantic import model_validator
 
 from src.modules.fulfillment.application.dto.production_schedule_dto import AutoPlanStage
+from src.modules.fulfillment.application.dto.production_schedule_dto import BoardColumn
+from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReasonKind
 from src.modules.fulfillment.domain.value_objects.auto_plan_algorithm import AutoPlanAlgorithm
 from src.modules.fulfillment.domain.value_objects.auto_plan_skip_reason import AutoPlanSkipReason
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
@@ -154,11 +156,58 @@ class AutoPlanSkippedOrderResponse(ResponseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RedatedOrderReasonResponse(ResponseModel):
+    kind: PlacementReasonKind
+    day: date | None
+    moment: datetime | None
+    previous_order_id: int | None
+    previous_order_number: str | None
+    previous_running: bool
+    previous_overrun: bool
+    previous_pieces_processed: float | None
+    previous_quantity: float | None
+    predecessor_sequence: int | None
+    predecessor_order_number: str | None
+    method_name: dict[str, str]
+    wait_after_minutes: int
+    order_item_id: int | None
+    expected_date: date | None
+    late: bool
+    response_time_days: int
+    pieces_processed: float | None
+    quantity: float | None
+    overrun: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RedatedOrderResponse(ResponseModel):
+    order_id: int
+    production_order_number: str
+    lot_id: int | None
+    lot_number: str
+    made_item_part_number: str
+    made_item_revision: str
+    column: BoardColumn
+    machine_id: int | None
+    machine_pool_id: int | None
+    before_planned_start: datetime | None
+    before_planned_end: datetime | None
+    after_planned_start: datetime | None
+    after_planned_end: datetime | None
+    reason: RedatedOrderReasonResponse | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AutoPlanResponse(ResponseModel):
     proposals: list[AutoPlanOrderDiffResponse] = Field(default_factory=list)
     skipped_pinned_or_in_progress: int = 0
     skipped_todays_planned: int = 0
     skipped: list[AutoPlanSkippedOrderResponse] = Field(default_factory=list)
+    redated: list[RedatedOrderResponse] = Field(default_factory=list)
+    kept_day: int = 0
+    walk_failed: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

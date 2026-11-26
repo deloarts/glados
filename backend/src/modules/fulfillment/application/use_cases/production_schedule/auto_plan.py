@@ -40,6 +40,7 @@ from src.modules.fulfillment.application.dto.production_schedule_dto import Auto
 from src.modules.fulfillment.application.dto.production_schedule_dto import AutoPlanProgressOrder
 from src.modules.fulfillment.application.dto.production_schedule_dto import AutoPlanResult
 from src.modules.fulfillment.application.dto.production_schedule_dto import AutoPlanSkippedOrder
+from src.modules.fulfillment.application.dto.production_schedule_dto import RedatedOrder
 from src.modules.fulfillment.application.services.planned_window import drop_planned_window
 from src.modules.fulfillment.application.services.queue_scope_locks import QueueScope
 from src.modules.fulfillment.application.services.queue_scope_locks import queue_scope_key
@@ -49,6 +50,12 @@ from src.modules.fulfillment.application.services.scheduling_context import buil
 from src.modules.fulfillment.application.services.scheduling_context import build_machine_calendars
 from src.modules.fulfillment.application.services.scheduling_context import prefetch_scheduling_data
 from src.modules.fulfillment.application.services.scheduling_context import resolve_lot_target_date
+from src.modules.fulfillment.application.use_cases.production_schedule._redated import Window
+from src.modules.fulfillment.application.use_cases.production_schedule._redated import moved_day
+from src.modules.fulfillment.application.use_cases.production_schedule._redated import (
+    redated_orders,
+)
+from src.modules.fulfillment.application.use_cases.production_schedule._redated import window_of
 from src.modules.fulfillment.application.use_cases.production_schedule.recompute_machine_schedule import (
     RecomputeMachineSchedule,
 )
@@ -68,6 +75,7 @@ from src.modules.fulfillment.domain.services.production_order_rules import (
 from src.modules.fulfillment.domain.services.scheduling import AutoPlanCandidate
 from src.modules.fulfillment.domain.services.scheduling import MachineCalendar
 from src.modules.fulfillment.domain.services.scheduling import OrderSchedulingContext
+from src.modules.fulfillment.domain.services.scheduling import ScheduleWalkResult
 from src.modules.fulfillment.domain.services.scheduling import advance_machine_queue
 from src.modules.fulfillment.domain.services.scheduling import compute_position_due_dates
 from src.modules.fulfillment.domain.services.scheduling import is_unplannable_for_missing_material
@@ -1174,9 +1182,11 @@ class AutoPlan:
             return
 
     async def _build_result(self, actor: User, state: _AutoPlanState) -> AutoPlanResult:
-        await self._walk_after_write(state)
+        before = {o.id: window_of(o) for o in await self._repos.orders.get_all_non_terminal()}
+        walk = await self._walk_after_write(state)
         _emit(state, AutoPlanProgress(stage="finalizing"))
         proposals = await self._build_proposals(state)
+        redated, kept_day = await self._redated(state, before, walk)
         moved = sum(1 for p in proposals if _moved(p))
 
         log.info(
@@ -1191,18 +1201,45 @@ class AutoPlan:
             skipped_pinned_or_in_progress=state.skipped,
             skipped_todays_planned=state.skipped_todays_planned,
             skipped=state.skipped_orders,
+            redated=redated,
+            kept_day=kept_day,
+            walk_failed=walk is None,
         )
 
-    async def _walk_after_write(self, state: _AutoPlanState) -> None:
+    async def _redated(
+        self,
+        state: _AutoPlanState,
+        before: dict[int, Window],
+        walk: ScheduleWalkResult | None,
+    ) -> tuple[list[RedatedOrder], int]:
+        """The open orders the walk moved to another day without the run
+        placing them (_redated.py). After a failed walk nothing moved."""
+        if walk is None:
+            return [], 0
+        after = await self._repos.orders.get_all_non_terminal()
+        placed = set(state.before_snapshot)
+        moved_lot_ids = sorted(
+            {
+                o.lot_id
+                for o in after
+                if o.id not in placed and moved_day(before.get(o.id), window_of(o), state.zone)
+            }
+        )
+        lots = await self._repos.lots.get_by_ids(moved_lot_ids) if moved_lot_ids else []
+        return redated_orders(before, after, placed, walk, lots, state.zone)
+
+    async def _walk_after_write(self, state: _AutoPlanState) -> ScheduleWalkResult | None:
         """Runs one global walk of the schedule on every run, also when the
         run moved nothing, so the dates are current when the answer arrives.
         The progress counts the walk itself, 0/1 before and 1/1 after it. The
         plan is committed by then, so a failed walk is logged and rolled back
         rather than answered as an error; the proposals read the committed
-        rows, and the next walk dates them."""
+        rows, and the next walk dates them. Returns the walk's placements,
+        None when it failed."""
         _emit(state, AutoPlanProgress(stage="recomputing", current=0, total=1))
+        walk: ScheduleWalkResult | None
         try:
-            await self._recompute.execute_all(
+            walk = await self._recompute.execute_all(
                 response_time_days=state.response_time_days,
                 settings=state.settings,
             )
@@ -1211,7 +1248,9 @@ class AutoPlan:
                 "Schedule recompute failed after Auto-Plan; the plan itself is committed."
             )
             await self._uow.rollback()
+            walk = None
         _emit(state, AutoPlanProgress(stage="recomputing", current=1, total=1))
+        return walk
 
     async def _build_proposals(self, state: _AutoPlanState) -> list[AutoPlanOrderDiff]:
         """Diffs every placed order's pre-run snapshot against its freshly reloaded row."""

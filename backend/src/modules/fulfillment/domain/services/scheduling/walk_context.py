@@ -20,6 +20,7 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from datetime import tzinfo
+from typing import TYPE_CHECKING
 from typing import Literal
 
 from src.modules.catalogue.domain.value_objects.step_role import StepRole
@@ -29,6 +30,9 @@ from src.modules.fulfillment.domain.services.scheduling.earliest_start import (
 )
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.shared_kernel.domain.services.clock import as_utc
+
+if TYPE_CHECKING:
+    from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReason
 
 
 @dataclass(frozen=True)
@@ -76,6 +80,11 @@ class PredecessorPosition:
     # ready at completed_ready_*, is never undated, and has no work left
     # for a backward pass.
     completed: bool = False
+    # The live order line of an EXTERNAL or MIXED position, and whether its
+    # expected arrival has passed without the delivery, so it counts as
+    # today; both only name the arrival to a planner.
+    order_item_id: int | None = None
+    arrival_late: bool = False
 
 
 LeadDaysSource = Literal["supplier", "method", "default"]
@@ -242,6 +251,8 @@ class ScheduledOrder:
     # read models such as the board's capacity rollup and never persisted,
     # because the concrete machine choice stays deferred.
     trial_machine_id: int | None = None
+    # What set the start (placement_reason.py), never persisted.
+    reason: "PlacementReason | None" = None
 
 
 def _with_completed[T: (date, datetime)](
