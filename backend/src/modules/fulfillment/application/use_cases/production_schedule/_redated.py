@@ -26,6 +26,7 @@ from src.modules.fulfillment.domain.entities.production_order import ProductionO
 from src.modules.fulfillment.domain.services.production_order_rules import position_is_manual
 from src.modules.fulfillment.domain.services.scheduling import ScheduleWalkResult
 from src.modules.fulfillment.domain.services.scheduling.placement_reason import PlacementReason
+from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.shared_kernel.domain.services.clock import as_utc
 
 Window = tuple[datetime | None, datetime | None]
@@ -62,11 +63,17 @@ def _column(order: ProductionOrder, position: LotPosition | None) -> BoardColumn
 
 
 def _last_method_name(position: LotPosition) -> dict[str, str]:
-    """The name of the method of the position's last step, whose wait the
-    position takes."""
-    if not position.steps:
+    """The name of the method whose wait the position takes: its last step's,
+    for a MIXED position its last in-house step's (wait_after)."""
+    steps = [
+        step
+        for step in position.steps
+        if position.kind != LotPositionKind.MIXED
+        or not (step.role == StepRole.FABRICATION and step.fabrication_method_required_external)
+    ]
+    if not steps:
         return {}
-    last = max(position.steps, key=lambda step: step.sequence)
+    last = max(steps, key=lambda step: step.sequence)
     name = (
         last.inspection_method_name
         if last.role == StepRole.INSPECTION and last.inspection_method_name is not None
@@ -111,6 +118,8 @@ def _resolve(
         order_item_id=reason.order_item_id,
         expected_date=reason.expected_date,
         late=reason.late,
+        arrived=reason.arrived,
+        forecast=reason.forecast,
         response_time_days=reason.response_time_days,
         pieces_processed=reason.pieces_processed,
         quantity=reason.quantity,

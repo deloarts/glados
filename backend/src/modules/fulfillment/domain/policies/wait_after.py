@@ -49,10 +49,14 @@ def step_waits(steps: Iterable[LotStep]) -> list[StepWait]:
 
 def position_wait_after_minutes(kind: str, steps: Iterable[StepWait]) -> int:
     """The clock minutes the pieces of a position wait after it: its last
-    step's wait for an INTERNAL position, its last in-house step's for a
-    MIXED one, and none for any other kind."""
-    if kind == LotPositionKind.INTERNAL:
-        candidates = list(steps)
+    step's wait for an INTERNAL position, and for an UNASSIGNED one that no
+    supplier usually does, since it will be done in house; its last in-house
+    step's for a MIXED one; and none for any other kind."""
+    steps = list(steps)
+    if kind == LotPositionKind.INTERNAL or (
+        kind == LotPositionKind.UNASSIGNED and not any(s.usually_external for s in steps)
+    ):
+        candidates = steps
     elif kind == LotPositionKind.MIXED:
         candidates = [step for step in steps if not step.usually_external]
     else:

@@ -85,7 +85,9 @@ def test_an_overrun_outside_working_time_ends_when_work_resumes():
 def test_a_resume_with_booked_pieces_counts_only_the_pieces_left():
     """Resumed Tuesday 08:00 with five pieces done: five pieces left take
     150 minutes, not the whole estimate again."""
-    resumed = _running(pieces_processed=5.0, last_resumed_at=_at(TUESDAY, 8))
+    resumed = _running(
+        pieces_processed=5.0, pieces_processed_at_resume=5.0, last_resumed_at=_at(TUESDAY, 8)
+    )
     placement = place_on_queue(resumed, None, CALENDAR, _at(TUESDAY, 8))
     assert placement.planned_start == _at(TUESDAY, 8)
     assert placement.planned_end == _at(TUESDAY, 10, 30)

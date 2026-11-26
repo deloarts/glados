@@ -184,10 +184,15 @@ export default {
         queueOverrunDetail: 'Überzieht: {processed} von {quantity} gemeldet, {left} offen, endet etwa {moment}.',
         predecessor: 'Nach Position {sequence}',
         predecessorDetail: '{order} endet {moment}.',
+        predecessorReadyDetail: 'Position {sequence} ist {moment} bereit.',
         waitAfter: 'Wartezeit nach dem Schritt, {duration}',
         waitAfterDetail: 'Position {sequence} ist {moment} bereit.',
         orderLine: 'Wartet auf Bestellposition #{line}',
         orderLineDetail: 'Erwartet am {date}, plus {days} Tag Reaktionszeit. | Erwartet am {date}, plus {days} Tage Reaktionszeit.',
+        orderLineArrivedDetail: 'Angekommen am {date}, plus {days} Tag Reaktionszeit. | Angekommen am {date}, plus {days} Tage Reaktionszeit.',
+        orderLineForecast: 'Wartet auf den Schritt bei einem Lieferanten',
+        orderLineForecastDetail:
+          'Noch kein Termin vom Lieferanten: voraussichtlich zurück am {date}, plus {days} Tag Reaktionszeit. | Noch kein Termin vom Lieferanten: voraussichtlich zurück am {date}, plus {days} Tage Reaktionszeit.',
         orderLineLate: 'Bestellposition #{line} ist überfällig',
         orderLineLateDetail:
           'Erwartet am {date}, nicht geliefert: zählt als heute, plus {days} Tag Reaktionszeit. | Erwartet am {date}, nicht geliefert: zählt als heute, plus {days} Tage Reaktionszeit.',

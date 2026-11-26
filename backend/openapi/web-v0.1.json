@@ -47263,6 +47263,10 @@
       },
       "RedatedOrderReasonResponse": {
         "properties": {
+          "arrived": {
+            "title": "Arrived",
+            "type": "boolean"
+          },
           "day": {
             "anyOf": [
               {
@@ -47286,6 +47290,10 @@
               }
             ],
             "title": "Expected Date"
+          },
+          "forecast": {
+            "title": "Forecast",
+            "type": "boolean"
           },
           "kind": {
             "enum": [
@@ -47463,6 +47471,8 @@
           "order_item_id",
           "expected_date",
           "late",
+          "arrived",
+          "forecast",
           "response_time_days",
           "pieces_processed",
           "quantity",

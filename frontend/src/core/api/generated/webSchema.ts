@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-25T14:52:08.190Z
+ * Generated: 2026-11-26T09:48:24.132Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -26770,10 +26770,14 @@ export interface components {
         };
         /** RedatedOrderReasonResponse */
         RedatedOrderReasonResponse: {
+            /** Arrived */
+            arrived: boolean;
             /** Day */
             day: string | null;
             /** Expected Date */
             expected_date: string | null;
+            /** Forecast */
+            forecast: boolean;
             /**
              * Kind
              * @enum {string}

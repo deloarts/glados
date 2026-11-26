@@ -1,4 +1,4 @@
-import { formatDateOrDash, formatDateTimeOrDash } from '@/core/utils/dates'
+import { formatDateOrDash, formatDateTimeOrDash, toLocalDayStart } from '@/core/utils/dates'
 
 import type { Schemas } from '@/core/api/generated'
 
@@ -15,10 +15,9 @@ export interface RedatedShift {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+// The day in the display timezone, the one the backend diffs by.
 function localDay(iso: string): number {
-  const day = new Date(iso)
-  day.setHours(0, 0, 0, 0)
-  return day.getTime()
+  return toLocalDayStart(iso).getTime()
 }
 
 // The walk lists an order once the day of its start or of its end changed,
@@ -108,16 +107,28 @@ export function redatedReasonText(reason: Reason | null | undefined): ReasonText
           { sequence, moment: reason.moment ? moment : day },
         )
       }
-      return text('mdi-arrow-right-bold-circle-outline', 'predecessor', { sequence }, 'predecessorDetail', {
-        order: reason.predecessor_order_number ?? '',
-        moment: reason.moment ? moment : day,
-      })
+      const when = reason.moment ? moment : day
+      return reason.predecessor_order_number
+        ? text('mdi-arrow-right-bold-circle-outline', 'predecessor', { sequence }, 'predecessorDetail', {
+            order: reason.predecessor_order_number,
+            moment: when,
+          })
+        : text('mdi-arrow-right-bold-circle-outline', 'predecessor', { sequence }, 'predecessorReadyDetail', {
+            sequence,
+            moment: when,
+          })
     }
     case 'order_line': {
       const params = { line: reason.order_item_id ?? '' }
       const detail = { date: formatDateOrDash(reason.expected_date), days: reason.response_time_days }
-      return reason.late
-        ? text('mdi-truck-alert-outline', 'orderLineLate', params, 'orderLineLateDetail', detail)
+      if (reason.forecast) {
+        return text('mdi-truck-fast-outline', 'orderLineForecast', params, 'orderLineForecastDetail', detail)
+      }
+      if (reason.late) {
+        return text('mdi-truck-alert-outline', 'orderLineLate', params, 'orderLineLateDetail', detail)
+      }
+      return reason.arrived
+        ? text('mdi-truck-check-outline', 'orderLine', params, 'orderLineArrivedDetail', detail)
         : text('mdi-truck-delivery-outline', 'orderLine', params, 'orderLineDetail', detail)
     }
     case 'raw_material':

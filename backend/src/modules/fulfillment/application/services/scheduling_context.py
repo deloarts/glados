@@ -1125,6 +1125,7 @@ async def build_order_context(
         ),
         quantity=order.quantity,
         pieces_processed=order.pieces_processed,
+        pieces_processed_at_resume=_pieces_processed_at_resume(order),
         minutes_per_piece=sum(
             production_order_rules.resolve_effective_per_piece_minutes(step)[0] for step in steps
         ),
@@ -1137,6 +1138,15 @@ async def build_order_context(
         last_resumed_at=last_resumed_at(order.interruptions),
         zone=zone,
     )
+
+
+def _pieces_processed_at_resume(order: ProductionOrder) -> float:
+    """The pieces the order had processed when it last went back to work,
+    from the completions recorded before that resume; 0 before any resume."""
+    resumed = last_resumed_at(order.interruptions)
+    if resumed is None:
+        return 0.0
+    return sum((c.quantity for c in order.completions if as_utc(c.created) <= as_utc(resumed)), 0.0)
 
 
 async def _resolve_pool(

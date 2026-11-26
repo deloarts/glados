@@ -14,6 +14,7 @@ with the dates.
 from dataclasses import dataclass
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 from typing import Literal
 
 from src.modules.fulfillment.domain.services.scheduling._shared import as_day
@@ -32,7 +33,8 @@ PlacementReasonKind = Literal[
     # The in-house predecessor `position_id` ends then, plus its wait.
     "predecessor",
     # The external predecessor `position_id` arrives on order line
-    # `order_item_id`; `late` when its expected day has passed.
+    # `order_item_id`; `late` when its expected day has passed, `arrived`
+    # once it did, and `forecast` when no supplier date exists yet.
     "order_line",
     "raw_material",
     "not_before",
@@ -63,6 +65,8 @@ class PlacementReason:
     response_time_days: int = 0
     wait_after_minutes: int = 0
     late: bool = False
+    arrived: bool = False
+    forecast: bool = False
     pieces_processed: float | None = None
     quantity: float | None = None
     overrun: bool = False
@@ -140,14 +144,27 @@ def _day_reason(
     if as_day(ctx.predecessor_ready_at, ctx.zone) == day:
         arrival = _arrival_on(ctx, day)
         if arrival is not None:
+            arrived = arrival.typed_external_date is None
             return PlacementReason(
                 kind="order_line",
                 day=day,
                 position_id=arrival.position_id,
                 order_item_id=arrival.order_item_id,
-                expected_date=arrival.typed_external_date,
+                expected_date=arrival.external_ready_at if arrived else arrival.typed_external_date,
                 response_time_days=ctx.response_time_days,
                 late=arrival.arrival_late,
+                arrived=arrived,
+            )
+        closest = _closest_predecessor(ctx)
+        if closest is not None and _is_forecast(closest, day, ctx):
+            return PlacementReason(
+                kind="order_line",
+                day=day,
+                position_id=closest.position_id,
+                order_item_id=closest.order_item_id,
+                expected_date=day - timedelta(days=ctx.response_time_days),
+                response_time_days=ctx.response_time_days,
+                forecast=True,
             )
         closest = _closest_internal(ctx)
         return PlacementReason(
@@ -161,6 +178,25 @@ def _day_reason(
             kind="raw_material", day=day, response_time_days=ctx.response_time_days
         )
     return PlacementReason(kind="ready_now", day=day)
+
+
+def _closest_predecessor(ctx: OrderSchedulingContext) -> PredecessorPosition | None:
+    """The earlier position closest before the order, of any kind."""
+    return max(ctx.predecessor_positions, key=lambda p: p.sequence, default=None)
+
+
+def _is_forecast(pred: PredecessorPosition, day: date, ctx: OrderSchedulingContext) -> bool:
+    """Whether the day comes from the walk's forecast of an external share
+    without any supplier date: an EXTERNAL position without one, or a MIXED
+    one whose in-house share is not what is ready on the day."""
+    if pred.external_ready_at is not None:
+        return False
+    if pred.kind == LotPositionKind.EXTERNAL:
+        return True
+    if pred.kind != LotPositionKind.MIXED:
+        return False
+    internal = as_day(pred.completed_ready_at or pred.stored_internal_ready_at, ctx.zone)
+    return internal != day
 
 
 def _arrival_on(ctx: OrderSchedulingContext, day: date) -> PredecessorPosition | None:

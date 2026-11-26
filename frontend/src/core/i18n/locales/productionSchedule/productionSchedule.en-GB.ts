@@ -179,10 +179,15 @@ export default {
         queueOverrunDetail: 'Overrunning: {processed} of {quantity} reported, {left} left, ends about {moment}.',
         predecessor: 'After position {sequence}',
         predecessorDetail: '{order} ends {moment}.',
+        predecessorReadyDetail: 'Position {sequence} is ready {moment}.',
         waitAfter: 'Wait after the step, {duration}',
         waitAfterDetail: 'Position {sequence} is ready {moment}.',
         orderLine: 'Waits for order line #{line}',
         orderLineDetail: 'Expected {date}, plus {days} response day. | Expected {date}, plus {days} response days.',
+        orderLineArrivedDetail: 'Arrived {date}, plus {days} response day. | Arrived {date}, plus {days} response days.',
+        orderLineForecast: 'Waits for the step at a supplier',
+        orderLineForecastDetail:
+          'No supplier date yet: forecast back {date}, plus {days} response day. | No supplier date yet: forecast back {date}, plus {days} response days.',
         orderLineLate: 'Order line #{line} is late',
         orderLineLateDetail:
           'Expected {date}, not delivered: counts as today, plus {days} response day. | Expected {date}, not delivered: counts as today, plus {days} response days.',

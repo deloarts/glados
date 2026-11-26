@@ -222,6 +222,9 @@ class OrderSchedulingContext:
     quantity: float = 0.0
     pieces_processed: float = 0.0
     minutes_per_piece: float = 0.0
+    # The pieces it had processed when it last resumed, the base of its
+    # original end after that resume.
+    pieces_processed_at_resume: float = 0.0
     # This is the first INTERNAL or MIXED position after an EXTERNAL or
     # MIXED position whose typed date is earlier than the chain feeding it.
     stale_external_predecessor: bool = False
@@ -312,7 +315,16 @@ def _predecessor_shares_with_forecast(
     instead of leaving the chain unknown. The forecast is returned even when
     a typed date wins, because it is persisted regardless. An outsourced
     UNASSIGNED position is forecast as well, but contributes nothing to the
-    chain, exactly as before it had a forecast."""
+    chain, exactly as before it had a forecast. A completed position whose
+    wait still runs gets no forecast, so the dates it keeps stay as they
+    are."""
+    if pred.completed:
+        external = (
+            pred.external_ready_at
+            if pred.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED)
+            else None
+        )
+        return external, _internal_ready_day(pred, placed_end_by_position), None
     if pred.kind == LotPositionKind.UNASSIGNED and pred.outsourced_unassigned:
         return None, None, resolve_external_forecast(pred, chain_end_before, response_time_days)
     if pred.kind == LotPositionKind.EXTERNAL:

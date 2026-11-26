@@ -25,6 +25,8 @@ function reason(overrides: Partial<Reason> = {}): Reason {
     order_item_id: null,
     expected_date: null,
     late: false,
+    arrived: false,
+    forecast: false,
     response_time_days: 0,
     pieces_processed: null,
     quantity: null,
@@ -125,6 +127,23 @@ describe('redatedReasonText', () => {
     expect(running.key).toBe('productionSchedule.autoPlan.redated.reason.queueRunning')
     expect(running.detailKey).toBe('productionSchedule.autoPlan.redated.reason.queueOverrunDetail')
     expect(running.detailParams).toMatchObject({ processed: 6, quantity: 10, left: 4 })
+  })
+
+  it('names a step at a supplier known only by its forecast, and a line that arrived', () => {
+    const forecast = redatedReasonText(reason({ kind: 'order_line', forecast: true, expected_date: '2026-12-01' }))
+    expect(forecast.key).toBe('productionSchedule.autoPlan.redated.reason.orderLineForecast')
+    expect(forecast.detailKey).toBe('productionSchedule.autoPlan.redated.reason.orderLineForecastDetail')
+    const arrived = redatedReasonText(reason({ kind: 'order_line', order_item_id: 52, arrived: true }))
+    expect(arrived.key).toBe('productionSchedule.autoPlan.redated.reason.orderLine')
+    expect(arrived.detailKey).toBe('productionSchedule.autoPlan.redated.reason.orderLineArrivedDetail')
+  })
+
+  it('leaves the order out of a predecessor detail that has none', () => {
+    const text = redatedReasonText(
+      reason({ kind: 'predecessor', predecessor_sequence: 2, moment: '2026-11-26T09:00:00Z' }),
+    )
+    expect(text.detailKey).toBe('productionSchedule.autoPlan.redated.reason.predecessorReadyDetail')
+    expect(text.detailParams).toMatchObject({ sequence: 2 })
   })
 
   it('says a walk that ran meanwhile dated an order without a reason', () => {

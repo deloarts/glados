@@ -406,8 +406,8 @@ def _running_window(
     forecasts, so an order that overruns pushes the steps after it.
 
     The original end is the start plus the estimate, or after a resume with
-    pieces already processed, the resume plus the pieces left, so a pause
-    does not count the whole estimate again. With pieces processed the
+    pieces already processed by then, the resume plus the pieces left at
+    the resume, so a pause does not count the whole estimate again. With pieces processed the
     forecast is now plus the pieces left, without setup, since the machine
     is set up already. Without any processed, or without minutes per piece,
     the progress is unknown and the forecast is now, so an order that
@@ -416,8 +416,15 @@ def _running_window(
     left = max(ctx.quantity - ctx.pieces_processed, 0.0)
     progress = ctx.pieces_processed > 0 and ctx.minutes_per_piece > 0
     left_minutes = round(left * ctx.minutes_per_piece) if progress else 0
-    if progress and ctx.last_resumed_at is not None:
-        planned_start, original_end = place(running_since, left_minutes, calendar)
+    if (
+        ctx.last_resumed_at is not None
+        and ctx.pieces_processed_at_resume > 0
+        and ctx.minutes_per_piece > 0
+    ):
+        left_at_resume = max(ctx.quantity - ctx.pieces_processed_at_resume, 0.0)
+        planned_start, original_end = place(
+            running_since, round(left_at_resume * ctx.minutes_per_piece), calendar
+        )
     else:
         planned_start, original_end = place(running_since, ctx.estimated_duration_minutes, calendar)
     _forecast_start, forecast_end = place(now, left_minutes, calendar)
@@ -451,9 +458,9 @@ def _walk_machine_queue(
     orders: list[OrderSchedulingContext],
     calendar: MachineCalendar,
     now: datetime,
-) -> tuple[list[ScheduledOrder], datetime | None]:
+) -> tuple[list[ScheduledOrder], datetime | None, int | None]:
     """Walks one machine's non-terminal orders and returns the placements
-    plus the final cursor. Running orders come first, since the machine is
+    plus the final cursor and the order whose end it is. Running orders come first, since the machine is
     busy with them now wherever they sit in the queue (a pool start appends
     the started order, and an operator may start one that is not at the
     head); the others follow in queue order. order_id breaks ties, so the
@@ -486,7 +493,7 @@ def _walk_machine_queue(
             )
         )
 
-    return results, cursor
+    return results, cursor, cursor_order_id
 
 
 def _walk_manual_orders(
@@ -619,12 +626,20 @@ def schedule_all(
     (_walk_manual_orders), and unassigned orders get no dates.
     """
     _assert_machine_queues_have_calendars(machine_queues, machine_calendars)
-    by_machine, machine_cursors = _walk_all_machine_queues(machine_queues, machine_calendars, now)
+    by_machine, machine_cursors, cursor_order_ids = _walk_all_machine_queues(
+        machine_queues, machine_calendars, now
+    )
     by_pool, pool_member_calendars, pool_sorted_orders, pool_heads = _seed_pool_walk_state(
         pool_queues, pool_members, machine_calendars
     )
     _merge_pool_queues(
-        by_pool, pool_member_calendars, pool_sorted_orders, pool_heads, machine_cursors, now
+        by_pool,
+        pool_member_calendars,
+        pool_sorted_orders,
+        pool_heads,
+        machine_cursors,
+        cursor_order_ids,
+        now,
     )
 
     manual = _walk_manual_orders(manual_queue, manual_calendar, now)
@@ -654,19 +669,22 @@ def _walk_all_machine_queues(
     machine_queues: dict[int, list[OrderSchedulingContext]],
     machine_calendars: dict[int, MachineCalendar],
     now: datetime,
-) -> tuple[dict[int, list[ScheduledOrder]], dict[int, datetime | None]]:
+) -> tuple[dict[int, list[ScheduledOrder]], dict[int, datetime | None], dict[int, int | None]]:
     """Walks every machine queue. Every machine with a calendar gets a
     cursor entry, even with an empty queue, so the pool merge can seed
-    from it."""
+    from it, and the order whose end the cursor is, so a pool order held
+    by it can name it."""
     by_machine: dict[int, list[ScheduledOrder]] = {}
     machine_cursors: dict[int, datetime | None] = {}
+    cursor_order_ids: dict[int, int | None] = {}
     for machine_id in sorted(machine_calendars):
-        results, cursor = _walk_machine_queue(
+        results, cursor, cursor_order_id = _walk_machine_queue(
             machine_queues.get(machine_id, []), machine_calendars[machine_id], now
         )
         by_machine[machine_id] = results
         machine_cursors[machine_id] = cursor
-    return by_machine, machine_cursors
+        cursor_order_ids[machine_id] = cursor_order_id
+    return by_machine, machine_cursors, cursor_order_ids
 
 
 def _seed_pool_walk_state(
@@ -705,10 +723,13 @@ def _merge_pool_queues(
     pool_sorted_orders: dict[int, list[OrderSchedulingContext]],
     pool_heads: dict[int, int],
     machine_cursors: dict[int, datetime | None],
+    cursor_order_ids: dict[int, int | None],
     now: datetime,
 ) -> None:
     """Earliest-finish merge of the pool queues (see schedule_all),
-    mutating by_pool, machine_cursors and pool_heads in place. The winning
+    mutating by_pool, machine_cursors, cursor_order_ids and pool_heads in
+    place. A placement the member's cursor holds back names the order whose
+    end that cursor is. The winning
     member is reported only as trial_machine_id and the order's machine_id
     stays unset, because the concrete machine is chosen later by Auto-Plan
     or the shop-floor Start dialog."""
@@ -746,6 +767,9 @@ def _merge_pool_queues(
             static_conflicts, ctx, placement.planned_end, now
         )
         conflicts += _placement_conflicts(placement)
+        reason = placement.reason
+        if reason is not None and reason.kind == "queue":
+            reason = replace(reason, previous_order_id=cursor_order_ids.get(member_id))
         by_pool[best_pool_id].append(
             ScheduledOrder(
                 ctx.order_id,
@@ -753,9 +777,11 @@ def _merge_pool_queues(
                 placement.planned_end,
                 conflicts,
                 member_id,
-                reason=placement.reason,
+                reason=reason,
             )
         )
+        if placement.next_cursor != machine_cursors.get(member_id):
+            cursor_order_ids[member_id] = ctx.order_id
         machine_cursors[member_id] = placement.next_cursor
         pool_heads[best_pool_id] += 1
 

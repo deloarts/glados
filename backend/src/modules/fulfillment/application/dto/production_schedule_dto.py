@@ -156,10 +156,13 @@ class RedatedOrderReason(BaseModel):
     predecessor_order_number: str | None = None
     method_name: dict[str, str] = Field(default_factory=dict)
     wait_after_minutes: int = 0
-    # order_line: the line and the day it is expected, late once passed.
+    # order_line: the line and the day it is expected, late once passed,
+    # the day it arrived once it did, or the forecast without a supplier date.
     order_item_id: int | None = None
     expected_date: date | None = None
     late: bool = False
+    arrived: bool = False
+    forecast: bool = False
     response_time_days: int = 0
     # in_progress: the order's own progress.
     pieces_processed: float | None = None

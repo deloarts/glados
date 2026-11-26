@@ -1183,6 +1183,9 @@ class AutoPlan:
 
     async def _build_result(self, actor: User, state: _AutoPlanState) -> AutoPlanResult:
         before = {o.id: window_of(o) for o in await self._repos.orders.get_all_non_terminal()}
+        # Ends the read's transaction, so the session does not sit idle in
+        # one while the walk waits for its lock on another connection.
+        await self._uow.commit()
         walk = await self._walk_after_write(state)
         _emit(state, AutoPlanProgress(stage="finalizing"))
         proposals = await self._build_proposals(state)

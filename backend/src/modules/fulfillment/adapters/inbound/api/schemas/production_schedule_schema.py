@@ -173,6 +173,8 @@ class RedatedOrderReasonResponse(ResponseModel):
     order_item_id: int | None
     expected_date: date | None
     late: bool
+    arrived: bool
+    forecast: bool
     response_time_days: int
     pieces_processed: float | None
     quantity: float | None
