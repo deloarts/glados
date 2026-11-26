@@ -462,6 +462,7 @@ export default {
       requiredExternal: 'Typically outsourced',
       defaultSupplier: 'Default supplier',
       defaultForAssemblies: 'Default for assemblies',
+      waitAfterMinutes: 'Wait after the step [min]',
       archived: 'Archived',
     },
     fields: {
@@ -534,6 +535,7 @@ export default {
       defaultMachine: 'Default Machine',
       flags: 'Flags',
       requiresEvidence: 'Requires evidence',
+      waitAfterMinutes: 'Wait after the check [min]',
       archived: 'Archived',
     },
     fields: {

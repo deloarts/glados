@@ -415,13 +415,8 @@ async def _describe_open_positions(
     for earlier in positions:
         wait = position_wait_after_minutes(earlier.kind, step_waits(earlier.steps))
         completed_ready_moment = await _completed_ready_moment(
-            earlier.id, repos, sibling_orders_by_position, wait
+            earlier.id, repos, sibling_orders_by_position, wait, zone=zone, today=today
         )
-        if (
-            completed_ready_moment is not None
-            and as_utc(completed_ready_moment).astimezone(zone).date() < today
-        ):
-            completed_ready_moment = None
         closed = earlier.status in _TERMINAL_POSITION_STATUSES
         if closed and (
             earlier.status != LotPositionStatus.COMPLETED or completed_ready_moment is None
@@ -435,15 +430,9 @@ async def _describe_open_positions(
         arrival_late = False
         outsourced_unassigned = is_outsourced_unassigned(earlier)
         if earlier.kind in (LotPositionKind.EXTERNAL, LotPositionKind.MIXED):
-            line = await _live_order_line(earlier.id, repos, order_items_by_position)
-            if line is not None:
-                order_item_id = line.id
-                arrival_late = (
-                    line.delivery_date is None
-                    and line.ready_for_pickup_date is None
-                    and line.expected_delivery_date is not None
-                    and line.expected_delivery_date < today
-                )
+            order_item_id, arrival_late = _arrival_facts(
+                await _live_order_line(earlier.id, repos, order_items_by_position), today
+            )
             external_ready_at = await _external_ready_at(
                 earlier.id, repos, order_items_by_position, zone=zone, today=today
             )
@@ -499,15 +488,33 @@ async def _describe_open_positions(
     return tuple(described)
 
 
+def _arrival_facts(line: OrderItem | None, today: date) -> tuple[int | None, bool]:
+    """The live order line of an external share and whether its expected
+    arrival has passed without the delivery or a ready-for-pickup event."""
+    if line is None:
+        return None, False
+    late = (
+        line.delivery_date is None
+        and line.ready_for_pickup_date is None
+        and line.expected_delivery_date is not None
+        and line.expected_delivery_date < today
+    )
+    return line.id, late
+
+
 async def _completed_ready_moment(
     position_id: int,
     repos: SchedulingRepos,
     sibling_orders_by_position: dict[int, list[ProductionOrder]] | None,
     wait_after_minutes: int,
+    *,
+    zone: tzinfo,
+    today: date,
 ) -> datetime | None:
     """When the pieces of the position's completed orders are ready, the
-    latest actual end plus the wait after the position. None without a wait,
-    since a completed order without one holds nothing back."""
+    latest actual end plus the wait after the position, while that day is
+    `today` or later. None without a wait, since a completed order without
+    one holds nothing back, and None once the wait is over."""
     if wait_after_minutes <= 0:
         return None
     sibling_orders = (
@@ -515,11 +522,14 @@ async def _completed_ready_moment(
         if sibling_orders_by_position is not None
         else await repos.orders.get_by_lot_position_id(position_id)
     )
-    return latest_ready_moment(
+    moment = latest_ready_moment(
         (o.actual_end, wait_after_minutes)
         for o in sibling_orders
         if o.status == ProductionOrderStatus.COMPLETED
     )
+    if moment is None or as_utc(moment).astimezone(zone).date() < today:
+        return None
+    return moment
 
 
 async def describe_external_work_chains(

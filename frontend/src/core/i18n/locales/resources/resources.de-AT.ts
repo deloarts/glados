@@ -463,6 +463,7 @@ export default {
       requiredExternal: 'Üblicherweise extern',
       defaultSupplier: 'Standardlieferant',
       defaultForAssemblies: 'Standard für Baugruppen',
+      waitAfterMinutes: 'Wartezeit nach dem Schritt [min]',
       archived: 'Archiviert',
     },
     fields: {
@@ -536,6 +537,7 @@ export default {
       defaultMachine: 'Standardmaschine',
       flags: 'Merkmale',
       requiresEvidence: 'Nachweis erforderlich',
+      waitAfterMinutes: 'Wartezeit nach der Prüfung [min]',
       archived: 'Archiviert',
     },
     fields: {
