@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.interfaces import ORMOption
@@ -221,3 +222,10 @@ class SqlAlchemyPrinterRepository:
         """Soft delete, sets archived=True and saves."""
         item.archived = True
         await self.save(item)
+
+    async def clear_default_except(self, id: int) -> None:
+        m = PrinterOrmModel
+        await self._db.execute(
+            update(m).where(m.id != id, m.is_default.is_(True)).values(is_default=False)
+        )
+        await self._db.flush()

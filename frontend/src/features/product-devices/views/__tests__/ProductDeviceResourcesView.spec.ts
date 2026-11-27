@@ -6,7 +6,12 @@ import { Permission } from '@/core/auth/permissions'
 import { useCurrentUserStore } from '@/core/stores/currentUserStore'
 import { mountWithApp } from '@/test-utils/mountWithApp'
 import { userWithPermissions } from '@/test-utils/factories'
-import type { ProductDeviceKind, ProductDeviceOption } from '../../types/productDevice'
+import type {
+  PlcEnvironment,
+  PlcEnvironmentSettings,
+  ProductDeviceKind,
+  ProductDeviceOption,
+} from '../../types/productDevice'
 
 // The archive confirmation comes from the shared row actions and is covered
 // by their own spec, so the confirm service is stubbed here.
@@ -53,6 +58,17 @@ vi.mock('../../api/productDeviceResourcesApi', () => ({
   setProductDeviceKindArchived: vi.fn<() => Promise<void>>(),
   placeProductDeviceOption: placeOption,
   placeProductDeviceKind: vi.fn<() => Promise<ProductDeviceKind[]>>(),
+}))
+
+// The view loads the PLC environments on mount. Left unmocked, those
+// requests fail in jsdom and start the connection store's recovery probe,
+// whose timer outlives the test file and fails the run.
+vi.mock('../../api/plcEnvironmentsApi', () => ({
+  getPlcEnvironments: (): Promise<PlcEnvironment[]> => Promise.resolve([]),
+  getPlcEnvironmentTemplate: vi.fn<() => Promise<PlcEnvironmentSettings>>(),
+  createPlcEnvironment: vi.fn<() => Promise<PlcEnvironment>>(),
+  updatePlcEnvironment: vi.fn<() => Promise<PlcEnvironment>>(),
+  setPlcEnvironmentArchived: vi.fn<() => Promise<PlcEnvironment>>(),
 }))
 
 import ProductDeviceResourcesView from '../ProductDeviceResourcesView.vue'

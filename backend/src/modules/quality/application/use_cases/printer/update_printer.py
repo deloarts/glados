@@ -87,6 +87,8 @@ class UpdatePrinter:
         printer.changes = append_changelog(printer.changes, actor.full_name, changelog_entry)
 
         saved = await self._printers.save(printer)
+        if saved.is_default:
+            await self._printers.clear_default_except(saved.id)
 
         await self._bus.publish(
             PrinterUpdated(printer_id=saved.id, name=saved.name, actor_id=actor.id)
