@@ -305,7 +305,9 @@ watch(
 // the last row reaches the bottom.
 .kpi-page {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  // Never below the cards' own minimum height, so a row cannot overlap the
+  // next one on a short screen; the page scrolls instead.
+  grid-template-rows: auto repeat(4, minmax(18rem, 1fr));
   gap: var(--space-1);
   height: 100%;
   min-height: 0;

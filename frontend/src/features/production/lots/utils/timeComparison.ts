@@ -8,11 +8,12 @@ export type TimeComparisonMetric = 'setup' | 'perPiece' | 'total'
 
 // Decimal places of an assessment's minutes per piece, as the backend
 // stores them. Sums and differences are rounded to them too, which strips
-// the float noise a product of decimals picks up.
+// the float noise a product of decimals picks up, and every minute value of
+// the comparison is shown with them.
 const MINUTE_DECIMALS = 2
 
-/** Minutes per piece with up to two decimals, without trailing zeros. */
-export function formatPieceMinutes(value: number): string {
+/** Minutes with up to two decimals, without trailing zeros. */
+export function formatDecimalMinutes(value: number): string {
   return String(withoutNegativeZero(roundTo(value, MINUTE_DECIMALS)))
 }
 

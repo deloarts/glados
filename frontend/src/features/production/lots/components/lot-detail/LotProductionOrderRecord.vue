@@ -13,9 +13,9 @@ import { formatDecimal } from '@/core/utils/numbers'
 import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
 import { productionOrderStatusSeverity } from '../../../utils/productionOrderStatus'
 import { pauseCauseLabelKey } from '../../../utils/pauseCauses'
-import { formatPieceMinutes } from '../../utils/timeComparison'
+import { formatDecimalMinutes } from '../../utils/timeComparison'
 
-import type { TimeComparisonMetric, TimeComparisonRow } from '../../utils/timeComparison'
+import type { TimeComparisonRow } from '../../utils/timeComparison'
 import type {
   ManufacturingAssessmentResponse,
   ProductionOrderCompletionResponse,
@@ -100,20 +100,12 @@ function completionBreakdown(completion: ProductionOrderCompletionResponse): str
   return parts.join(', ')
 }
 
-// Minutes per piece keep the two decimals they are assessed in; setup and
-// total minutes read fine at one.
-function formatMinutes(metric: TimeComparisonMetric, minutes: number): string {
-  return metric === 'perPiece' ? formatPieceMinutes(minutes) : formatDecimal(minutes)
-}
-
-function formatDiff(
-  metric: TimeComparisonMetric,
-  minutes: number | null,
-  percent: number | null,
-): string {
+// Minutes keep the two decimals they are assessed in, so a total of 3 x 6.75
+// reads 20.25; the percentage reads fine at one.
+function formatDiff(minutes: number | null, percent: number | null): string {
   if (minutes === null) return getEmptyPlaceholder()
   const sign = minutes > 0 ? '+' : ''
-  const value = `${sign}${formatMinutes(metric, minutes)} min`
+  const value = `${sign}${formatDecimalMinutes(minutes)} min`
   return percent === null ? value : `${value} (${sign}${formatDecimal(percent)}%)`
 }
 
@@ -253,18 +245,18 @@ function diffClass(minutes: number | null): string {
                 {{
                   cmp.estimated === null
                     ? getEmptyPlaceholder()
-                    : `${formatMinutes(cmp.metric, cmp.estimated)} min`
+                    : `${formatDecimalMinutes(cmp.estimated)} min`
                 }}
               </td>
               <td class="num">
                 {{
                   cmp.actual === null
                     ? getEmptyPlaceholder()
-                    : `${formatMinutes(cmp.metric, cmp.actual)} min`
+                    : `${formatDecimalMinutes(cmp.actual)} min`
                 }}
               </td>
               <td class="num" :class="diffClass(cmp.diffMinutes)">
-                {{ formatDiff(cmp.metric, cmp.diffMinutes, cmp.diffPercent) }}
+                {{ formatDiff(cmp.diffMinutes, cmp.diffPercent) }}
               </td>
             </tr>
           </tbody>
@@ -278,7 +270,7 @@ function diffClass(minutes: number | null): string {
         <span class="field-sublabel">
           {{ t('production.lots.detail.record.execution.assessedBy') }}:
           {{ row.assessment.operator?.full_name ?? getEmptyPlaceholder() }} ({{
-            row.assessment.created
+            formatISODateTime(row.assessment.created)
           }})
         </span>
         <span v-if="row.assessment.note" class="field-sublabel">

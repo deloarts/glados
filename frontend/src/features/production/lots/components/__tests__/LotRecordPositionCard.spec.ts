@@ -627,6 +627,40 @@ describe('LotRecordPositionCard', () => {
     wrapper.unmount()
   })
 
+  it('shows decimal minutes with two decimals and the assessment time formatted', async () => {
+    const wrapper = mountCard({
+      position: makePosition({
+        quantity: 3,
+        steps: [{ ...step, id: 1, estimated_setup_minutes: 0, estimated_minutes_per_piece: 5 }],
+      }),
+      orders: [makeOrder({ id: 42, quantity: 3, estimated_duration_minutes: 15 })],
+      assessments: {
+        42: {
+          public_id: '00000103-0000-0000-0000-000000000000',
+          id: 1,
+          production_order_id: 42,
+          operator_id: 2,
+          operator: null,
+          // 3 x 6.75 = 20.25 actual against 15 estimated.
+          actual_minutes_per_piece: 6.75,
+          actual_setup_minutes: null,
+          complexity: 'normal',
+          note: null,
+          created: '2026-11-27T12:28:10.804229Z',
+        },
+      },
+    })
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('6.75 min')
+    expect(text).toContain('20.25 min')
+    expect(text).toContain('+5.25 min (+35%)')
+    expect(text).not.toContain('T12:28:10')
+
+    wrapper.unmount()
+  })
+
   it('shows no comparison table for an order nobody has assessed', async () => {
     const wrapper = mountCard({ position: makePosition(), orders: [makeOrder({ id: 42 })] })
     await flushPromises()

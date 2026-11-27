@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { formatISODateTime } from '@/core/utils/dates'
 import UserAvatarPreview from '@/shared/components/user/UserAvatarPreview.vue'
 
 import type { ChangedBy } from '../../composables/useChangedByUser'
@@ -21,13 +22,13 @@ const { t } = useI18n()
     <div class="meta-item">
       <UserAvatarPreview :user="creator" />
       <span class="field-sublabel"
-        >{{ t('madeItems.catalogue.columns.created') }}: {{ created }}</span
+        >{{ t('madeItems.catalogue.columns.created') }}: {{ formatISODateTime(created) }}</span
       >
     </div>
     <div v-if="changed" class="meta-item">
       <UserAvatarPreview v-if="changedBy.user" :user="changedBy.user" />
       <span class="field-sublabel">
-        {{ t('madeItems.catalogue.columns.changed') }}: {{ changed }}
+        {{ t('madeItems.catalogue.columns.changed') }}: {{ formatISODateTime(changed) }}
         <template v-if="!changedBy.user && changedBy.name">({{ changedBy.name }})</template>
       </span>
     </div>

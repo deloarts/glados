@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
-import { formatPlanned } from '@/core/utils/dates'
+import { formatISODateTime, formatPlanned } from '@/core/utils/dates'
 import {
   conflictLabelKey,
   conflictSeverity,
   conflictTooltipKey,
 } from '../../utils/productionOrderConflicts'
 import { formatDecimal } from '@/core/utils/numbers'
-import { formatPieceMinutes } from '../utils/timeComparison'
+import { formatDecimalMinutes } from '../utils/timeComparison'
 import { formatMinutesDuration } from '../../utils/lotStepDisplay'
 import {
   productionOrderPrioritySeverity,
@@ -195,7 +195,7 @@ const { format: madeItemLabel } = useMadeItemLabel()
               t('production.lots.detail.record.execution.actualPerPiece')
             }}</span>
             <span class="field-value"
-              >{{ formatPieceMinutes(assessment.actual_minutes_per_piece) }} min</span
+              >{{ formatDecimalMinutes(assessment.actual_minutes_per_piece) }} min</span
             >
           </div>
           <div v-if="assessment.actual_setup_minutes !== null" class="field">
@@ -220,7 +220,7 @@ const { format: madeItemLabel } = useMadeItemLabel()
             }}</span>
             <span class="field-value"
               >{{ assessment.operator?.full_name ?? getEmptyPlaceholder() }} ({{
-                assessment.created
+                formatISODateTime(assessment.created)
               }})</span
             >
           </div>
