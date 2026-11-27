@@ -110,7 +110,7 @@ forbidden_modules =
 # section 4.6). From the top: the dashboard and todo readers compose what the groups below
 # list; awarding a quote request creates an order and assigns lot positions, and the
 # source item allocations reuse the source item demand family; the order, demand, bucket,
-# production order, machine and settings groups are independent of each other; orders,
+# production order, production plan, machine and settings groups are independent of each other; orders,
 # demands and production orders create or cancel lots; every write that changes the plan runs
 # the machine schedule recompute; the demand family holds the use cases the three demand kinds
 # share; application services sit below every group.
@@ -122,7 +122,7 @@ containers =
 layers =
     use_cases.dashboard | use_cases.todo | use_cases.external_work
     use_cases.quote_request | use_cases.source_item_allocation
-    use_cases.order | use_cases.bought_item_demand | use_cases.made_item_demand | use_cases.source_item_demand | use_cases.bought_item_demand_bucket | use_cases.made_item_demand_bucket | use_cases.source_item_demand_bucket | use_cases.production_order | use_cases.production_machine | use_cases.machine_pool | use_cases.admin_settings
+    use_cases.order | use_cases.bought_item_demand | use_cases.made_item_demand | use_cases.source_item_demand | use_cases.bought_item_demand_bucket | use_cases.made_item_demand_bucket | use_cases.source_item_demand_bucket | use_cases.production_order | use_cases.production_plan | use_cases.production_machine | use_cases.machine_pool | use_cases.admin_settings
     use_cases.production_lot
     use_cases.production_schedule | use_cases._demand_family
     services
@@ -521,6 +521,7 @@ protected_modules =
     src.modules.fulfillment.adapters.outbound.persistence.repositories.production_machine_repository
     src.modules.fulfillment.adapters.outbound.persistence.repositories.production_order_file_repository
     src.modules.fulfillment.adapters.outbound.persistence.repositories.production_order_repository
+    src.modules.fulfillment.adapters.outbound.persistence.repositories.production_plan_repository
     src.modules.fulfillment.adapters.outbound.persistence.repositories.project_work_repository
     src.modules.fulfillment.adapters.outbound.persistence.repositories.quote_request_file_repository
     src.modules.fulfillment.adapters.outbound.persistence.repositories.quote_request_repository
