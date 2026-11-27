@@ -26339,7 +26339,7 @@
         "properties": {
           "actual_minutes_per_piece": {
             "title": "Actual Minutes Per Piece",
-            "type": "integer"
+            "type": "number"
           },
           "actual_setup_minutes": {
             "anyOf": [
@@ -35030,6 +35030,20 @@
         "title": "PatVersionResponse",
         "type": "object"
       },
+      "PauseCause": {
+        "description": "The cause of a manual pause of a production order.",
+        "enum": [
+          "waiting_for_material",
+          "waiting_for_tool",
+          "waiting_for_drawing",
+          "waiting_for_qa",
+          "machine_fault",
+          "other_work",
+          "end_of_shift"
+        ],
+        "title": "PauseCause",
+        "type": "string"
+      },
       "PauseProductionOrderRequest": {
         "properties": {
           "operator_id": {
@@ -35042,6 +35056,16 @@
               }
             ],
             "title": "Operator Id"
+          },
+          "pause_cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PauseCause"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "reason": {
             "anyOf": [
@@ -43518,6 +43542,16 @@
       },
       "ProductionOrderInterruptionResponse": {
         "properties": {
+          "pause_cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PauseCause"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "paused_at": {
             "format": "date-time",
             "title": "Paused At",
@@ -43561,7 +43595,8 @@
           "paused_at",
           "resumed_at",
           "reason",
-          "paused_operator_id"
+          "paused_operator_id",
+          "pause_cause"
         ],
         "title": "ProductionOrderInterruptionResponse",
         "type": "object"
@@ -47122,7 +47157,7 @@
           "actual_minutes_per_piece": {
             "minimum": 0.0,
             "title": "Actual Minutes Per Piece",
-            "type": "integer"
+            "type": "number"
           },
           "actual_setup_minutes": {
             "anyOf": [

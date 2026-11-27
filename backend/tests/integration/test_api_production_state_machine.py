@@ -25,6 +25,7 @@ from datetime import datetime
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy import update
 
 from src.modules.catalogue.adapters.outbound.persistence.repositories.made_item_repository.item import (
     SqlAlchemyMadeItemRepository,
@@ -38,8 +39,20 @@ from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings
 from src.modules.fulfillment.adapters.outbound.persistence.models.lot_position_model import (
     LotPositionOrmModel,
 )
+from src.modules.fulfillment.adapters.outbound.persistence.models.manufacturing_assessment_model import (
+    ManufacturingAssessmentOrmModel,
+)
+from src.modules.fulfillment.adapters.outbound.persistence.models.production_order_interruption_model import (
+    ProductionOrderInterruptionOrmModel,
+)
+from src.modules.fulfillment.adapters.outbound.persistence.models.production_order_model import (
+    ProductionOrderOrmModel,
+)
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.machine_pool_repository import (
     SqlAlchemyMachinePoolRepository,
+)
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.manufacturing_assessment_repository import (
+    SqlAlchemyManufacturingAssessmentRepository,
 )
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_lot_repository.lot import (
     SqlAlchemyProductionLotRepository,
@@ -52,12 +65,15 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories.producti
 )
 from src.modules.fulfillment.domain.entities.lot_position import LotPosition
 from src.modules.fulfillment.domain.entities.machine_pool import MachinePool
+from src.modules.fulfillment.domain.entities.manufacturing_assessment import ManufacturingAssessment
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_machine import ProductionMachine
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
+from src.modules.fulfillment.domain.errors import ManufacturingAssessmentAlreadyExistsError
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
 from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
+from src.modules.fulfillment.domain.value_objects.production_status import ComplexityClass
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.domain.value_objects.production_status import UrgencyClass
 from src.modules.platform.const import API_WEB
@@ -732,3 +748,179 @@ class TestRecordManufacturingAssessment:
         reread = await client.get(f"{ORDERS}/{order.id}/assessment")
         assert reread.status_code == 200
         assert reread.json()["actual_minutes_per_piece"] == 7
+
+
+# ── Booking details: first operator, resume operator, pause cause ──────
+
+
+async def _fresh(db, model, **where):
+    """The row as the database holds it now, past the session's cache."""
+    query = select(model).filter_by(**where).execution_options(populate_existing=True)
+    return (await db.scalars(query)).all()
+
+
+class TestBookingDetails:
+    async def test_a_resume_by_another_operator_keeps_the_first_operator(
+        self, db, client, create_user
+    ):
+        first = await create_user(
+            username="bd-first",
+            email="bd-first@example.com",
+            permissions=[Permission.WRITE_PRODUCTION_ORDERS],
+        )
+        second = await create_user(
+            username="bd-second",
+            email="bd-second@example.com",
+            permissions=[Permission.WRITE_PRODUCTION_ORDERS],
+        )
+        _, _, order = await _seed_lot_with_internal_order(db, first.id, with_machine=True)
+        await client.post(f"{ORDERS}/{order.id}/start", json={}, headers=await auth_headers(first))
+        await client.post(f"{ORDERS}/{order.id}/pause", json={}, headers=await auth_headers(first))
+
+        response = await client.post(
+            f"{ORDERS}/{order.id}/start", json={}, headers=await auth_headers(second)
+        )
+
+        assert response.status_code == 200, response.text
+        [row] = await _fresh(db, ProductionOrderOrmModel, id=order.id)
+        assert (row.first_started_operator_id, row.started_operator_id) == (first.id, second.id)
+        [pause] = await _fresh(
+            db, ProductionOrderInterruptionOrmModel, production_order_id=order.id
+        )
+        assert (pause.ended_by, pause.resumed_operator_id) == ("resume", second.id)
+
+    async def test_a_pause_stores_and_returns_the_picked_cause(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        _, _, order = await _seed_lot_with_internal_order(db, 1, with_machine=True)
+        await client.post(f"{ORDERS}/{order.id}/start", json={})
+
+        response = await client.post(
+            f"{ORDERS}/{order.id}/pause",
+            json={"reason": "Spindle alarm", "pause_cause": "machine_fault"},
+        )
+
+        assert response.status_code == 200, response.text
+        assert [i["pause_cause"] for i in response.json()["interruptions"]] == ["machine_fault"]
+
+    async def test_a_pause_with_an_unknown_cause_is_refused(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        _, _, order = await _seed_lot_with_internal_order(db, 1, with_machine=True)
+        await client.post(f"{ORDERS}/{order.id}/start", json={})
+
+        response = await client.post(f"{ORDERS}/{order.id}/pause", json={"pause_cause": "coffee"})
+
+        assert response.status_code == 422
+
+
+# ── Assessment: decimal minutes and one active row per order ──────────
+
+
+class TestAssessmentMinutesAndHistory:
+    async def _completed_order(self, db):
+        _, _, order = await _seed_lot_with_internal_order(
+            db, 1, order_status=ProductionOrderStatus.COMPLETED
+        )
+        await db.commit()
+        return order
+
+    async def test_decimal_minutes_round_trip(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        order = await self._completed_order(db)
+
+        response = await client.post(
+            f"{ORDERS}/{order.id}/assessment",
+            json={"actual_minutes_per_piece": 6.75, "complexity": "normal"},
+        )
+
+        assert response.status_code == 200, response.text
+        reread = await client.get(f"{ORDERS}/{order.id}/assessment")
+        assert reread.json()["actual_minutes_per_piece"] == 6.75
+
+    async def test_more_than_two_decimals_are_refused(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        order = await self._completed_order(db)
+
+        response = await client.post(
+            f"{ORDERS}/{order.id}/assessment",
+            json={"actual_minutes_per_piece": 6.755, "complexity": "normal"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_a_second_assessment_without_a_reversal_is_a_conflict(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        order = await self._completed_order(db)
+        body = {"actual_minutes_per_piece": 5, "complexity": "normal"}
+        await client.post(f"{ORDERS}/{order.id}/assessment", json=body)
+
+        response = await client.post(f"{ORDERS}/{order.id}/assessment", json=body)
+
+        assert response.status_code == 409
+        assert response.json()["code"] == "ManufacturingAssessmentAlreadyExistsError"
+
+    async def test_the_index_allows_a_new_row_once_the_old_one_is_superseded(self, db):
+        order = await self._completed_order(db)
+        repo = SqlAlchemyManufacturingAssessmentRepository(db)
+
+        def assessment(minutes: float) -> ManufacturingAssessment:
+            return ManufacturingAssessment(
+                id=0,
+                production_order_id=order.id,
+                operator_id=1,
+                actual_minutes_per_piece=minutes,
+                actual_setup_minutes=None,
+                complexity=ComplexityClass.NORMAL,
+                note=None,
+                created=datetime.now(UTC),
+            )
+
+        first = await repo.save(assessment(5))
+        await repo.mark_superseded(first.id, datetime.now(UTC))
+        await repo.save(assessment(6))
+        await db.commit()
+
+        active = await repo.get_by_production_order_id(order.id)
+        assert active is not None and active.actual_minutes_per_piece == 6
+        rows = await _fresh(db, ManufacturingAssessmentOrmModel, production_order_id=order.id)
+        assert sorted(r.superseded_at is None for r in rows) == [False, True]
+
+    async def test_a_concurrent_second_active_row_is_refused_by_the_index(self, db):
+        # Two records that both passed the use case's check: the index
+        # refuses the second, which reads as the existing assessment.
+        order = await self._completed_order(db)
+        repo = SqlAlchemyManufacturingAssessmentRepository(db)
+        row = ManufacturingAssessment(
+            id=0,
+            production_order_id=order.id,
+            operator_id=1,
+            actual_minutes_per_piece=5,
+            actual_setup_minutes=None,
+            complexity=ComplexityClass.NORMAL,
+            note=None,
+            created=datetime.now(UTC),
+        )
+        await repo.save(row)
+
+        with pytest.raises(ManufacturingAssessmentAlreadyExistsError):
+            await repo.save(row)
+        await db.rollback()
+
+    async def test_a_superseded_row_is_never_the_orders_assessment(self, db, auth_client):
+        client = await auth_client(permissions=[Permission.WRITE_PRODUCTION_ORDERS])
+        order = await self._completed_order(db)
+        await client.post(
+            f"{ORDERS}/{order.id}/assessment",
+            json={"actual_minutes_per_piece": 5, "complexity": "normal"},
+        )
+        await db.execute(
+            update(ManufacturingAssessmentOrmModel)
+            .where(ManufacturingAssessmentOrmModel.production_order_id == order.id)
+            .values(superseded_at=datetime.now(UTC))
+        )
+        await db.commit()
+
+        assessment = await client.get(f"{ORDERS}/{order.id}/assessment")
+        detail = await client.get(f"{ORDERS}/{order.id}")
+
+        assert assessment.status_code == 404
+        assert detail.json()["assessment"] is None

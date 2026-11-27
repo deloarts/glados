@@ -1,11 +1,16 @@
 """
 Unit tests for the ManufacturingAssessment vertical, a
 post-manufacturing assessment prompted at a ProductionOrder's final
-completion. One per completed order, create + read only. No database,
-no HTTP. All dependencies replaced with in-memory fakes.
+completion. A completed order has one active assessment, which a new one
+replaces only after a reversal booked later than it. No database, no HTTP.
+All dependencies replaced with in-memory fakes.
 """
 
+from datetime import UTC
 from datetime import date
+from datetime import datetime
+from datetime import timedelta
+from datetime import tzinfo
 from typing import Any
 
 import pytest
@@ -21,6 +26,9 @@ from src.modules.fulfillment.application.use_cases.production_order.record_manuf
 )
 from src.modules.fulfillment.domain.entities.manufacturing_assessment import ManufacturingAssessment
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
+from src.modules.fulfillment.domain.entities.production_order_completion import (
+    ProductionOrderCompletion,
+)
 from src.modules.fulfillment.domain.errors import ManufacturingAssessmentAlreadyExistsError
 from src.modules.fulfillment.domain.errors import ManufacturingAssessmentNotFoundError
 from src.modules.fulfillment.domain.errors import ProductionOrderInvalidStatusTransitionError
@@ -31,6 +39,7 @@ from src.modules.fulfillment.domain.value_objects.production_status import Urgen
 from src.modules.platform.domain.entities.user import User
 from src.modules.platform.domain.exceptions import InsufficientPermissionsError
 from src.modules.platform.domain.value_objects.permission import Permission
+from src.shared_kernel.domain.services import clock as clock_module
 from tests import factories
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -73,7 +82,7 @@ def make_order(
 
 
 def make_command(
-    actual_minutes_per_piece: int = 5,
+    actual_minutes_per_piece: float = 5,
     actual_setup_minutes: int | None = 15,
     complexity: str = ComplexityClass.NORMAL.value,
     note: str | None = None,
@@ -98,21 +107,38 @@ class FakeProductionOrderRepository:
 
 
 class FakeManufacturingAssessmentRepository:
+    """Keeps every row, superseded ones included, and refuses a second
+    active row per order as the partial unique index does."""
+
     def __init__(self) -> None:
-        self._by_order: dict[int, ManufacturingAssessment] = {}
+        self.rows: list[ManufacturingAssessment] = []
         self._next_id = 1
 
     async def get_by_production_order_id(
         self, production_order_id: int
     ) -> ManufacturingAssessment | None:
-        return self._by_order.get(production_order_id)
+        return next(
+            (
+                a
+                for a in self.rows
+                if a.production_order_id == production_order_id and a.superseded_at is None
+            ),
+            None,
+        )
 
     async def save(self, assessment: ManufacturingAssessment) -> ManufacturingAssessment:
+        if await self.get_by_production_order_id(assessment.production_order_id):
+            raise ManufacturingAssessmentAlreadyExistsError("active assessment exists")
         if assessment.id == 0:
             assessment.id = self._next_id
             self._next_id += 1
-        self._by_order[assessment.production_order_id] = assessment
+        self.rows.append(assessment)
         return assessment
+
+    async def mark_superseded(self, assessment_id: int, superseded_at: datetime) -> None:
+        for row in self.rows:
+            if row.id == assessment_id and row.superseded_at is None:
+                row.superseded_at = superseded_at
 
 
 class FakeEventBus:
@@ -272,3 +298,148 @@ async def test_get_assessment_raises_not_found_when_none_recorded() -> None:
 
     with pytest.raises(ManufacturingAssessmentNotFoundError):
         await get_use_case.execute(production_order_id=1)
+
+
+# ── Replacing the assessment after a reversal ───────────────────────────
+
+
+def _completion(
+    id: int, created: datetime, *, reverses: int | None = None
+) -> ProductionOrderCompletion:
+    """A completion of the whole order, or the reversal of completion
+    `reverses` when it is set."""
+    quantity = -10.0 if reverses is not None else 10.0
+    return ProductionOrderCompletion(
+        id=id,
+        production_order_id=1,
+        quantity=quantity,
+        quantity_accepted=quantity,
+        quantity_rejected=0.0,
+        completion_date=created.date(),
+        note=None,
+        operator_id=1,
+        recorded_by_id=1,
+        created=created,
+        reverses_completion_id=reverses,
+    )
+
+
+_START = datetime(2026, 3, 2, 8, 0, tzinfo=UTC)
+
+
+class _Clock(datetime):
+    """Stands in for the datetime class of the clock module, so every
+    now_utc() call returns the instant the test set last."""
+
+    current = _START
+
+    @classmethod
+    def now(cls, tz: tzinfo | None = None) -> datetime:
+        return cls.current
+
+
+class _CompletedOrder:
+    """Completed order #1, completed at 08:00. Each assessment is recorded
+    an hour after the last booking, and a reversal and the completion after
+    it are booked half an hour after the last assessment."""
+
+    @pytest.fixture(autouse=True)
+    def _clock(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(_Clock, "current", _START)
+        monkeypatch.setattr(clock_module, "datetime", _Clock)
+
+    def setup_method(self) -> None:
+        self.actor = make_user()
+        self.order = make_order(id=1, status=ProductionOrderStatus.COMPLETED)
+        self.order.completions = [_completion(1, _START)]
+        self.assessments = FakeManufacturingAssessmentRepository()
+        self.use_case = RecordManufacturingAssessment(
+            assessment_repo=self.assessments,
+            order_repo=FakeProductionOrderRepository([self.order]),
+            event_bus=FakeEventBus(),
+            uow=FakeUnitOfWork(),
+        )
+
+    async def record(self, minutes: float) -> None:
+        _Clock.current += timedelta(hours=1)
+        await self.use_case.execute(
+            actor=self.actor, production_order_id=1, cmd=make_command(minutes)
+        )
+
+    def reverse_and_complete_again(self) -> None:
+        """A reversal of the last completion and a new completion, both
+        booked after every assessment so far."""
+        _Clock.current += timedelta(minutes=30)
+        last = self.order.completions[-1].id
+        self.order.completions += [
+            _completion(last + 1, _Clock.current, reverses=last),
+            _completion(last + 2, _Clock.current + timedelta(minutes=1)),
+        ]
+
+    def active(self) -> list[float]:
+        return [
+            a.actual_minutes_per_piece for a in self.assessments.rows if a.superseded_at is None
+        ]
+
+
+class TestReplaceAfterReversal(_CompletedOrder):
+    async def test_a_reversal_after_the_assessment_lets_the_next_one_replace_it(self) -> None:
+        await self.record(5)
+        self.reverse_and_complete_again()
+
+        await self.record(6.5)
+
+        [first, second] = self.assessments.rows
+        assert first.superseded_at is not None
+        assert (second.actual_minutes_per_piece, second.superseded_at) == (6.5, None)
+        assert self.active() == [6.5]
+
+    async def test_without_a_later_reversal_a_second_assessment_is_refused(self) -> None:
+        # The order's earlier reversal happened before the assessment, so
+        # the assessment already describes the final run.
+        self.order.completions = [
+            _completion(1, _START - timedelta(hours=3)),
+            _completion(2, _START - timedelta(hours=2), reverses=1),
+            _completion(3, _START - timedelta(hours=1)),
+        ]
+        await self.record(5)
+
+        with pytest.raises(ManufacturingAssessmentAlreadyExistsError):
+            await self.record(6)
+
+        assert self.active() == [5]
+
+    async def test_a_second_reversal_lets_a_third_assessment_replace_the_second(self) -> None:
+        await self.record(5)
+        self.reverse_and_complete_again()
+        await self.record(6)
+        self.reverse_and_complete_again()
+
+        await self.record(7.25)
+
+        assert [a.superseded_at is not None for a in self.assessments.rows] == [True, True, False]
+        assert self.active() == [7.25]
+
+    async def test_a_replacement_is_recorded_only_once_per_reversal(self) -> None:
+        await self.record(5)
+        self.reverse_and_complete_again()
+        await self.record(6)
+
+        with pytest.raises(ManufacturingAssessmentAlreadyExistsError):
+            await self.record(7)
+
+        assert self.active() == [6]
+
+
+# ── Decimal minutes ─────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("minutes", [0, 0.5, 2.25, 12.1])
+def test_minutes_per_piece_take_up_to_two_decimals(minutes: float) -> None:
+    assert make_command(minutes).actual_minutes_per_piece == minutes
+
+
+@pytest.mark.parametrize("minutes", [2.255, -0.5, float("inf")])
+def test_minutes_per_piece_outside_two_decimals_are_refused(minutes: float) -> None:
+    with pytest.raises(ValueError):
+        make_command(minutes)

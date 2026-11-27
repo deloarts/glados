@@ -855,8 +855,8 @@ describe('LotRecordPositionCard', () => {
         makeOrder({
           status: 'paused',
           interruptions: [
-            { paused_at: '2026-07-10T08:00:00', resumed_at: '2026-07-10T09:30:00', reason: null, paused_operator_id: null },
-            { paused_at: '2026-07-10T11:00:00', resumed_at: null, reason: null, paused_operator_id: null },
+            { paused_at: '2026-07-10T08:00:00', resumed_at: '2026-07-10T09:30:00', reason: null, paused_operator_id: null, pause_cause: null },
+            { paused_at: '2026-07-10T11:00:00', resumed_at: null, reason: null, paused_operator_id: null, pause_cause: null },
           ],
         }),
       ],
@@ -867,6 +867,25 @@ describe('LotRecordPositionCard', () => {
     expect(text).toContain('Interruptions (2)')
     expect(text).toContain('resumed')
     expect(text).toContain('still paused')
+
+    wrapper.unmount()
+  })
+
+  it('names the cause an operator picked for a pause', async () => {
+    const wrapper = mountCard({
+      position: makePosition({ kind: 'internal' }),
+      orders: [
+        makeOrder({
+          status: 'paused',
+          interruptions: [
+            { paused_at: '2026-07-10T11:00:00', resumed_at: null, reason: 'manual', paused_operator_id: null, pause_cause: 'waiting_for_material' },
+          ],
+        }),
+      ],
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Waiting for Material')
 
     wrapper.unmount()
   })

@@ -7,7 +7,9 @@ import { useSubmitAction } from '@/shared/composables/useSubmitAction'
 import { useCurrentUserStore } from '@/core/stores/currentUserStore'
 import { useErrorToast } from '@/core/composables/useErrorToast'
 import { useProductionQueueStore } from '../../stores/productionQueueStore'
+import { PAUSE_CAUSES, pauseCauseLabelKey } from '../../utils/pauseCauses'
 
+import type { PauseCause } from '../../utils/pauseCauses'
 import type { ProductionOrderResponse } from '../../types/productionOrdersResponse'
 
 const props = defineProps<{
@@ -25,6 +27,7 @@ const store = useProductionQueueStore()
 const currentUserStore = useCurrentUserStore()
 
 const operatorId = ref<number | null>(null)
+const pauseCause = ref<PauseCause | null>(null)
 const reason = ref('')
 const { submitting, errorMessage, run } = useSubmitAction()
 
@@ -32,6 +35,10 @@ const operatorRequired = computed(() => currentUserStore.isSharedAccount)
 
 const operatorOptions = computed(() =>
   store.operators.map((op) => ({ label: op.full_name, value: op.id })),
+)
+
+const causeOptions = computed(() =>
+  PAUSE_CAUSES.map((cause) => ({ label: t(pauseCauseLabelKey(cause)), value: cause })),
 )
 
 onMounted(() => {
@@ -43,6 +50,7 @@ onMounted(() => {
 watch(visible, (isVisible) => {
   if (!isVisible) return
   operatorId.value = null
+  pauseCause.value = null
   reason.value = ''
   errorMessage.value = null
 })
@@ -60,6 +68,7 @@ async function onSubmit(): Promise<void> {
   await run(async () => {
     await store.pause(order.id, {
       ...(operatorId.value !== null ? { operator_id: operatorId.value } : {}),
+      ...(pauseCause.value !== null ? { pause_cause: pauseCause.value } : {}),
       reason: reason.value.trim() || undefined,
     })
     visible.value = false
@@ -103,6 +112,21 @@ async function onSubmit(): Promise<void> {
         <Message v-if="operatorOptions.length === 0" severity="warn" :closable="false">
           {{ t('productionQueue.operators.noneAssigned') }}
         </Message>
+      </div>
+
+      <div class="field">
+        <label :id="`${uid}-cause-label`" :for="`${uid}-cause`">{{ t('productionQueue.pause.cause') }}</label>
+        <Select
+          v-model="pauseCause"
+          :input-id="`${uid}-cause`"
+          :aria-labelledby="`${uid}-cause-label`"
+          :options="causeOptions"
+          option-label="label"
+          option-value="value"
+          :placeholder="t('productionQueue.pause.causePlaceholder')"
+          show-clear
+          fluid
+        />
       </div>
 
       <div class="field">

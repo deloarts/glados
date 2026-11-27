@@ -10,6 +10,7 @@ from typing import runtime_checkable
 from src.modules.fulfillment.domain.entities.production_order_interruption import (
     ProductionOrderInterruption,
 )
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 
 
@@ -26,14 +27,18 @@ class IProductionOrderInterruptionRepository(Protocol):
         resumed_at: datetime,
         resumed_by_id: int,
         *,
+        ended_by: InterruptionEndedBy,
         reason: InterruptionReason | None = None,
+        resumed_operator_id: int | None = None,
     ) -> ProductionOrderInterruption | None:
         """Closes the order's open interruption (resumed_at IS NULL), only
         when its reason is the given one if `reason` is set, and returns it.
         None when there is no such row. An order has at most one open
         interruption: a resume closes the manual pause, a lot resume the
-        interruption of its hold, and a cancel or a forced completion
-        whichever is open."""
+        interruption of its hold, and a cancel or a cut whichever is open.
+        `ended_by` records which of these closed it, and
+        `resumed_operator_id` the operator who went on with the work, which
+        only the order's own resume knows."""
         ...
 
     async def get_by_order_ids(self, order_ids: list[int]) -> list[ProductionOrderInterruption]:

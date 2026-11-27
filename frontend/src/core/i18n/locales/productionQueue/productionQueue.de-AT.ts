@@ -193,6 +193,17 @@ export default {
   pause: {
     title: 'Fertigungsauftrag pausieren',
     explain: 'So funktioniert das Pausieren',
+    cause: 'Ursache',
+    causePlaceholder: 'Ursache auswählen (optional)',
+    causes: {
+      waiting_for_material: 'Warten auf Material',
+      waiting_for_tool: 'Warten auf Werkzeug oder Vorrichtung',
+      waiting_for_drawing: 'Warten auf Zeichnung oder Programm',
+      waiting_for_qa: 'Warten auf QS',
+      machine_fault: 'Maschinenfehler',
+      other_work: 'Zu anderer Arbeit abgezogen',
+      end_of_shift: 'Schichtende',
+    },
     reason: 'Grund',
     submit: 'Pausieren',
     errors: {

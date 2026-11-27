@@ -1,8 +1,11 @@
 """
 Post-manufacturing assessment prompted at a ProductionOrder's final
 completion, training dataset for future AI-assisted time estimation.
-One per completed production order, internal-only in v1, create-only
-(immutable, mirrors OrderItemDelivery's append-only shape).
+A completed order has one active assessment. A second one is refused,
+unless a reversal took a completion back after the active one was recorded:
+then the order went to work again, and the new assessment describes the run
+that finished it. The earlier one is marked superseded and kept, never
+edited (manufacturing_assessment_rules.py).
 """
 
 from src.modules.fulfillment.application.dto.production_order_dto import (
@@ -18,6 +21,9 @@ from src.modules.fulfillment.domain.entities.manufacturing_assessment import Man
 from src.modules.fulfillment.domain.errors import ManufacturingAssessmentAlreadyExistsError
 from src.modules.fulfillment.domain.errors import ProductionOrderInvalidStatusTransitionError
 from src.modules.fulfillment.domain.errors import ProductionOrderNotFoundError
+from src.modules.fulfillment.domain.services.manufacturing_assessment_rules import (
+    is_assessment_replaceable,
+)
 from src.modules.fulfillment.domain.services.production_order_rules import ProductionOrderRules
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.ports.outbound.repositories.manufacturing_assessment_repository import (
@@ -72,10 +78,15 @@ class RecordManufacturingAssessment:
                 f"Production order #{order.id} is {order.status.value!r}; assessments can only be "
                 f"recorded for completed orders."
             )
-        if await self._assessments.get_by_production_order_id(production_order_id):
-            raise ManufacturingAssessmentAlreadyExistsError(
-                f"Production order #{production_order_id} already has a manufacturing assessment."
-            )
+        now = now_utc()
+        active = await self._assessments.get_by_production_order_id(production_order_id)
+        if active is not None:
+            if not is_assessment_replaceable(active, order.completions):
+                raise ManufacturingAssessmentAlreadyExistsError(
+                    f"Production order #{production_order_id} already has a manufacturing "
+                    "assessment."
+                )
+            await self._assessments.mark_superseded(active.id, now)
 
         # RecordManufacturingAssessmentCommand has no operator_id field,
         # unlike start/pause, there's no shared-account ambiguity to
@@ -92,12 +103,14 @@ class RecordManufacturingAssessment:
                 actual_setup_minutes=cmd.actual_setup_minutes,
                 complexity=cmd.complexity,
                 note=cmd.note,
-                created=now_utc(),
+                created=now,
             )
         )
         await self._uow.commit()
 
+        replaced = f", replacing assessment #{active.id}" if active is not None else ""
         log.info(
-            f"Recorded a manufacturing assessment for production order #{production_order_id}."
+            f"Recorded a manufacturing assessment for production order "
+            f"#{production_order_id}{replaced}."
         )
         return ManufacturingAssessmentMapper.to_result(saved)

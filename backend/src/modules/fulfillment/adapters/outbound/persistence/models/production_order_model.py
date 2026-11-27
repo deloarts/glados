@@ -199,6 +199,15 @@ class ProductionOrderOrmModel(ChangedByColumns, Base):
         lazy="raise_on_sql",
     )
 
+    # The operator of the order's first start, set once with actual_start
+    # and never overwritten, unlike started_operator_id.
+    first_started_operator_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("user_table.id", name="fk_production_order_first_started_operator_id"),
+        nullable=True,
+        index=True,
+    )
+
     # Frozen once by StartProductionOrder from planned_end at the moment
     # of the order's first start, never rewritten afterward. See
     # production_order.py's matching field docstring.

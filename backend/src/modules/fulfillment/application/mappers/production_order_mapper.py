@@ -121,6 +121,7 @@ class ProductionOrderMapper:
                     resumed_at=i.resumed_at,
                     reason=i.reason,
                     paused_operator_id=i.paused_operator_id,
+                    pause_cause=i.pause_cause,
                 )
                 for i in entity.interruptions
             ],

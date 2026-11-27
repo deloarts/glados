@@ -22,6 +22,7 @@ import FilesSection from '@/shared/components/files/FilesSection.vue'
 import PageLayout from '@/shared/components/resource-view/PageLayout.vue'
 import InfoBar from '@/shared/components/resource-view/InfoBar.vue'
 import { ProductionOrderCompletionDialog } from '@/features/production'
+import { ManufacturingAssessmentDialog } from '@/features/production'
 import { useProductionOrderFilesStore } from '@/features/production'
 import { getProductionOrderFileBlob } from '@/features/production'
 import { productionOrderStatusSeverity } from '@/features/production'
@@ -215,9 +216,17 @@ async function refreshOrder(): Promise<void> {
 // ── Recording ─────────────────────────────────────────────────────────
 
 const showCompletion = ref(false)
+// The completion that completes the order asks for the assessment, as on
+// the queue board, so inspection steps feed the same data.
+const assessmentTarget = ref<ProductionOrderResponse | null>(null)
+const showAssessment = ref(false)
 
-async function onRecorded(): Promise<void> {
+async function onRecorded(updated: ProductionOrderResponse): Promise<void> {
   showCompletion.value = false
+  if (updated.status === 'completed') {
+    assessmentTarget.value = updated
+    showAssessment.value = true
+  }
   await load()
 }
 
@@ -435,6 +444,8 @@ function goBack(): void {
     :steps="steps"
     @recorded="onRecorded"
   />
+
+  <ManufacturingAssessmentDialog v-model:visible="showAssessment" :order="assessmentTarget" />
 
   <FilePreviewDialog
     v-if="previewFile"

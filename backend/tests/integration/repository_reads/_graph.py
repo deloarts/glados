@@ -840,6 +840,7 @@ class Graph:
                 machine_pool_id=pool.id,
                 planned_by_id=self.uid,
                 started_operator_id=self.other_user.id,
+                first_started_operator_id=self.other_user.id,
                 lot_position_id=position.id,
             )
         )
@@ -883,6 +884,7 @@ class Graph:
                 resumed_at=NOW,
                 paused_by_id=self.uid,
                 resumed_by_id=self.other_user.id,
+                resumed_operator_id=self.other_user.id,
             )
         )
         await self.db.commit()
