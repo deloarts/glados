@@ -127,6 +127,8 @@ class SqlAlchemySourceItemRepository(ISourceItemRepository):
 
         if filters.id is not None:
             q = q.where(SourceItemOrmModel.id == filters.id)
+        if filters.ids:
+            q = q.where(SourceItemOrmModel.id.in_(filters.ids))
         if filters.status:
             q = q.where(SourceItemOrmModel.status == filters.status)
         if filters.type_id is not None:
@@ -188,6 +190,7 @@ class SqlAlchemySourceItemRepository(ISourceItemRepository):
             filters.limit,
             order_term(sort_col, filters.order_dir, default="desc"),
             options=source_item_load_options(),
+            min_limit=len(filters.ids) if filters.ids else None,
         )
         return total, [source_item_orm_to_entity(r) for r in rows]
 

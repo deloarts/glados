@@ -4,8 +4,10 @@ Manages the source item catalogue: create, read, update, soft-delete.
 """
 
 from datetime import tzinfo
+from typing import Annotated
 
 from fastapi import Depends
+from fastapi import Query
 from fastapi import status
 from fastapi.routing import APIRouter
 
@@ -16,13 +18,13 @@ from src.modules.catalogue.adapters.inbound.api.deps.items import get_source_ite
 from src.modules.catalogue.adapters.inbound.api.deps.items import get_source_items_use_case
 from src.modules.catalogue.adapters.inbound.api.deps.items import get_update_source_item_use_case
 from src.modules.catalogue.adapters.inbound.api.schemas.source_item_schema import (
-    SourceItemFilterParams,
-)
-from src.modules.catalogue.adapters.inbound.api.schemas.source_item_schema import (
     SourceItemUpdateRequest,
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.source_item_schema import (
     SourceItemWebCreateRequest,
+)
+from src.modules.catalogue.adapters.inbound.api.schemas.source_item_schema import (
+    SourceItemWebFilterParams,
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.source_item_schema import (
     SourceItemWebResponse,
@@ -54,7 +56,9 @@ router = APIRouter()
 
 @router.get("/", response_model=PageResponse[SourceItemWebResponse])
 async def read_source_items(
-    params: SourceItemFilterParams = Depends(),
+    # A query-parameter model, not `Depends()`: only this binds `ids` from
+    # repeated query keys.
+    params: Annotated[SourceItemWebFilterParams, Query()],
     _: User = Depends(get_current_active_user),
     zone: tzinfo = Depends(get_tenant_zone),
     use_case: GetSourceItems = Depends(get_source_items_use_case),

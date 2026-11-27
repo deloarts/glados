@@ -291,6 +291,7 @@ class SqlAlchemyBoughtItemRepository:
         return [
             when(not filters.include_archived, lambda _: BoughtItemOrmModel.archived.is_(False)),
             when(filters.id, lambda id: BoughtItemOrmModel.id == id),
+            when(filters.ids, lambda ids: BoughtItemOrmModel.id.in_(ids)),
             when(filters.status, lambda status: BoughtItemOrmModel.status == status),
             when(
                 filters.manufacturer_id,
@@ -421,6 +422,7 @@ class SqlAlchemyBoughtItemRepository:
             filters.limit,
             order_term(sort_col, filters.order_dir, default="desc"),
             options=bought_item_load_options(),
+            min_limit=len(filters.ids) if filters.ids else None,
         )
         pdf_files = await _pdf_files_by_item(self._db, [r.id for r in rows])
         return total, [item_orm_to_entity(r, pdf_files.get(r.id, [])) for r in rows]

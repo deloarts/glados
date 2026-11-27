@@ -26,8 +26,23 @@ from sqlalchemy.orm import sessionmaker
 from src.modules.catalogue.adapters.outbound.persistence.models.bought_item_file_model import (
     BoughtItemFileOrmModel,
 )
+from src.modules.catalogue.adapters.outbound.persistence.models.bought_item_model import (
+    BoughtItemOrmModel,
+)
 from src.modules.catalogue.adapters.outbound.persistence.models.customer_model import (
     CustomerOrmModel,
+)
+from src.modules.catalogue.adapters.outbound.persistence.models.made_item_file_model import (
+    MadeItemFileOrmModel,
+)
+from src.modules.catalogue.adapters.outbound.persistence.models.made_item_model import (
+    MadeItemOrmModel,
+)
+from src.modules.catalogue.adapters.outbound.persistence.models.source_item_file_model import (
+    SourceItemFileOrmModel,
+)
+from src.modules.catalogue.adapters.outbound.persistence.models.source_item_model import (
+    SourceItemOrmModel,
 )
 from src.modules.fulfillment.adapters.outbound.persistence.models.bought_item_allocation_model import (
     BoughtItemAllocationOrmModel,
@@ -402,6 +417,120 @@ async def test_bought_item_file_signals_its_item_as_updated(session_factory, fak
     assert await _signals(fake_redis) == [
         {"resource": LiveResource.BOUGHT_ITEMS, "id": 42, "action": "updated", "actor_id": None}
     ]
+
+
+def _make_catalogue_item(session: Session, resource: str) -> Base:
+    now = datetime.now(UTC)
+    common = {"created": now, "changed": now, "changes": [], "creator_id": 1}
+    item: Base
+    if resource == LiveResource.BOUGHT_ITEMS:
+        item = BoughtItemOrmModel(
+            **common,
+            order_code_1="OC-1",
+            status="active",
+            article_name="Screw",
+            data_source="WEB",
+            manufacturer_id=1,
+        )
+    elif resource == LiveResource.MADE_ITEMS:
+        item = MadeItemOrmModel(
+            **common, revision="A", article_name="Bracket", status="active", data_source="CAD"
+        )
+    else:
+        item = SourceItemOrmModel(**common, type_id=1, material="S235", status="active")
+    session.add(item)
+    session.flush()
+    return item
+
+
+def _catalogue_signal(resource: str, row_id: int, action: str) -> dict:
+    return {"resource": resource, "id": row_id, "action": action, "actor_id": None}
+
+
+_CATALOGUE_RESOURCES = [
+    LiveResource.BOUGHT_ITEMS,
+    LiveResource.MADE_ITEMS,
+    LiveResource.SOURCE_ITEMS,
+]
+
+
+@pytest.mark.parametrize("resource", _CATALOGUE_RESOURCES)
+async def test_catalogue_item_create_signals_created(session_factory, fake_redis, resource):
+    with session_factory() as session:
+        item = _make_catalogue_item(session, resource)
+        session.commit()
+        item_id = item.id
+
+    assert await _signals(fake_redis) == [_catalogue_signal(resource, item_id, "created")]
+
+
+@pytest.mark.parametrize("resource", _CATALOGUE_RESOURCES)
+async def test_catalogue_item_update_signals_updated(session_factory, fake_redis, resource):
+    with session_factory() as session:
+        item = _make_catalogue_item(session, resource)
+        session.commit()
+        item_id = item.id
+        model = type(item)
+
+    await _drain()
+    fake_redis.published.clear()
+
+    with session_factory() as session:
+        session.get(model, item_id).note = "Changed elsewhere"
+        session.commit()
+
+    assert await _signals(fake_redis) == [_catalogue_signal(resource, item_id, "updated")]
+
+
+@pytest.mark.parametrize("resource", _CATALOGUE_RESOURCES)
+async def test_catalogue_item_archive_signals_updated(session_factory, fake_redis, resource):
+    """Archiving is a soft delete, so the row is dirty rather than deleted;
+    the table drops it when the id refetch no longer returns it."""
+    with session_factory() as session:
+        item = _make_catalogue_item(session, resource)
+        session.commit()
+        item_id = item.id
+        model = type(item)
+
+    await _drain()
+    fake_redis.published.clear()
+
+    with session_factory() as session:
+        session.get(model, item_id).archived = True
+        session.commit()
+
+    assert await _signals(fake_redis) == [_catalogue_signal(resource, item_id, "updated")]
+
+
+@pytest.mark.parametrize(
+    ("model", "fk", "category", "resource"),
+    [
+        (MadeItemFileOrmModel, "made_item_id", "mesh", LiveResource.MADE_ITEMS),
+        (SourceItemFileOrmModel, "source_item_id", "mesh", LiveResource.SOURCE_ITEMS),
+    ],
+)
+async def test_item_file_signals_its_item_as_updated(
+    session_factory, fake_redis, model, fk, category, resource
+):
+    # SQLite leaves foreign keys unchecked here, so the file needs no item row.
+    with session_factory() as session:
+        session.add(
+            model(
+                **{fk: 42},
+                file_name="part.stl",
+                stored_name="stored-part.stl",
+                mime_type="model/stl",
+                size_bytes=1,
+                storage_path="items/42/stored-part.stl",
+                sha256="0" * 64,
+                category=category,
+                created=datetime.now(UTC),
+                uploaded_by_user_id=1,
+            )
+        )
+        session.commit()
+
+    assert await _signals(fake_redis) == [_catalogue_signal(resource, 42, "updated")]
 
 
 async def test_product_device_component_signals_its_product_as_updated(session_factory, fake_redis):

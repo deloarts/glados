@@ -40,6 +40,7 @@ class ArticleGroupFilterDto(LabeledCatalogueFilterDto):
 class BoughtItemFilterDto:
     skip: int | None = None
     limit: int | None = None
+    ids: list[int] | None = None  # live row-sync: refetch specific rows, ignore paging
     search: str | None = None
     id: int | None = None
     status: str | None = None
@@ -76,6 +77,7 @@ class BoughtItemFilterDto:
 class MadeItemFilterDto:
     skip: int | None = None
     limit: int | None = None
+    ids: list[int] | None = None  # live row-sync: refetch specific rows, ignore paging
     search: str | None = None
     id: int | None = None
     status: str | None = None

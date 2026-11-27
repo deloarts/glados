@@ -4,6 +4,7 @@ owned, ordered process steps (routing).
 """
 
 from datetime import tzinfo
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi import Query
@@ -45,7 +46,6 @@ from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import 
 from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import (
     MadeItemCreateRevisionRequest,
 )
-from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import MadeItemFilterParams
 from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import (
     MadeItemMergeTargetResponse,
 )
@@ -69,6 +69,9 @@ from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import 
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import (
     MadeItemUpdateRequest,
+)
+from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import (
+    MadeItemWebFilterParams,
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import MadeItemWebResponse
 from src.modules.catalogue.adapters.inbound.api.schemas.made_item_schema import MergeMadeItemRequest
@@ -126,7 +129,9 @@ router = APIRouter()
 
 @router.get("/", response_model=PageResponse[MadeItemWebResponse])
 async def read_made_items(
-    params: MadeItemFilterParams = Depends(),
+    # A query-parameter model, not `Depends()`: only this binds `ids` from
+    # repeated query keys.
+    params: Annotated[MadeItemWebFilterParams, Query()],
     actor: User = Depends(get_current_active_user),
     zone: tzinfo = Depends(get_tenant_zone),
     use_case: GetMadeItems = Depends(get_made_items_use_case),

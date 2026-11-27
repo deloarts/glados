@@ -14,7 +14,9 @@ import pytest
 from src.bootstrap.main import app
 
 LIST_QUERY_FIELDS = {
+    "/api/v1/web/bought-items/": {"ids"},
     "/api/v1/web/bought-items-demands/": {"ids", "bucket_id", "order_id"},
+    "/api/v1/web/made-items/": {"ids"},
     "/api/v1/web/made-items-demands/": {
         "ids",
         "statuses",
@@ -23,6 +25,7 @@ LIST_QUERY_FIELDS = {
         "process_fabrication_method_id",
         "process_inspection_method_id",
     },
+    "/api/v1/web/source-items/": {"ids"},
     "/api/v1/web/source-item-demands/": {"ids", "bucket_id", "lot_id", "order_id"},
     "/api/v1/web/production-lots/": {"ids", "statuses"},
     "/api/v1/web/admin/settings/pdm/runs": {"trigger"},

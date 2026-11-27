@@ -71073,6 +71073,7 @@
         "operationId": "read_bought_items_api_v1_web_bought_items__get",
         "parameters": [
           {
+            "description": "Rows to skip; 0 when omitted.",
             "in": "query",
             "name": "skip",
             "required": false,
@@ -71086,10 +71087,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows to skip; 0 when omitted.",
               "title": "Skip"
             }
           },
           {
+            "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
             "in": "query",
             "name": "limit",
             "required": false,
@@ -71104,10 +71107,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
               "title": "Limit"
             }
           },
           {
+            "description": "Fuzzy search across all text columns",
             "in": "query",
             "name": "search",
             "required": false,
@@ -71120,6 +71125,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Fuzzy search across all text columns",
               "title": "Search"
             }
           },
@@ -71610,6 +71616,26 @@
                 }
               ],
               "title": "Order Dir"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
             }
           }
         ],
@@ -80294,6 +80320,7 @@
         "operationId": "read_made_items_api_v1_web_made_items__get",
         "parameters": [
           {
+            "description": "Rows to skip; 0 when omitted.",
             "in": "query",
             "name": "skip",
             "required": false,
@@ -80307,10 +80334,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows to skip; 0 when omitted.",
               "title": "Skip"
             }
           },
           {
+            "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
             "in": "query",
             "name": "limit",
             "required": false,
@@ -80325,10 +80354,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
               "title": "Limit"
             }
           },
           {
+            "description": "Fuzzy search across all text columns",
             "in": "query",
             "name": "search",
             "required": false,
@@ -80341,6 +80372,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Fuzzy search across all text columns",
               "title": "Search"
             }
           },
@@ -80727,6 +80759,7 @@
             }
           },
           {
+            "description": "Keep only the newest revision of each part-number family (highest revision wins, by length then alphabetically, ties broken by creation date desc then id desc). Rows with no part number always pass.",
             "in": "query",
             "name": "latest_only",
             "required": false,
@@ -80739,6 +80772,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Keep only the newest revision of each part-number family (highest revision wins, by length then alphabetically, ties broken by creation date desc then id desc). Rows with no part number always pass.",
               "title": "Latest Only"
             }
           },
@@ -80782,6 +80816,26 @@
                 }
               ],
               "title": "Order Dir"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
             }
           }
         ],
@@ -106570,6 +106624,7 @@
         "operationId": "read_source_items_api_v1_web_source_items__get",
         "parameters": [
           {
+            "description": "Rows to skip; 0 when omitted.",
             "in": "query",
             "name": "skip",
             "required": false,
@@ -106583,10 +106638,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows to skip; 0 when omitted.",
               "title": "Skip"
             }
           },
           {
+            "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
             "in": "query",
             "name": "limit",
             "required": false,
@@ -106601,10 +106658,12 @@
                   "type": "null"
                 }
               ],
+              "description": "Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match.",
               "title": "Limit"
             }
           },
           {
+            "description": "Fuzzy search across all text columns",
             "in": "query",
             "name": "search",
             "required": false,
@@ -106617,6 +106676,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Fuzzy search across all text columns",
               "title": "Search"
             }
           },
@@ -106961,6 +107021,26 @@
                 }
               ],
               "title": "Order Dir"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "maxItems": 200,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
             }
           }
         ],

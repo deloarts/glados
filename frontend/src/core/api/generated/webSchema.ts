@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-26T09:48:24.132Z
+ * Generated: 2026-11-27T08:34:27.795Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -36350,8 +36350,11 @@ export interface operations {
     read_bought_items_api_v1_web_bought_items__get: {
         parameters: {
             query?: {
+                /** @description Rows to skip; 0 when omitted. */
                 skip?: number | null;
+                /** @description Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match. */
                 limit?: number | null;
+                /** @description Fuzzy search across all text columns */
                 search?: string | null;
                 id?: number | null;
                 status?: components["schemas"]["BoughtItemCatalogueStatus"] | null;
@@ -36382,6 +36385,7 @@ export interface operations {
                 changed_to?: string | null;
                 order_by?: ("id" | "article_name" | "manufacturer_name" | "changed" | "created") | null;
                 order_dir?: ("asc" | "desc") | null;
+                ids?: number[] | null;
             };
             header?: never;
             path?: never;
@@ -40473,8 +40477,11 @@ export interface operations {
     read_made_items_api_v1_web_made_items__get: {
         parameters: {
             query?: {
+                /** @description Rows to skip; 0 when omitted. */
                 skip?: number | null;
+                /** @description Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match. */
                 limit?: number | null;
+                /** @description Fuzzy search across all text columns */
                 search?: string | null;
                 id?: number | null;
                 status?: components["schemas"]["MadeItemCatalogueStatus"] | null;
@@ -40499,9 +40506,11 @@ export interface operations {
                 created_to?: string | null;
                 changed_from?: string | null;
                 changed_to?: string | null;
+                /** @description Keep only the newest revision of each part-number family (highest revision wins, by length then alphabetically, ties broken by creation date desc then id desc). Rows with no part number always pass. */
                 latest_only?: boolean | null;
                 order_by?: ("id" | "article_name" | "changed" | "created") | null;
                 order_dir?: ("asc" | "desc") | null;
+                ids?: number[] | null;
             };
             header?: never;
             path?: never;
@@ -53289,8 +53298,11 @@ export interface operations {
     read_source_items_api_v1_web_source_items__get: {
         parameters: {
             query?: {
+                /** @description Rows to skip; 0 when omitted. */
                 skip?: number | null;
+                /** @description Rows per page, at most 500; 100 when omitted. `total` in the response says how many rows match. */
                 limit?: number | null;
+                /** @description Fuzzy search across all text columns */
                 search?: string | null;
                 id?: number | null;
                 status?: components["schemas"]["SourceItemCatalogueStatus"] | null;
@@ -53312,6 +53324,7 @@ export interface operations {
                 changed_to?: string | null;
                 order_by?: ("id" | "changed" | "created") | null;
                 order_dir?: ("asc" | "desc") | null;
+                ids?: number[] | null;
             };
             header?: never;
             path?: never;
