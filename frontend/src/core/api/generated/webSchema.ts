@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-27T10:17:42.643Z
+ * Generated: 2026-11-27T11:29:03.843Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -1384,6 +1384,28 @@ export interface paths {
          */
         get: operations["get_pdm_workflows_api_v1_web_admin_settings_pdm_workflows_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/web/admin/settings/planning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Planning Settings */
+        get: operations["get_planning_settings_api_v1_web_admin_settings_planning_get"];
+        /**
+         * Update Planning Settings
+         * @description Set the committed horizon and the retention of recorded plans. Requires
+         *     write:settings.
+         */
+        put: operations["update_planning_settings_api_v1_web_admin_settings_planning_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -7087,6 +7109,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/web/production-kpi/booking-quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Booking Quality
+         * @description Orders that ran through hours without working time, final completions
+         *     without an assessment and manual pauses without a cause, in the period.
+         */
+        get: operations["read_booking_quality_api_v1_web_production_kpi_booking_quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/web/production-kpi/estimate-accuracy": {
         parameters: {
             query?: never;
@@ -12444,6 +12487,25 @@ export interface components {
             /** Writeback Enabled */
             writeback_enabled: boolean;
         };
+        /** AdminPlanningSettingsResponse */
+        AdminPlanningSettingsResponse: {
+            /**
+             * Booking Quality Since
+             * Format: date-time
+             */
+            booking_quality_since: string;
+            /** Commit Horizon Working Days */
+            commit_horizon_working_days: number;
+            /** Id */
+            id: number;
+            /** Plan Retention Days */
+            plan_retention_days: number;
+            /**
+             * Public Id
+             * Format: uuid
+             */
+            public_id: string;
+        };
         /** AdminProductionSettingsResponse */
         AdminProductionSettingsResponse: {
             /** Assign Approved Material To Item */
@@ -12757,6 +12819,7 @@ export interface components {
             notifications: components["schemas"]["AdminNotificationSettingsResponse"];
             orders: components["schemas"]["AdminOrderSettingsResponse"];
             pdm: components["schemas"]["AdminPdmSettingsResponse"];
+            planning: components["schemas"]["AdminPlanningSettingsResponse"];
             production: components["schemas"]["AdminProductionSettingsResponse"];
             retention: components["schemas"]["AdminRetentionSettingsResponse"];
             security: components["schemas"]["AdminSecuritySettingsResponse"];
@@ -21478,6 +21541,24 @@ export interface components {
              */
             vertical_align: "top" | "middle" | "bottom";
         };
+        /** MissingAssessmentRowResult */
+        MissingAssessmentRowResult: {
+            /**
+             * Completed At
+             * Format: date-time
+             */
+            completed_at: string;
+            /** Lot Id */
+            lot_id: number;
+            /** Lot Number */
+            lot_number: string;
+            /** Machine Id */
+            machine_id: number | null;
+            /** Order Id */
+            order_id: number;
+            /** Production Order Number */
+            production_order_number: string;
+        };
         /** MoveOrderItemRequest */
         MoveOrderItemRequest: {
             /** Target Order Id */
@@ -22089,6 +22170,23 @@ export interface components {
              * @default false
              */
             update_items_delivery_date: boolean;
+        };
+        /** OutsideWorkingTimeRowResult */
+        OutsideWorkingTimeRowResult: {
+            /** Booked Minutes */
+            booked_minutes: number;
+            /** Lot Id */
+            lot_id: number;
+            /** Lot Number */
+            lot_number: string;
+            /** Machine Id */
+            machine_id: number | null;
+            /** Order Id */
+            order_id: number;
+            /** Outside Minutes */
+            outside_minutes: number;
+            /** Production Order Number */
+            production_order_number: string;
         };
         /** PageResponse[AdminSettingsAuditEntryResponse] */
         PageResponse_AdminSettingsAuditEntryResponse_: {
@@ -25341,6 +25439,26 @@ export interface components {
              * Format: uuid
              */
             public_id: string;
+        };
+        /** ProductionKpiBookingQualityResult */
+        ProductionKpiBookingQualityResult: {
+            /**
+             * Booking Quality Since
+             * Format: date-time
+             */
+            booking_quality_since: string;
+            /** Final Completions */
+            final_completions: number;
+            /** Manual Pauses */
+            manual_pauses: number;
+            /** Missing Assessments */
+            missing_assessments: components["schemas"]["MissingAssessmentRowResult"][];
+            /** Orders With Bookings */
+            orders_with_bookings: number;
+            /** Outside Working Time */
+            outside_working_time: components["schemas"]["OutsideWorkingTimeRowResult"][];
+            /** Uncaused Pauses */
+            uncaused_pauses: components["schemas"]["UncausedPauseRowResult"][];
         };
         /** ProductionKpiEstimateAccuracyResult */
         ProductionKpiEstimateAccuracyResult: {
@@ -30036,6 +30154,26 @@ export interface components {
             /** User Agent */
             user_agent: string | null;
         };
+        /** UncausedPauseRowResult */
+        UncausedPauseRowResult: {
+            /** Lot Id */
+            lot_id: number;
+            /** Lot Number */
+            lot_number: string;
+            /** Machine Id */
+            machine_id: number | null;
+            /** Operator Id */
+            operator_id: number | null;
+            /** Order Id */
+            order_id: number;
+            /**
+             * Paused At
+             * Format: date-time
+             */
+            paused_at: string;
+            /** Production Order Number */
+            production_order_number: string;
+        };
         /** UpdateAgentSettingsRequest */
         UpdateAgentSettingsRequest: {
             /** Ai Policy Url */
@@ -30474,6 +30612,13 @@ export interface components {
             watched_folders?: components["schemas"]["PdmWatchedFolderRequest"][] | null;
             /** Writeback Enabled */
             writeback_enabled?: boolean | null;
+        };
+        /** UpdatePlanningSettingsRequest */
+        UpdatePlanningSettingsRequest: {
+            /** Commit Horizon Working Days */
+            commit_horizon_working_days?: number | null;
+            /** Plan Retention Days */
+            plan_retention_days?: number | null;
         };
         /** UpdateProductionOrderRequest */
         UpdateProductionOrderRequest: {
@@ -33770,6 +33915,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PdmWorkflowResponse"][];
+                };
+            };
+        };
+    };
+    get_planning_settings_api_v1_web_admin_settings_planning_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanningSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_planning_settings_api_v1_web_admin_settings_planning_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanningSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanningSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -45996,6 +46194,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanningExceptionResponse"][];
+                };
+            };
+        };
+    };
+    read_booking_quality_api_v1_web_production_kpi_booking_quality_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+                machine_id?: number | null;
+                machine_pool_id?: number | null;
+                project_id?: number | null;
+                customer_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionKpiBookingQualityResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

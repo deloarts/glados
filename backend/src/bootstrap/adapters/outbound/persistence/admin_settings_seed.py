@@ -46,9 +46,19 @@ from src.modules.external_data.domain.entities.admin_settings.eplan_data_portal 
 )
 from src.modules.external_data.domain.entities.admin_settings.pdm import AdminPdmSettings
 from src.modules.external_data.domain.entities.admin_settings.stock import AdminStockSettings
+from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings_model.planning import (
+    AdminPlanningSettingsOrmModel,
+)
 from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings_model.production import (
     AdminProductionSettingsOrmModel,
 )
+from src.modules.fulfillment.domain.entities.admin_settings.planning import (
+    DEFAULT_COMMIT_HORIZON_WORKING_DAYS,
+)
+from src.modules.fulfillment.domain.entities.admin_settings.planning import (
+    DEFAULT_PLAN_RETENTION_DAYS,
+)
+from src.modules.fulfillment.domain.entities.admin_settings.planning import AdminPlanningSettings
 from src.modules.fulfillment.domain.entities.admin_settings.production import (
     AdminProductionSettings,
 )
@@ -467,6 +477,18 @@ ADMIN_SETTINGS_SEEDS: tuple[AdminSettingsSeed[Any], ...] = (
             assign_approved_material_to_item=False,
             overwrite_item_material_on_approval=False,
             external_first_step_needs_no_material=True,
+        ),
+    ),
+    AdminSettingsSeed(
+        label="planning",
+        model=AdminPlanningSettingsOrmModel,
+        save=lambda repo: repo.save_planning,
+        # A fresh install judges bookings from its first start.
+        build=lambda: AdminPlanningSettings(
+            id=1,
+            commit_horizon_working_days=DEFAULT_COMMIT_HORIZON_WORKING_DAYS,
+            plan_retention_days=DEFAULT_PLAN_RETENTION_DAYS,
+            booking_quality_since=now_utc(),
         ),
     ),
     AdminSettingsSeed(

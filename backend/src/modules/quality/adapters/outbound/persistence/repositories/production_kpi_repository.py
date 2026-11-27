@@ -39,6 +39,9 @@ from src.modules.fulfillment.adapters.outbound.persistence.models.lot_position_m
 from src.modules.fulfillment.adapters.outbound.persistence.models.lot_step_model import (
     LotStepOrmModel,
 )
+from src.modules.fulfillment.adapters.outbound.persistence.models.manufacturing_assessment_model import (
+    ManufacturingAssessmentOrmModel,
+)
 from src.modules.fulfillment.adapters.outbound.persistence.models.order_item_delivery_model import (
     OrderItemDeliveryOrmModel,
 )
@@ -51,15 +54,23 @@ from src.modules.fulfillment.adapters.outbound.persistence.models.production_lot
 from src.modules.fulfillment.adapters.outbound.persistence.models.production_order_completion_model import (
     ProductionOrderCompletionOrmModel,
 )
+from src.modules.fulfillment.adapters.outbound.persistence.models.production_order_interruption_model import (
+    ProductionOrderInterruptionOrmModel,
+)
 from src.modules.fulfillment.adapters.outbound.persistence.models.production_order_model import (
     ProductionOrderOrmModel,
+)
+from src.modules.fulfillment.domain.entities.production_order_completion import (
+    ProductionOrderCompletion,
 )
 from src.modules.fulfillment.domain.entities.production_order_interruption import (
     ProductionOrderInterruption,
 )
+from src.modules.fulfillment.domain.policies.booked_work import BookedOrder
 from src.modules.fulfillment.domain.policies.wait_after import StepWait
 from src.modules.fulfillment.domain.policies.wait_after import position_wait_after_minutes
 from src.modules.fulfillment.domain.policies.wait_after import ready_after_wait
+from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotStatus
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
@@ -70,6 +81,8 @@ from src.modules.fulfillment.ports.outbound.fulfillment_queries import (
 from src.modules.platform.adapters.outbound.persistence.date_range import day_after_utc
 from src.modules.platform.adapters.outbound.persistence.date_range import day_start_utc
 from src.modules.platform.domain.value_objects.localized_text import LocalizedText
+from src.modules.quality.domain.services.booking_quality import BookingQualityOrder
+from src.modules.quality.domain.services.booking_quality import UncausedPause
 from src.modules.quality.domain.services.kpi_rules import CompletedOrderRow
 from src.modules.quality.domain.services.kpi_rules import CompletionRow
 from src.modules.quality.domain.services.kpi_rules import FabricationMethodRef
@@ -85,6 +98,7 @@ from src.modules.quality.ports.outbound.repositories.production_kpi_repository i
     LateLotCandidateRow,
 )
 from src.modules.workspace.adapters.outbound.persistence.models.project_model import ProjectOrmModel
+from src.shared_kernel.domain.services.clock import as_utc
 
 _OPEN_LOT_STATUSES = [
     status
@@ -117,10 +131,10 @@ _Q = TypeVar("_Q", bound="Select[Any]")
 def _apply_order_lot_scope(q: _Q, scope: KpiScope) -> _Q:
     """Applies KpiScope's machine/pool/project/customer narrowing to a
     query already joined through ProductionOrderOrmModel and
-    ProductionLotOrmModel. Shared by get_waiting_time_rows and the
-    completion half of get_scrap_events, the two queries built directly
-    against those two tables rather than via _machine_scope_exists's own
-    EXISTS subquery."""
+    ProductionLotOrmModel. Shared by the queries built directly against
+    those two tables rather than via _machine_scope_exists's own EXISTS
+    subquery: get_waiting_time_rows, the completion half of
+    get_scrap_events and the booking quality reads."""
     if scope.machine_id is not None:
         q = q.where(ProductionOrderOrmModel.machine_id == scope.machine_id)
     if scope.machine_pool_id is not None:
@@ -636,3 +650,149 @@ class SqlAlchemyProductionKpiRepository:
             )
             for delivery, supplier_id, supplier_name in rows
         ]
+
+    async def get_booking_quality_orders(
+        self, period: KpiPeriod, scope: KpiScope
+    ) -> list[BookingQualityOrder]:
+        start = day_start_utc(period.date_from, period.zone)
+        end = day_after_utc(period.date_to, period.zone)
+        q = (
+            select(
+                ProductionOrderOrmModel, ProductionLotOrmModel.id, ProductionLotOrmModel.lot_number
+            )
+            .join(
+                LotPositionOrmModel,
+                ProductionOrderOrmModel.lot_position_id == LotPositionOrmModel.id,
+            )
+            .join(ProductionLotOrmModel, LotPositionOrmModel.lot_id == ProductionLotOrmModel.id)
+            .where(
+                ProductionOrderOrmModel.actual_start.isnot(None),
+                ProductionOrderOrmModel.actual_start < end,
+                # Still open, or ended inside or after the period.
+                and_(
+                    (ProductionOrderOrmModel.actual_end.is_(None))
+                    | (ProductionOrderOrmModel.actual_end >= start),
+                    (ProductionOrderOrmModel.canceled_at.is_(None))
+                    | (ProductionOrderOrmModel.canceled_at >= start),
+                ),
+            )
+            .order_by(ProductionOrderOrmModel.id)
+        )
+        q = _apply_order_lot_scope(q, scope)
+        rows = (await self._db.execute(q)).all()
+        if not rows:
+            return []
+        order_ids = [order.id for order, _lot_id, _lot_number in rows]
+
+        interruptions: dict[int, list[ProductionOrderInterruption]] = {}
+        for interruption in await self._interruptions.get_by_order_ids(order_ids):
+            interruptions.setdefault(interruption.production_order_id, []).append(interruption)
+        completions: dict[int, list[ProductionOrderCompletion]] = {}
+        for c in (
+            await self._db.scalars(
+                select(ProductionOrderCompletionOrmModel)
+                .where(ProductionOrderCompletionOrmModel.production_order_id.in_(order_ids))
+                .order_by(ProductionOrderCompletionOrmModel.id)
+            )
+        ).all():
+            completions.setdefault(c.production_order_id, []).append(_completion(c))
+        assessed = set(
+            (
+                await self._db.scalars(
+                    select(ManufacturingAssessmentOrmModel.production_order_id).where(
+                        ManufacturingAssessmentOrmModel.production_order_id.in_(order_ids),
+                        ManufacturingAssessmentOrmModel.superseded_at.is_(None),
+                    )
+                )
+            ).all()
+        )
+
+        return [
+            BookingQualityOrder(
+                order_id=order.id,
+                production_order_number=order.production_order_number,
+                lot_id=lot_id,
+                lot_number=lot_number,
+                machine_id=order.machine_id,
+                completed=order.status == ProductionOrderStatus.COMPLETED.value,
+                has_assessment=order.id in assessed,
+                booked=BookedOrder(
+                    actual_start=order.actual_start,
+                    actual_end=order.actual_end,
+                    canceled_at=order.canceled_at,
+                    quantity=float(order.quantity),
+                    first_started_operator_id=order.first_started_operator_id,
+                    interruptions=tuple(
+                        sorted(interruptions.get(order.id, []), key=lambda i: i.paused_at)
+                    ),
+                    completions=tuple(completions.get(order.id, [])),
+                ),
+            )
+            for order, lot_id, lot_number in rows
+        ]
+
+    async def get_manual_pauses(
+        self, period: KpiPeriod, scope: KpiScope, since: datetime
+    ) -> list[UncausedPause | None]:
+        start = max(day_start_utc(period.date_from, period.zone), as_utc(since))
+        end = day_after_utc(period.date_to, period.zone)
+        q = (
+            select(
+                ProductionOrderInterruptionOrmModel,
+                ProductionOrderOrmModel.production_order_number,
+                ProductionOrderOrmModel.machine_id,
+                ProductionLotOrmModel.id,
+                ProductionLotOrmModel.lot_number,
+            )
+            .join(
+                ProductionOrderOrmModel,
+                ProductionOrderInterruptionOrmModel.production_order_id
+                == ProductionOrderOrmModel.id,
+            )
+            .join(
+                LotPositionOrmModel,
+                ProductionOrderOrmModel.lot_position_id == LotPositionOrmModel.id,
+            )
+            .join(ProductionLotOrmModel, LotPositionOrmModel.lot_id == ProductionLotOrmModel.id)
+            .where(
+                ProductionOrderInterruptionOrmModel.reason == InterruptionReason.MANUAL.value,
+                ProductionOrderInterruptionOrmModel.paused_at >= start,
+                ProductionOrderInterruptionOrmModel.paused_at < end,
+            )
+            .order_by(ProductionOrderInterruptionOrmModel.id)
+        )
+        q = _apply_order_lot_scope(q, scope)
+        return [
+            None
+            if pause.pause_cause
+            else UncausedPause(
+                order_id=pause.production_order_id,
+                production_order_number=order_number,
+                lot_id=lot_id,
+                lot_number=lot_number,
+                machine_id=machine_id,
+                paused_at=pause.paused_at,
+                operator_id=pause.paused_operator_id,
+            )
+            for pause, order_number, machine_id, lot_id, lot_number in (
+                await self._db.execute(q)
+            ).all()
+        ]
+
+
+def _completion(c: ProductionOrderCompletionOrmModel) -> ProductionOrderCompletion:
+    """The fields of a completion the booked work derivation reads."""
+    return ProductionOrderCompletion(
+        id=c.id,
+        public_id=c.public_id,
+        production_order_id=c.production_order_id,
+        quantity=float(c.quantity),
+        quantity_accepted=float(c.quantity_accepted),
+        quantity_rejected=float(c.quantity_rejected),
+        completion_date=c.completion_date,
+        note=c.note,
+        operator_id=c.operator_id,
+        recorded_by_id=c.recorded_by_id,
+        created=c.created,
+        reverses_completion_id=c.reverses_completion_id,
+    )

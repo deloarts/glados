@@ -34,6 +34,7 @@ export default {
     logs: 'Logs',
     backups: 'Backups',
     production: 'Production',
+    planning: 'Planning',
   },
   auth: {
     flow: {
@@ -747,6 +748,16 @@ export default {
     addIp: 'Add IP Address',
     removeIp: 'Remove {ip}',
     invalidIp: '"{ip}" doesn\'t look like a valid IP address or CIDR range.',
+  },
+  planning: {
+    commitHorizonWorkingDays: 'Committed Horizon (working days)',
+    commitHorizonHint:
+      'How many working days from today the nightly baseline records. Later it is also the horizon planners commit.',
+    planRetentionDays: 'Plan Retention (days)',
+    planRetentionHint: 'Recorded plans, the nightly baseline among them, are deleted after this many days.',
+    bookingQualitySince: 'Booking Quality Since',
+    bookingQualitySinceHint:
+      'The booking quality view counts bookings from this moment on. It is set once and cannot be changed.',
   },
   retention: {
     logRetentionDays: 'Log Retention (days)',

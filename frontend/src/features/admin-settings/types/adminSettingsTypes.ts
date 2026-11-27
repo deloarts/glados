@@ -159,6 +159,7 @@ export type UpdateMadeItemSettingsCommand = Omit<
 }
 
 export type AdminProductionSettings = Schemas['AdminProductionSettingsResponse']
+export type AdminPlanningSettings = Schemas['AdminPlanningSettingsResponse']
 
 /**
  * One read-only row of the ownership table. `mappable` gates the custom
@@ -242,6 +243,7 @@ export interface AllAdminSettings {
   orders: AdminOrderSettings
   made_items: AdminMadeItemSettings
   production: AdminProductionSettings
+  planning: AdminPlanningSettings
   pdm: AdminPdmSettings
 }
 
@@ -467,6 +469,7 @@ export type PdmReconciliationSummary = Schemas['PdmReconciliationReportResponse'
 export type PdmReconcileResult = Schemas['PdmReconcileResponse']
 
 export type UpdateProductionSettingsCommand = Schemas['UpdateProductionSettingsRequest']
+export type UpdatePlanningSettingsCommand = Schemas['UpdatePlanningSettingsRequest']
 
 export type BackupEntry = Schemas['BackupEntryResponse']
 

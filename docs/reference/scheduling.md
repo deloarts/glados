@@ -1,6 +1,6 @@
 # scheduling
 
-The exact behaviour of the schedule walk and of Auto-Plan: how an order's window is placed, which windows are kept, when the walk runs, how Auto-Plan reads, places and writes, the tenant timezone, machine calendars and machine capability. The concept is in [CONTRIBUTING.md section 11](../CONTRIBUTING.md#11-scheduling-and-auto-plan).
+The exact behaviour of the schedule walk and of Auto-Plan: how an order's window is placed, which windows are kept, when the walk runs, how Auto-Plan reads, places and writes, the tenant timezone, machine calendars, machine capability and the nightly baseline of the dates. The concept is in [CONTRIBUTING.md section 11](../CONTRIBUTING.md#11-scheduling-and-auto-plan).
 
 - [1 the forward walk](#1-the-forward-walk)
   - [1.1 where an order starts](#11-where-an-order-starts)
@@ -16,6 +16,7 @@ The exact behaviour of the schedule walk and of Auto-Plan: how an order's window
 - [5 the tenant timezone](#5-the-tenant-timezone)
 - [6 machine calendars and downtime](#6-machine-calendars-and-downtime)
 - [7 machine capability](#7-machine-capability)
+- [8 the nightly baseline](#8-the-nightly-baseline)
 
 ## 1 the forward walk
 
@@ -155,3 +156,16 @@ Auto-Plan lives in `src/modules/fulfillment/application/use_cases/production_sch
 - An inspection step always forms a position of its own, goes only to a QA machine (`is_qa_machine`) and never to a pool.
 - A QA machine never takes fabrication work.
 - A pool covers the intersection of its members' methods.
+
+## 8 the nightly baseline
+
+- Once per tenant day the baseline records the dates the active scheduler persisted, so the dates of later days can be compared with the plan as the floor saw it that morning (`record_plan_baseline.py`). It never dates anything itself and records in either scheduler mode.
+- It is recorded from 00:30 tenant time, which leaves the walk after midnight time to date the new day. A job in every worker checks every 15 minutes whether the day still needs its baseline (`PLAN_BASELINE_TICK_SECONDS` in `main.py`).
+- The job holds the `PLAN_BASELINE` advisory lock as a try-lock, so one worker records and the others skip. A partial unique index allows one baseline per plan day (`uq_production_plan_baseline_day`), should two ever race.
+- A plan is one row of `production_plan_table` with its kind, the scheduler mode, the engine and its version, the plan day and its status.
+- Its entries are the open orders whose planned start lies before the end of the committed horizon: the start of the local day after the `commit_horizon_working_days`-th working day from today, today included when it is one. A working day is a day the admin default calendar gives working time, holidays excluded (`plan_baseline.py`). An undated order has no entry.
+- Each entry copies the order's number, lot, position sequence, machine, pool, queue sequence, window and duration, so it still reads after the order is deleted, when its references turn empty.
+- Every lot with an open order gets one lot row with its target date and its planned finish: the latest planned end of its open orders plus the wait after their position, and a completed order's actual end plus that wait while the wait still runs, as the late checks compute it.
+- The pool member a pool's queue would land on is never persisted, so a baseline records only the order's machine and pool.
+- The same job then purges every plan whose plan day lies more than `plan_retention_days` before today, with its rows (`purge_expired_plans.py`).
+- Both settings live in `admin_planning_settings`, the Planning tab of the admin settings: the committed horizon of 1 to 20 working days (default 5) and the retention of 30 to 3650 days (default 400).

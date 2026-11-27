@@ -16,6 +16,7 @@ import { handbookHelp } from '@/features/handbook'
 import { templatePrinting } from '@/features/print-labels/templatePrinting'
 import { edpSettingsTab } from '@/features/bought-items/edpSettingsTab'
 import { productionSettingsTab } from '@/features/production/productionSettingsTab'
+import { planningSettingsTab } from '@/features/production/planningSettingsTab'
 import { timeTrackingSections } from '@/features/time-tracking/timeTrackingSections'
 import { agentSections } from '@/features/agents/agentSections'
 
@@ -68,6 +69,7 @@ export function mountWithApp<T extends Component>(
         templatePrinting,
         timeTrackingSections,
         productionSettingsTab,
+        planningSettingsTab,
         edpSettingsTab,
         agentSections,
         // A spec that still lists ConfirmationService itself would apply it

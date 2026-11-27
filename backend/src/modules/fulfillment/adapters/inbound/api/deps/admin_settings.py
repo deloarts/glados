@@ -1,4 +1,4 @@
-"""Use case factories: the production settings tab."""
+"""Use case factories: the production and planning settings tabs."""
 
 from fastapi import Depends
 
@@ -20,8 +20,14 @@ from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
 )
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
 from src.modules.fulfillment.application.services.lot_material_restore import RestoreLotMaterial
+from src.modules.fulfillment.application.use_cases.admin_settings.get_planning_settings import (
+    GetPlanningSettings,
+)
 from src.modules.fulfillment.application.use_cases.admin_settings.get_production_settings import (
     GetProductionSettings,
+)
+from src.modules.fulfillment.application.use_cases.admin_settings.update_planning_settings import (
+    UpdatePlanningSettings,
 )
 from src.modules.fulfillment.application.use_cases.admin_settings.update_production_settings import (
     UpdateProductionSettings,
@@ -73,3 +79,16 @@ def get_update_production_settings_use_case(
             lot_repo, source_demand_repo, source_allocation_repo, reconciler
         ),
     )
+
+
+def get_planning_settings_use_case(
+    repo: IFulfillmentSettingsRepository = Depends(get_fulfillment_settings_repo),
+) -> GetPlanningSettings:
+    return GetPlanningSettings(repo)
+
+
+def get_update_planning_settings_use_case(
+    repo: IFulfillmentSettingsRepository = Depends(get_fulfillment_settings_repo),
+    uow: IUnitOfWork = Depends(get_unit_of_work),
+) -> UpdatePlanningSettings:
+    return UpdatePlanningSettings(repo, uow=uow)

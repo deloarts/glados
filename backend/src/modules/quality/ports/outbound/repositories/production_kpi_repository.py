@@ -12,6 +12,8 @@ from datetime import tzinfo
 from typing import Protocol
 from typing import runtime_checkable
 
+from src.modules.quality.domain.services.booking_quality import BookingQualityOrder
+from src.modules.quality.domain.services.booking_quality import UncausedPause
 from src.modules.quality.domain.services.kpi_rules import CompletedOrderRow
 from src.modules.quality.domain.services.kpi_rules import CompletionRow
 from src.modules.quality.domain.services.kpi_rules import ScrapReasonRow
@@ -118,4 +120,21 @@ class IProductionKpiRepository(Protocol):
         """Every order item delivery record inside the period, matching
         the project/customer scope (machine/pool scope is not applied,
         same reasoning as the delivery half of get_scrap_events)."""
+        ...
+
+    async def get_booking_quality_orders(
+        self, period: KpiPeriod, scope: KpiScope
+    ) -> list[BookingQualityOrder]:
+        """Every production order with bookings in the period: started before
+        it ends and not ended, completed or canceled before it begins, with
+        its interruptions, its completions and whether it has an active
+        assessment."""
+        ...
+
+    async def get_manual_pauses(
+        self, period: KpiPeriod, scope: KpiScope, since: datetime
+    ) -> list[UncausedPause | None]:
+        """One entry per manual pause booked in the period and not before
+        `since`: the pause when it has no cause, None when it has one. Lot
+        holds are never included."""
         ...

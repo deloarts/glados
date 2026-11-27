@@ -20,11 +20,13 @@ from src.modules.fulfillment.application.facade.scheduling import IMachinePoolRe
 from src.modules.fulfillment.application.facade.scheduling import IProductionMachineRepository
 from src.modules.fulfillment.application.facade.scheduling import SchedulingRepos
 from src.modules.fulfillment.application.facade.scheduling import TargetDateSource
+from src.modules.fulfillment.application.facade.scheduling import build_machine_calendar
 from src.modules.fulfillment.application.facade.scheduling import build_machine_calendars
 from src.modules.fulfillment.application.facade.scheduling import (
     compute_schedule_explanations_for_orders,
 )
 from src.modules.fulfillment.application.facade.scheduling import describe_lot_target_dates
+from src.modules.fulfillment.application.facade.scheduling import holiday_dates
 from src.modules.fulfillment.domain.entities.production_lot import ProductionLot
 from src.modules.fulfillment.domain.entities.production_machine import ProductionMachine
 from src.modules.fulfillment.domain.policies.scheduling import EarliestStartExplanation
@@ -32,6 +34,7 @@ from src.modules.fulfillment.ports.outbound.fulfillment_queries import IMachineD
 from src.modules.platform.application.services.tenant_timezone import tenant_zone
 from src.modules.quality.application.dto.production_kpi_dto import KpiFilter
 from src.modules.quality.application.dto.production_kpi_dto import LateLotResult
+from src.modules.quality.application.dto.production_kpi_dto import ProductionKpiBookingQualityResult
 from src.modules.quality.application.dto.production_kpi_dto import (
     ProductionKpiEstimateAccuracyResult,
 )
@@ -47,6 +50,7 @@ from src.modules.quality.application.dto.production_kpi_dto import ProductionKpi
 from src.modules.quality.application.dto.production_kpi_dto import ProductionKpiWeeklyResult
 from src.modules.quality.application.mappers import production_kpi_mapper as mapper
 from src.modules.quality.domain.services import kpi_rules
+from src.modules.quality.domain.services.booking_quality import compute_booking_quality
 from src.modules.quality.ports.outbound.repositories.production_kpi_repository import (
     CompletedLotRow,
 )
@@ -58,6 +62,7 @@ from src.modules.quality.ports.outbound.repositories.production_kpi_repository i
 from src.modules.quality.ports.outbound.repositories.production_kpi_repository import (
     LateLotCandidateRow,
 )
+from src.shared_kernel.domain.services.clock import now_utc
 
 
 def _period_bounds(period: KpiPeriod) -> tuple[datetime, datetime]:
@@ -289,6 +294,54 @@ class ComputeProductionKpis:
         return ProductionKpiEstimateAccuracyResult(
             rows=[mapper.to_estimate_accuracy_row_result(row) for row in rows]
         )
+
+    async def booking_quality(self, kpi_filter: KpiFilter) -> ProductionKpiBookingQualityResult:
+        """Where the period's bookings miss what planning will read from them
+        (domain/services/booking_quality.py). Working time is each
+        machine's calendar, and the admin default calendar for work without
+        a machine."""
+        period = await self._period(kpi_filter)
+        scope = self._scope(kpi_filter)
+        since = (await self._settings.get_planning()).booking_quality_since
+        orders = await self._kpi_repo.get_booking_quality_orders(period, scope)
+        pauses = await self._kpi_repo.get_manual_pauses(period, scope, since)
+
+        default_hours = (await self._settings.get_production()).default_weekly_hours
+        machine_ids = sorted({o.machine_id for o in orders if o.machine_id is not None})
+        calendars = await build_machine_calendars(
+            machine_ids, self._calendars, default_hours, zone=period.zone
+        )
+        default_calendar = build_machine_calendar(
+            default_hours,
+            None,
+            {},
+            zone=period.zone,
+            holidays=await holiday_dates(self._calendars),
+        )
+
+        def windows_for(
+            machine_id: int | None, start: datetime, end: datetime
+        ) -> list[tuple[datetime, datetime]]:
+            calendar = calendars.get(machine_id) if machine_id is not None else None
+            calendar = calendar or default_calendar
+            first = start.astimezone(period.zone).date() - timedelta(days=1)
+            days = (end.astimezone(period.zone).date() - first).days + 1
+            return sorted(
+                window
+                for offset in range(days)
+                for window in calendar.windows_on(first + timedelta(days=offset))
+            )
+
+        period_start, period_end = _period_bounds(period)
+        quality = compute_booking_quality(
+            orders,
+            pauses,
+            period_start=period_start,
+            period_end=period_end,
+            now=now_utc(),
+            windows_for=windows_for,
+        )
+        return mapper.to_booking_quality_result(quality, since=since)
 
     async def waiting_time(self, kpi_filter: KpiFilter) -> ProductionKpiWaitingTimeResult:
         period = await self._period(kpi_filter)

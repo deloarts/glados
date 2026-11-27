@@ -1609,6 +1609,41 @@
         "title": "AdminPdmSettingsResponse",
         "type": "object"
       },
+      "AdminPlanningSettingsResponse": {
+        "properties": {
+          "booking_quality_since": {
+            "format": "date-time",
+            "title": "Booking Quality Since",
+            "type": "string"
+          },
+          "commit_horizon_working_days": {
+            "title": "Commit Horizon Working Days",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "plan_retention_days": {
+            "title": "Plan Retention Days",
+            "type": "integer"
+          },
+          "public_id": {
+            "format": "uuid",
+            "title": "Public Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "public_id",
+          "commit_horizon_working_days",
+          "plan_retention_days",
+          "booking_quality_since"
+        ],
+        "title": "AdminPlanningSettingsResponse",
+        "type": "object"
+      },
       "AdminProductionSettingsResponse": {
         "properties": {
           "assign_approved_material_to_item": {
@@ -2422,6 +2457,9 @@
           "pdm": {
             "$ref": "#/components/schemas/AdminPdmSettingsResponse"
           },
+          "planning": {
+            "$ref": "#/components/schemas/AdminPlanningSettingsResponse"
+          },
           "production": {
             "$ref": "#/components/schemas/AdminProductionSettingsResponse"
           },
@@ -2450,6 +2488,7 @@
           "orders",
           "made_items",
           "production",
+          "planning",
           "banner",
           "pdm"
         ],
@@ -30476,6 +30515,52 @@
         "title": "MessageWidgetData",
         "type": "object"
       },
+      "MissingAssessmentRowResult": {
+        "properties": {
+          "completed_at": {
+            "format": "date-time",
+            "title": "Completed At",
+            "type": "string"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "production_order_number": {
+            "title": "Production Order Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "production_order_number",
+          "lot_id",
+          "lot_number",
+          "machine_id",
+          "completed_at"
+        ],
+        "title": "MissingAssessmentRowResult",
+        "type": "object"
+      },
       "MoveOrderItemRequest": {
         "properties": {
           "target_order_id": {
@@ -32567,6 +32652,56 @@
           "expected_edit_version"
         ],
         "title": "OrderUpdateRequest",
+        "type": "object"
+      },
+      "OutsideWorkingTimeRowResult": {
+        "properties": {
+          "booked_minutes": {
+            "title": "Booked Minutes",
+            "type": "integer"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "outside_minutes": {
+            "title": "Outside Minutes",
+            "type": "integer"
+          },
+          "production_order_number": {
+            "title": "Production Order Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "production_order_number",
+          "lot_id",
+          "lot_number",
+          "machine_id",
+          "booked_minutes",
+          "outside_minutes"
+        ],
+        "title": "OutsideWorkingTimeRowResult",
         "type": "object"
       },
       "PageResponse_AdminSettingsAuditEntryResponse_": {
@@ -42575,6 +42710,59 @@
           "contains_robotics"
         ],
         "title": "ProductWebResponse",
+        "type": "object"
+      },
+      "ProductionKpiBookingQualityResult": {
+        "properties": {
+          "booking_quality_since": {
+            "format": "date-time",
+            "title": "Booking Quality Since",
+            "type": "string"
+          },
+          "final_completions": {
+            "title": "Final Completions",
+            "type": "integer"
+          },
+          "manual_pauses": {
+            "title": "Manual Pauses",
+            "type": "integer"
+          },
+          "missing_assessments": {
+            "items": {
+              "$ref": "#/components/schemas/MissingAssessmentRowResult"
+            },
+            "title": "Missing Assessments",
+            "type": "array"
+          },
+          "orders_with_bookings": {
+            "title": "Orders With Bookings",
+            "type": "integer"
+          },
+          "outside_working_time": {
+            "items": {
+              "$ref": "#/components/schemas/OutsideWorkingTimeRowResult"
+            },
+            "title": "Outside Working Time",
+            "type": "array"
+          },
+          "uncaused_pauses": {
+            "items": {
+              "$ref": "#/components/schemas/UncausedPauseRowResult"
+            },
+            "title": "Uncaused Pauses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "booking_quality_since",
+          "orders_with_bookings",
+          "outside_working_time",
+          "final_completions",
+          "missing_assessments",
+          "manual_pauses",
+          "uncaused_pauses"
+        ],
+        "title": "ProductionKpiBookingQualityResult",
         "type": "object"
       },
       "ProductionKpiEstimateAccuracyResult": {
@@ -57892,6 +58080,64 @@
         "title": "TrustedDeviceResult",
         "type": "object"
       },
+      "UncausedPauseRowResult": {
+        "properties": {
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "lot_number": {
+            "title": "Lot Number",
+            "type": "string"
+          },
+          "machine_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Id"
+          },
+          "operator_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator Id"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "paused_at": {
+            "format": "date-time",
+            "title": "Paused At",
+            "type": "string"
+          },
+          "production_order_number": {
+            "title": "Production Order Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "production_order_number",
+          "lot_id",
+          "lot_number",
+          "machine_id",
+          "paused_at",
+          "operator_id"
+        ],
+        "title": "UncausedPauseRowResult",
+        "type": "object"
+      },
       "UpdateAgentSettingsRequest": {
         "properties": {
           "ai_policy_url": {
@@ -59449,6 +59695,38 @@
           }
         },
         "title": "UpdatePdmSettingsRequest",
+        "type": "object"
+      },
+      "UpdatePlanningSettingsRequest": {
+        "properties": {
+          "commit_horizon_working_days": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Horizon Working Days"
+          },
+          "plan_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 30.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Retention Days"
+          }
+        },
+        "title": "UpdatePlanningSettingsRequest",
         "type": "object"
       },
       "UpdateProductionOrderRequest": {
@@ -66116,6 +66394,77 @@
           }
         ],
         "summary": "Get Pdm Workflows",
+        "tags": [
+          "web/admin/settings"
+        ]
+      }
+    },
+    "/api/v1/web/admin/settings/planning": {
+      "get": {
+        "operationId": "get_planning_settings_api_v1_web_admin_settings_planning_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPlanningSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Planning Settings",
+        "tags": [
+          "web/admin/settings"
+        ]
+      },
+      "put": {
+        "description": "Set the committed horizon and the retention of recorded plans. Requires\nwrite:settings.",
+        "operationId": "update_planning_settings_api_v1_web_admin_settings_planning_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanningSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPlanningSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Planning Settings",
         "tags": [
           "web/admin/settings"
         ]
@@ -90983,6 +91332,129 @@
         "summary": "Read Planning Exceptions",
         "tags": [
           "web/production-exceptions"
+        ]
+      }
+    },
+    "/api/v1/web/production-kpi/booking-quality": {
+      "get": {
+        "description": "Orders that ran through hours without working time, final completions\nwithout an assessment and manual pauses without a cause, in the period.",
+        "operationId": "read_booking_quality_api_v1_web_production_kpi_booking_quality_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Machine Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_pool_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Machine Pool Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Customer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionKpiBookingQualityResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Booking Quality",
+        "tags": [
+          "web/production-kpi"
         ]
       }
     },

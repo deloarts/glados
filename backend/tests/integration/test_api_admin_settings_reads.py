@@ -35,6 +35,7 @@ from src.modules.platform.domain.entities.admin_settings.notifications import (
 )
 from src.modules.platform.domain.entities.admin_settings.retention import AdminRetentionSettings
 from src.modules.platform.domain.entities.admin_settings.security import AdminSecuritySettings
+from src.modules.platform.domain.value_objects.permission import Permission
 
 BASE = "/api/v1/web/admin/settings"
 
@@ -55,6 +56,7 @@ ROUTES = [
     "/made-items",
     "/pdm",
     "/production",
+    "/planning",
 ]
 
 
@@ -257,3 +259,10 @@ async def test_integrations_overview_requires_read_settings(auth_client) -> None
     client: TestClient = await auth_client(permissions=[])
     resp = await client.get(f"{BASE}/host/integrations")
     assert resp.status_code == 403, resp.text
+
+
+async def test_the_combined_read_carries_the_planning_settings(auth_client) -> None:
+    client: TestClient = await auth_client(permissions=[Permission.READ_SETTINGS])
+    resp = await client.get(BASE)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["planning"]["commit_horizon_working_days"] == 5

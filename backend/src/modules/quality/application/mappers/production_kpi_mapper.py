@@ -3,16 +3,24 @@ Converts src.modules.quality.domain.services.kpi_rules result dataclasses into t
 Pydantic result DTOs the production KPI endpoints return.
 """
 
+from dataclasses import asdict
+from datetime import datetime
+
 from src.modules.quality.application.dto.production_kpi_dto import EstimateAccuracyRowResult
+from src.modules.quality.application.dto.production_kpi_dto import MissingAssessmentRowResult
+from src.modules.quality.application.dto.production_kpi_dto import OutsideWorkingTimeRowResult
+from src.modules.quality.application.dto.production_kpi_dto import ProductionKpiBookingQualityResult
 from src.modules.quality.application.dto.production_kpi_dto import QualityByItemRowResult
 from src.modules.quality.application.dto.production_kpi_dto import RatioResult
 from src.modules.quality.application.dto.production_kpi_dto import RejectedPerSupplierRowResult
 from src.modules.quality.application.dto.production_kpi_dto import ScrapByReasonRowResult
 from src.modules.quality.application.dto.production_kpi_dto import ThroughputTimeResult
+from src.modules.quality.application.dto.production_kpi_dto import UncausedPauseRowResult
 from src.modules.quality.application.dto.production_kpi_dto import UtilizationRowResult
 from src.modules.quality.application.dto.production_kpi_dto import WaitingTimeRowResult
 from src.modules.quality.application.dto.production_kpi_dto import WeeklyKpiPointResult
 from src.modules.quality.domain.services import kpi_rules
+from src.modules.quality.domain.services.booking_quality import BookingQuality
 
 
 def to_ratio_result(ratio: kpi_rules.Ratio) -> RatioResult:
@@ -94,4 +102,22 @@ def to_utilization_row_result(
         utilization=to_ratio_result(utilization.ratio),
         downtime_minutes=availability.downtime_minutes if availability else None,
         availability=to_ratio_result(availability.ratio) if availability else None,
+    )
+
+
+def to_booking_quality_result(
+    quality: BookingQuality, *, since: datetime
+) -> ProductionKpiBookingQualityResult:
+    return ProductionKpiBookingQualityResult(
+        booking_quality_since=since,
+        orders_with_bookings=quality.orders_with_bookings,
+        outside_working_time=[
+            OutsideWorkingTimeRowResult(**asdict(row)) for row in quality.outside_working_time
+        ],
+        final_completions=quality.final_completions,
+        missing_assessments=[
+            MissingAssessmentRowResult(**asdict(row)) for row in quality.missing_assessments
+        ],
+        manual_pauses=quality.manual_pauses,
+        uncaused_pauses=[UncausedPauseRowResult(**asdict(row)) for row in quality.uncaused_pauses],
     )

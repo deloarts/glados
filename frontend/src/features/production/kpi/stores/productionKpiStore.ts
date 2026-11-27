@@ -9,6 +9,7 @@ import { useSequencedFetch } from '@/core/composables/useSequencedFetch'
 import { getProductionKpiSummary } from '../api/getProductionKpiSummary'
 import { getProductionKpiWeekly } from '../api/getProductionKpiWeekly'
 import { getProductionKpiUtilization } from '../api/getProductionKpiUtilization'
+import { getProductionKpiBookingQuality } from '../api/getProductionKpiBookingQuality'
 import { getProductionKpiEstimateAccuracy } from '../api/getProductionKpiEstimateAccuracy'
 import { getProductionKpiWaitingTime } from '../api/getProductionKpiWaitingTime'
 import { getProductionKpiLateLots } from '../api/getProductionKpiLateLots'
@@ -20,6 +21,7 @@ import { previousPeriodOf, resolvePeriodPreset } from '../utils/periodPresets'
 import type { ProductionKpiPeriodPreset } from '../utils/periodPresets'
 import type { ProductionKpiFilterParams } from '../types/productionKpiFilterParams'
 import type {
+  ProductionKpiBookingQualityResult,
   ProductionKpiEstimateAccuracyResult,
   ProductionKpiLateLotsResult,
   ProductionKpiQualityByItemResult,
@@ -199,6 +201,20 @@ export const useProductionKpiStore = defineStore('productionKpi', () => {
     rejectedPerSupplier.value = result.rejectedPerSupplier
   }
 
+  // The booking quality view has its own fetch too, for the same reason.
+  const bookingQuality = ref<ProductionKpiBookingQualityResult | null>(null)
+  const {
+    loading: bookingQualityLoading,
+    error: bookingQualityError,
+    run: runBookingQuality,
+  } = useSequencedFetch(getProductionKpiBookingQuality)
+
+  async function loadBookingQuality(): Promise<void> {
+    const result = await runBookingQuality(queryParams.value)
+    if (!result) return
+    bookingQuality.value = result
+  }
+
   return {
     periodPreset,
     customRange,
@@ -226,5 +242,9 @@ export const useProductionKpiStore = defineStore('productionKpi', () => {
     scrapError,
     load,
     loadScrapKpis,
+    bookingQuality,
+    bookingQualityLoading,
+    bookingQualityError,
+    loadBookingQuality,
   }
 })

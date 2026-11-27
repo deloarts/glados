@@ -28,6 +28,7 @@ import { updateBannerSettings } from '../api/updateBannerSettings'
 import { updateRetentionSettings } from '../api/updateRetentionSettings'
 import { updateOrderSettings } from '../api/updateOrderSettings'
 import { updateMadeItemSettings } from '../api/updateMadeItemSettings'
+import { updatePlanningSettings } from '../api/updatePlanningSettings'
 import { updateProductionSettings } from '../api/updateProductionSettings'
 import { updatePdmSettings } from '../api/updatePdmSettings'
 import { verifyPdmConnection as verifyPdmConnectionApi } from '../api/verifyPdmConnection'
@@ -80,6 +81,7 @@ import type {
   UpdateOrderSettingsCommand,
   UpdateMadeItemSettingsCommand,
   UpdateProductionSettingsCommand,
+  UpdatePlanningSettingsCommand,
   UpdatePdmSettingsCommand,
   VerifyPdmConnectionCommand,
   PdmConnectionTestResult,
@@ -318,6 +320,12 @@ export const useAdminSettingsStore = defineStore('adminSettings', () => {
     return result
   }
 
+  async function savePlanning(cmd: UpdatePlanningSettingsCommand) {
+    const result = await updatePlanningSettings(cmd)
+    if (settings.value) settings.value.planning = result
+    return result
+  }
+
   async function savePdm(cmd: UpdatePdmSettingsCommand) {
     const result = await updatePdmSettings(cmd)
     if (settings.value) settings.value.pdm = result
@@ -507,6 +515,7 @@ export const useAdminSettingsStore = defineStore('adminSettings', () => {
     saveOrders,
     saveMadeItems,
     saveProduction,
+    savePlanning,
     savePdm,
     verifyPdm,
     loadPdmOperations,

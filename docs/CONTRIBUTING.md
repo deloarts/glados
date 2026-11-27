@@ -387,4 +387,6 @@ The schedule walk (`src/modules/fulfillment/domain/services/scheduling/`) places
 
 Auto-Plan (`src/modules/fulfillment/application/use_cases/production_schedule/auto_plan.py`) re-sequences and assigns queued orders around anchors such as pinned, running and today's orders, at the level of machine pools or of concrete machines. It reads, places without holding locks, then writes only the queues that did not change meanwhile and reports every skipped order with its reason. Every run ends with a walk of the whole schedule, and its answer also lists the orders that walk moved to another day, each with the reason the walk gives for its date. All days in scheduling are days of the tenant's default timezone, while stored instants stay UTC. A machine can take a position when its fabrication methods cover the position's machine steps, and inspection steps go only to QA machines.
 
+Every night after the walk has dated the new day, a baseline records the dates the scheduler persisted for the committed horizon, a week of working days by default, and when each open lot was planned to finish. It never dates anything itself, so later dates can be measured against what the floor saw that morning, and plans older than the retention in the Planning settings are purged.
+
 Full rules: [reference/scheduling.md](reference/scheduling.md).

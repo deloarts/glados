@@ -12,6 +12,7 @@ export { default as AdminSettingsTabShell } from './components/AdminSettingsTabS
 export type {
   AdminEdpSettings,
   AdminOrderSettings,
+  AdminPlanningSettings,
   AdminProductionSettings,
   AdminTimeTrackingSettings,
   AllAdminSettings,

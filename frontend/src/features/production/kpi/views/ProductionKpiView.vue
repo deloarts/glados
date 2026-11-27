@@ -15,6 +15,7 @@ import KpiFiltersBar from '../components/KpiFiltersBar.vue'
 import KpiTile from '../components/KpiTile.vue'
 import KpiWeeklyChart from '../components/KpiWeeklyChart.vue'
 import KpiUtilizationChart from '../components/KpiUtilizationChart.vue'
+import KpiBookingQualityPanel from '../components/KpiBookingQualityPanel.vue'
 import KpiEstimateAccuracyPanel from '../components/KpiEstimateAccuracyPanel.vue'
 import KpiWaitingTimePanel from '../components/KpiWaitingTimePanel.vue'
 import KpiLateLotsTable from '../components/KpiLateLotsTable.vue'
@@ -37,6 +38,7 @@ const {
   weekly,
   utilization,
   estimateAccuracy,
+  bookingQuality,
   waitingTime,
   lateLots,
   qualityByItem,
@@ -220,6 +222,7 @@ const tiles = computed<TileData[]>(() => {
 function reload(): void {
   void store.load()
   void store.loadScrapKpis()
+  void store.loadBookingQuality()
 }
 
 // A custom range holds [Date, null] while the second date is being picked,
@@ -278,6 +281,7 @@ watch(
         <section class="kpi-panels">
           <KpiEstimateAccuracyPanel :rows="estimateAccuracy?.rows ?? []" />
           <KpiWaitingTimePanel :rows="waitingTime?.rows ?? []" />
+          <KpiBookingQualityPanel :result="bookingQuality" />
         </section>
 
         <section class="kpi-tables">

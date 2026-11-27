@@ -13,6 +13,9 @@ from src.modules.catalogue.adapters.inbound.api.schemas.admin_settings_schema.or
 from src.modules.external_data.adapters.inbound.api.schemas.admin_settings_schema.pdm import (
     AdminPdmSettingsResponse,
 )
+from src.modules.fulfillment.adapters.inbound.api.schemas.admin_settings_schema.planning import (
+    AdminPlanningSettingsResponse,
+)
 from src.modules.fulfillment.adapters.inbound.api.schemas.admin_settings_schema.production import (
     AdminProductionSettingsResponse,
 )
@@ -70,6 +73,7 @@ class AllAdminSettingsResponse(ResponseModel):
     orders: AdminOrderSettingsResponse
     made_items: AdminMadeItemSettingsResponse
     production: AdminProductionSettingsResponse
+    planning: AdminPlanningSettingsResponse
     banner: AdminBannerSettingsResponse
     pdm: AdminPdmSettingsResponse
 
