@@ -15,6 +15,7 @@ import type {
   AdminNotificationSettings,
   AdminOrderSettings,
   AdminPdmSettings,
+  AdminPlanningSettings,
   AdminProductionSettings,
   AdminRetentionSettings,
   AdminSecuritySettings,
@@ -534,6 +535,17 @@ function makePdmSettings(overrides: Partial<AdminPdmSettings> = {}): AdminPdmSet
   }
 }
 
+function makePlanningSettings(overrides: Partial<AdminPlanningSettings> = {}): AdminPlanningSettings {
+  return {
+    id: 1,
+    public_id: '00000000-0000-0000-0000-000000000031',
+    commit_horizon_working_days: 5,
+    plan_retention_days: 400,
+    booking_quality_since: '2026-11-27T08:00:00Z',
+    ...overrides,
+  }
+}
+
 function makeAllSettings(overrides: Partial<AllAdminSettings> = {}): AllAdminSettings {
   return {
     host: makeHostSettings(),
@@ -551,6 +563,7 @@ function makeAllSettings(overrides: Partial<AllAdminSettings> = {}): AllAdminSet
     orders: makeOrderSettings(),
     made_items: makeMadeItemSettings(),
     production: makeProductionSettings(),
+    planning: makePlanningSettings(),
     pdm: makePdmSettings(),
     ...overrides,
   }

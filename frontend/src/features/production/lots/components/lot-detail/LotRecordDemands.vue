@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { formatISODateTime } from '@/core/utils/dates'
 import { formatDecimal } from '@/core/utils/numbers'
 import { useMadeItemLabel } from '@/features/made-items'
 
@@ -81,7 +82,7 @@ const { format: madeItemLabel } = useMadeItemLabel()
               <span class="field-label">{{
                 t('production.lots.detail.record.demands.requested')
               }}</span>
-              <span class="field-value">{{ demand.created }}</span>
+              <span class="field-value">{{ formatISODateTime(demand.created) }}</span>
             </div>
             <div class="field">
               <span class="field-label">{{

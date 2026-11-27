@@ -34,6 +34,7 @@ export default {
     logs: 'Protokolle',
     backups: 'Sicherungen',
     production: 'Produktion',
+    planning: 'Planung',
   },
   auth: {
     flow: {
@@ -761,6 +762,17 @@ export default {
     removeIp: '{ip} entfernen',
     invalidIp:
       '"{ip}" sieht nicht wie eine gültige IP-Adresse oder ein gültiger CIDR-Bereich aus.',
+  },
+  planning: {
+    commitHorizonWorkingDays: 'Festgelegter Horizont (Arbeitstage)',
+    commitHorizonHint:
+      'So viele Arbeitstage ab heute hält die nächtliche Basislinie fest. Später ist es auch der Horizont, für den die Planung Aufträge festlegt.',
+    planRetentionDays: 'Aufbewahrung der Pläne (Tage)',
+    planRetentionHint:
+      'Gespeicherte Pläne, darunter die nächtliche Basislinie, werden nach so vielen Tagen gelöscht.',
+    bookingQualitySince: 'Buchungsqualität seit',
+    bookingQualitySinceHint:
+      'Die Buchungsqualität zählt Buchungen ab diesem Zeitpunkt. Er wird einmal gesetzt und lässt sich nicht ändern.',
   },
   retention: {
     logRetentionDays: 'Protokoll-Aufbewahrung (Tage)',

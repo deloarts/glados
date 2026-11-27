@@ -13,6 +13,10 @@ from src.modules.fulfillment.application.services.scheduling_context import (
 from src.modules.fulfillment.application.services.scheduling_context import (
     describe_lot_target_dates,
 )
+from src.modules.fulfillment.application.services.scheduling_context import holiday_dates
+from src.modules.fulfillment.domain.services.scheduling.machine_calendar import (
+    build_machine_calendar,
+)
 from src.modules.fulfillment.ports.outbound.repositories.machine_calendar_repository import (
     IMachineCalendarRepository,
 )
@@ -29,7 +33,9 @@ __all__ = [
     "IProductionMachineRepository",
     "SchedulingRepos",
     "TargetDateSource",
+    "build_machine_calendar",
     "build_machine_calendars",
     "compute_schedule_explanations_for_orders",
     "describe_lot_target_dates",
+    "holiday_dates",
 ]

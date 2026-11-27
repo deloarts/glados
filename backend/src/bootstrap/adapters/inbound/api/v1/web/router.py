@@ -76,6 +76,9 @@ from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import source
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import source_item_demands
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints import todo
 from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints.admin_settings import (
+    planning as admin_settings_planning,
+)
+from src.modules.fulfillment.adapters.inbound.api.v1.web.endpoints.admin_settings import (
     production_numbering as admin_settings_production_numbering,
 )
 from src.modules.operations.adapters.inbound.api.v1.web.endpoints import infoscreens
@@ -552,6 +555,7 @@ for admin_settings_tab in (
     admin_settings_order_numbering,
     admin_settings_made_item_numbering,
     admin_settings_production_numbering,
+    admin_settings_planning,
     admin_settings_pdm,
     admin_settings_time_tracking,
     admin_settings_data_import,

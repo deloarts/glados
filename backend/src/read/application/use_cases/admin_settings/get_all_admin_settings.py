@@ -13,6 +13,9 @@ from src.modules.catalogue.application.mappers.admin_settings_mapper.orders impo
 from src.modules.external_data.application.mappers.admin_settings_mapper.pdm import (
     PdmSettingsMapper,
 )
+from src.modules.fulfillment.application.mappers.admin_settings_mapper.planning import (
+    PlanningSettingsMapper,
+)
 from src.modules.fulfillment.application.mappers.admin_settings_mapper.production import (
     ProductionSettingsMapper,
 )
@@ -92,6 +95,7 @@ class GetAllAdminSettings:
             production=ProductionSettingsMapper.production_to_result(
                 await self._repo.get_production(), today=today
             ),
+            planning=PlanningSettingsMapper.planning_to_result(await self._repo.get_planning()),
             banner=BannerSettingsMapper.banner_to_result(await self._repo.get_banner()),
             pdm=PdmSettingsMapper.pdm_to_result(
                 await self._repo.get_pdm(),

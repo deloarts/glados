@@ -375,13 +375,13 @@ watch(
         <div class="field">
           <span class="field-label">{{ t('madeItems.catalogue.columns.created') }}</span>
           <div class="field-value-row">
-            <span class="field-value">{{ item.created }}</span>
+            <span class="field-value">{{ formatDateTimeOrDash(item.created) }}</span>
           </div>
         </div>
         <div v-if="item.changed" class="field">
           <span class="field-label">{{ t('madeItems.catalogue.columns.changed') }}</span>
           <div class="field-value-row">
-            <span class="field-value">{{ item.changed }}</span>
+            <span class="field-value">{{ formatDateTimeOrDash(item.changed) }}</span>
           </div>
         </div>
         <div v-if="item.changed_by" class="field">

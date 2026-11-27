@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildTimeComparison, effectivePerPieceMinutes, formatPieceMinutes } from '../timeComparison'
+import { buildTimeComparison, effectivePerPieceMinutes, formatDecimalMinutes } from '../timeComparison'
 
 import type { FabricationLotStep, LotStepResponse } from '../../../types/productionLotsResponse'
 import type { ManufacturingAssessmentResponse } from '../../../types/productionOrdersResponse'
@@ -182,8 +182,8 @@ describe('decimal minutes per piece', () => {
   })
 
   it('formats minutes per piece with up to two decimals', () => {
-    expect(formatPieceMinutes(6.75)).toBe('6.75')
-    expect(formatPieceMinutes(6.5)).toBe('6.5')
-    expect(formatPieceMinutes(4)).toBe('4')
+    expect(formatDecimalMinutes(6.75)).toBe('6.75')
+    expect(formatDecimalMinutes(6.5)).toBe('6.5')
+    expect(formatDecimalMinutes(4)).toBe('4')
   })
 })

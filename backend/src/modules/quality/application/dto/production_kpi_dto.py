@@ -5,6 +5,7 @@ the corresponding src.modules.quality.domain.services.kpi_rules result.
 """
 
 from datetime import date
+from datetime import datetime
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -150,3 +151,43 @@ class RejectedPerSupplierRowResult(ResultModel):
 
 class ProductionKpiRejectedPerSupplierResult(ResultModel):
     rows: list[RejectedPerSupplierRowResult] = Field(default_factory=list)
+
+
+class OutsideWorkingTimeRowResult(ResultModel):
+    order_id: int
+    production_order_number: str
+    lot_id: int
+    lot_number: str
+    machine_id: int | None
+    booked_minutes: int
+    outside_minutes: int
+
+
+class MissingAssessmentRowResult(ResultModel):
+    order_id: int
+    production_order_number: str
+    lot_id: int
+    lot_number: str
+    machine_id: int | None
+    completed_at: datetime
+
+
+class UncausedPauseRowResult(ResultModel):
+    order_id: int
+    production_order_number: str
+    lot_id: int
+    lot_number: str
+    machine_id: int | None
+    paused_at: datetime
+    operator_id: int | None
+
+
+class ProductionKpiBookingQualityResult(ResultModel):
+    # Bookings count from this moment on (the planning settings).
+    booking_quality_since: datetime
+    orders_with_bookings: int
+    outside_working_time: list[OutsideWorkingTimeRowResult] = Field(default_factory=list)
+    final_completions: int
+    missing_assessments: list[MissingAssessmentRowResult] = Field(default_factory=list)
+    manual_pauses: int
+    uncaused_pauses: list[UncausedPauseRowResult] = Field(default_factory=list)

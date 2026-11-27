@@ -37,6 +37,9 @@ from src.modules.fulfillment.adapters.outbound.persistence.repositories.producti
 from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_order_repository import (
     SqlAlchemyProductionOrderRepository,
 )
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_plan_repository import (
+    SqlAlchemyProductionPlanRepository,
+)
 from src.modules.fulfillment.domain.entities.machine_calendar_exception import (
     MachineCalendarException,
 )
@@ -44,9 +47,15 @@ from src.modules.fulfillment.domain.entities.machine_downtime import MachineDown
 from src.modules.fulfillment.domain.entities.machine_working_hours import MachineWorkingHours
 from src.modules.fulfillment.domain.entities.manufacturing_assessment import ManufacturingAssessment
 from src.modules.fulfillment.domain.entities.production_order_file import ProductionOrderFile
+from src.modules.fulfillment.domain.entities.production_plan import ProductionPlan
+from src.modules.fulfillment.domain.entities.production_plan import ProductionPlanEntry
+from src.modules.fulfillment.domain.entities.production_plan import ProductionPlanLot
 from src.modules.fulfillment.domain.value_objects.machine_downtime_reason import (
     MachineDowntimeReason,
 )
+from src.modules.fulfillment.domain.value_objects.plan_kind import PlanKind
+from src.modules.fulfillment.domain.value_objects.plan_kind import PlanStatus
+from src.modules.fulfillment.domain.value_objects.plan_kind import SchedulerMode
 from src.modules.fulfillment.domain.value_objects.production_order_file_category import (
     ProductionOrderFileCategory,
 )
@@ -146,6 +155,51 @@ async def _interruptions(g: Graph, r: Any) -> None:
     interruption = await g.interruption()
     await r.get_by_order_ids([interruption.production_order_id])
     await r.sum_minutes_by_order_ids([interruption.production_order_id])
+
+
+@SCENARIOS.register(SqlAlchemyProductionPlanRepository)
+async def _plans(g: Graph, r: Any) -> None:
+    order = await g.production_order()
+    await r.add(
+        ProductionPlan(
+            id=0,
+            kind=PlanKind.BASELINE,
+            scheduler_mode=SchedulerMode.CURRENT,
+            engine="forward_walk",
+            engine_version="1",
+            plan_day=TODAY,
+            created=NOW,
+            status=PlanStatus.RECORDED,
+            entries=[
+                ProductionPlanEntry(
+                    id=0,
+                    production_order_id=order.id,
+                    lot_position_id=order.lot_position_id,
+                    lot_id=order.lot_id,
+                    position_sequence=1,
+                    production_order_number=order.production_order_number,
+                    machine_id=order.machine_id,
+                    machine_pool_id=order.machine_pool_id,
+                    queue_sequence=order.queue_sequence,
+                    planned_start=NOW,
+                    planned_end=NOW,
+                    duration_minutes=30,
+                )
+            ],
+            lots=[
+                ProductionPlanLot(
+                    id=0,
+                    lot_id=order.lot_id,
+                    lot_number=order.lot_number,
+                    target_date=TODAY,
+                    planned_finish=NOW,
+                )
+            ],
+        )
+    )
+    await g.db.commit()
+    await r.get_by_day(PlanKind.BASELINE, TODAY)
+    await r.exists_for(PlanKind.BASELINE, TODAY)
 
 
 @SCENARIOS.register(SqlAlchemyProductionMachineRepository)

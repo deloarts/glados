@@ -58,6 +58,7 @@ export default {
     reworkRatio: 'Rework ratio (ISO 22400): quantity sent to rework as a share of the total quantity completed.',
     oee: 'Overall equipment effectiveness (ISO 22400): availability × performance × quality, shown only once all three factors are computable.',
     estimateAccuracy: 'Ratio of actual net work time to the estimated duration, median per fabrication method. Above 100% means the job ran longer than estimated.',
+    bookingQuality: 'Where the bookings miss what planning will read from them: orders booked as running for at least 30 minutes outside working time, final completions without an assessment, and manual pauses without a cause. Lot holds are never counted.',
     waitingTime: 'Median days between a predecessor position becoming ready and the next order actually starting, grouped by position kind.',
     rejectedPerSupplier: 'Rejected quantity as a share of everything received from a supplier in the period, and how much of that was lost for good rather than re-delivered.',
   },
@@ -73,6 +74,31 @@ export default {
     scrapByReasonTitle: 'Scrap by Reason',
     scrapByReasonEmpty: 'No scrapped or rejected pieces in this period.',
     scrapByReasonSeries: 'Scrapped Quantity',
+  },
+  bookingQuality: {
+    title: 'Booking Quality',
+    empty: 'No findings in this period.',
+    summary: {
+      outside: '{count} of {total} orders ran through hours without working time',
+      missing: '{count} of {total} final completions have no assessment',
+      uncaused: '{count} of {total} manual pauses have no cause (counted since {since})',
+    },
+    columns: {
+      finding: 'Finding',
+      order: 'Order',
+      lot: 'Lot',
+      detail: 'Detail',
+    },
+    kinds: {
+      outside: 'Outside Working Time',
+      missing: 'No Assessment',
+      uncaused: 'Pause Without Cause',
+    },
+    details: {
+      outside: '{minutes} of {booked} booked minutes outside working time',
+      completedAt: 'Completed {date}',
+      pausedAt: 'Paused {date}',
+    },
   },
   estimateAccuracy: {
     title: 'Estimate Accuracy by Fabrication Method',

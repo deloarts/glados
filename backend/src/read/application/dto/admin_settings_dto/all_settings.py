@@ -9,6 +9,9 @@ from src.modules.catalogue.application.dto.admin_settings_dto.made_items import 
 )
 from src.modules.catalogue.application.dto.admin_settings_dto.orders import AdminOrderSettingsResult
 from src.modules.external_data.application.dto.admin_settings_dto.pdm import AdminPdmSettingsResult
+from src.modules.fulfillment.application.dto.admin_settings_dto.planning import (
+    AdminPlanningSettingsResult,
+)
 from src.modules.fulfillment.application.dto.admin_settings_dto.production import (
     AdminProductionSettingsResult,
 )
@@ -57,5 +60,6 @@ class AllAdminSettingsResult(BaseModel):
     orders: AdminOrderSettingsResult
     made_items: AdminMadeItemSettingsResult
     production: AdminProductionSettingsResult
+    planning: AdminPlanningSettingsResult
     banner: AdminBannerSettingsResult
     pdm: AdminPdmSettingsResult

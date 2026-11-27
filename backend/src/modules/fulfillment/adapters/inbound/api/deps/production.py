@@ -46,6 +46,9 @@ from src.modules.fulfillment.adapters.inbound.api.deps.repositories import (
     get_source_item_demand_repo,
 )
 from src.modules.fulfillment.adapters.inbound.api.deps.services import get_schedule_recompute_lock
+from src.modules.fulfillment.adapters.outbound.persistence.repositories.production_plan_repository import (
+    SqlAlchemyProductionPlanRepository,
+)
 from src.modules.fulfillment.application.services.lifecycle_actions import LifecycleActions
 from src.modules.fulfillment.application.services.lifecycle_lock_plan import LockPlan
 from src.modules.fulfillment.application.services.lifecycle_reconciler import LifecycleReconciler
@@ -207,6 +210,12 @@ from src.modules.fulfillment.application.use_cases.production_order.update_produ
 )
 from src.modules.fulfillment.application.use_cases.production_order.upload_production_order_file import (
     UploadProductionOrderFile,
+)
+from src.modules.fulfillment.application.use_cases.production_plan.purge_expired_plans import (
+    PurgeExpiredPlans,
+)
+from src.modules.fulfillment.application.use_cases.production_plan.record_plan_baseline import (
+    RecordPlanBaseline,
 )
 from src.modules.fulfillment.application.use_cases.production_schedule.auto_plan import AutoPlan
 from src.modules.fulfillment.application.use_cases.production_schedule.get_schedule_board import (
@@ -1324,3 +1333,23 @@ def get_place_machine_pool_use_case(
     uow: IUnitOfWork = Depends(get_unit_of_work),
 ) -> PlaceMachinePool:
     return PlaceMachinePool(machine_pool_repo=machine_pool_repo, uow=uow)
+
+
+def build_record_plan_baseline(db: AsyncSession) -> RecordPlanBaseline:
+    """The nightly baseline on one session, for the background job that
+    records it."""
+    return RecordPlanBaseline(
+        SqlAlchemyProductionPlanRepository(db),
+        _scheduling_repos(db),
+        get_machine_calendar_repo(db),
+        uow=get_unit_of_work(db),
+    )
+
+
+def build_purge_expired_plans(db: AsyncSession) -> PurgeExpiredPlans:
+    """The purge of expired plans on one session, run with the baseline."""
+    return PurgeExpiredPlans(
+        SqlAlchemyProductionPlanRepository(db),
+        get_fulfillment_settings_repo(db),
+        uow=get_unit_of_work(db),
+    )

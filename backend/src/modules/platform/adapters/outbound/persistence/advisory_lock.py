@@ -49,6 +49,9 @@ class AdvisoryLockKey(IntEnum):
     AGENT_TOKEN_SWEEP = 0x0107B8
     MEETING_NOTIFICATION_FLUSH = 0x0107B9
     MEETING_MAINTENANCE = 0x0107BA
+    # Held while one worker records the day's plan baseline and purges
+    # expired plans; the others skip.
+    PLAN_BASELINE = 0x0107BB
     INIT_DB_SEED = 7874131
     QUEUE_SEQUENCE_NAMESPACE = 1901054801
     TIME_BUDGET_NAMESPACE = 1901054802

@@ -58,6 +58,9 @@ vi.mock('@/features/admin-settings/components/AdminSettingsTabNumbering.vue', ()
 vi.mock('@/features/production/components/AdminSettingsTabProduction.vue', () =>
   asyncTabStub('AdminSettingsTabProduction'),
 )
+vi.mock('@/features/production/components/AdminSettingsTabPlanning.vue', () =>
+  asyncTabStub('AdminSettingsTabPlanning'),
+)
 vi.mock('@/features/admin-settings/components/AdminSettingsTabBranding.vue', () =>
   asyncTabStub('AdminSettingsTabBranding'),
 )
@@ -112,6 +115,7 @@ const TAB_VALUES = [
   'security',
   'numbering',
   'production',
+  'planning',
   'branding',
   'notifications',
   'solidworks-pdm',

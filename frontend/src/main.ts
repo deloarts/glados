@@ -20,6 +20,7 @@ import { templatePrinting } from '@/features/print-labels'
 // production and bought item screens into the entry chunk.
 import { edpSettingsTab } from '@/features/bought-items/edpSettingsTab'
 import { productionSettingsTab } from '@/features/production/productionSettingsTab'
+import { planningSettingsTab } from '@/features/production/planningSettingsTab'
 import { timeTrackingSections } from '@/features/time-tracking/timeTrackingSections'
 import { agentSections } from '@/features/agents/agentSections'
 
@@ -74,6 +75,7 @@ function bootstrap(): void {
   // and the admin settings, which never import those features.
   app.use(timeTrackingSections)
   app.use(productionSettingsTab)
+  app.use(planningSettingsTab)
   app.use(edpSettingsTab)
   app.use(agentSections)
 

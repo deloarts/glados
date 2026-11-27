@@ -58,6 +58,7 @@ export default {
     reworkRatio: 'Nacharbeitsquote (ISO 22400): zur Nacharbeit gegebene Menge als Anteil der insgesamt abgeschlossenen Menge.',
     oee: 'Gesamtanlageneffektivität (ISO 22400): Verfügbarkeit × Leistung × Qualität, nur angezeigt, wenn alle drei Faktoren berechenbar sind.',
     estimateAccuracy: 'Verhältnis von tatsächlicher Nettoarbeitszeit zur geschätzten Dauer, Median je Fertigungsverfahren. Über 100 % heißt, der Auftrag hat länger als geschätzt gedauert.',
+    bookingQuality: 'Wo die Buchungen noch nicht tragen, was die Planung aus ihnen liest: Aufträge, die mindestens 30 Minuten außerhalb der Arbeitszeit als laufend gebucht waren, Fertigmeldungen ohne Fertigungsbewertung und manuelle Pausen ohne Ursache. Pausen durch ein pausiertes Los zählen nie mit.',
     waitingTime: 'Median der Tage zwischen der Bereitschaft einer Vorgängerposition und dem tatsächlichen Start des nächsten Auftrags, gruppiert nach Positionsart.',
     rejectedPerSupplier: 'Zurückgewiesene Menge als Anteil an allem, was im Zeitraum von einem Lieferanten geliefert wurde, sowie der Anteil davon, der endgültig verloren statt nachgeliefert wurde.',
   },
@@ -73,6 +74,31 @@ export default {
     scrapByReasonTitle: 'Ausschuss nach Ursache',
     scrapByReasonEmpty: 'Kein Ausschuss oder keine Zurückweisungen in diesem Zeitraum.',
     scrapByReasonSeries: 'Ausschussmenge',
+  },
+  bookingQuality: {
+    title: 'Buchungsqualität',
+    empty: 'Keine Auffälligkeiten in diesem Zeitraum.',
+    summary: {
+      outside: '{count} von {total} Aufträgen liefen durch Stunden ohne Arbeitszeit',
+      missing: '{count} von {total} Fertigmeldungen haben keine Fertigungsbewertung',
+      uncaused: '{count} von {total} manuellen Pausen haben keine Ursache (gezählt seit {since})',
+    },
+    columns: {
+      finding: 'Auffälligkeit',
+      order: 'Auftrag',
+      lot: 'Los',
+      detail: 'Details',
+    },
+    kinds: {
+      outside: 'Außerhalb der Arbeitszeit',
+      missing: 'Keine Fertigungsbewertung',
+      uncaused: 'Pause ohne Ursache',
+    },
+    details: {
+      outside: '{minutes} von {booked} gebuchten Minuten außerhalb der Arbeitszeit',
+      completedAt: 'Fertiggemeldet {date}',
+      pausedAt: 'Pausiert {date}',
+    },
   },
   estimateAccuracy: {
     title: 'Schätzgenauigkeit je Fertigungsverfahren',

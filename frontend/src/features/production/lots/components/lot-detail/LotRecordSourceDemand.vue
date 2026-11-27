@@ -299,7 +299,7 @@ const rejectedTooltip = computed(() =>
           <span class="field-label">{{
             t('production.lots.detail.record.sourceDemand.requested')
           }}</span>
-          <span class="field-value">{{ sourceItemDemand.created }}</span>
+          <span class="field-value">{{ formatISODateTime(sourceItemDemand.created) }}</span>
         </div>
         <template v-if="summary">
           <div class="field">

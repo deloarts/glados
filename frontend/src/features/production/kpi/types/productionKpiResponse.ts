@@ -18,6 +18,7 @@ export type ProductionKpiUtilizationResult = Schemas['ProductionKpiUtilizationRe
 export type EstimateAccuracyRowResult = Schemas['EstimateAccuracyRowResult']
 
 export type ProductionKpiEstimateAccuracyResult = Schemas['ProductionKpiEstimateAccuracyResult']
+export type ProductionKpiBookingQualityResult = Schemas['ProductionKpiBookingQualityResult']
 
 export type WaitingTimeRowResult = Schemas['WaitingTimeRowResult']
 

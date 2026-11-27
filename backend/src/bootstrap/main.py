@@ -82,6 +82,8 @@ from src.modules.external_data.application.use_cases.eplan_data_portal.fill_edp_
 from src.modules.external_data.application.use_cases.pdm.refresh_pdm_file import RefreshPdmFile
 from src.modules.external_data.domain.events.pdm_events import PdmFileChangeRequested
 from src.modules.external_data.domain.value_objects.pdm_sync_trigger import PdmSyncTrigger
+from src.modules.fulfillment.adapters.inbound.api.deps.production import build_purge_expired_plans
+from src.modules.fulfillment.adapters.inbound.api.deps.production import build_record_plan_baseline
 from src.modules.fulfillment.adapters.inbound.api.deps.production import build_schedule_walk
 from src.modules.fulfillment.adapters.outbound.external.schedules.schedule_tick import TICK_SECONDS
 from src.modules.fulfillment.adapters.outbound.external.schedules.schedule_tick import ScheduleTick
@@ -141,6 +143,8 @@ from src.modules.platform.adapters.outbound.external.storage.factory import crea
 from src.modules.platform.adapters.outbound.external.webhook.factory import (
     create_webhook_dispatcher,
 )
+from src.modules.platform.adapters.outbound.persistence.advisory_lock import AdvisoryLockKey
+from src.modules.platform.adapters.outbound.persistence.advisory_lock import advisory_lock
 from src.modules.platform.adapters.outbound.persistence.change_tracking import (
     register_change_tracking,
 )
@@ -228,6 +232,9 @@ from src.read.application.services.print_root_resolver import PrintRootResolver
 from src.shared_kernel.domain.events.base import DomainEvent
 
 _NOTIFICATION_INTERVAL_SECONDS = 300  # 5 minutes
+# The plan baseline job looks every 15 minutes whether the day still needs
+# its baseline, so it is recorded soon after the night walk.
+PLAN_BASELINE_TICK_SECONDS = 15 * 60
 
 
 def _log_task_completion(task: asyncio.Task[Any]) -> None:
@@ -430,6 +437,21 @@ async def _walk_schedule() -> None:
         await build_schedule_walk(db).execute_all()
 
 
+async def _record_plan_baseline() -> None:
+    """The plan baseline job: one worker records the day's baseline once and
+    purges the expired plans; the others find the lock held and skip. A
+    failure is logged and the next run tries again."""
+    try:
+        async with advisory_lock(engine, AdvisoryLockKey.PLAN_BASELINE) as locked:
+            if not locked:
+                return
+            async with SessionLocal() as db:
+                await build_record_plan_baseline(db).execute()
+                await build_purge_expired_plans(db).execute()
+    except Exception:
+        log.exception("Plan baseline job failed.")
+
+
 async def _tenant_today() -> date:
     async with SessionLocal() as db:
         return await tenant_today(db)
@@ -602,6 +624,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         asyncio.create_task(
             run_every(TICK_SECONDS, ScheduleTick(_walk_schedule, _tenant_today), "schedule_tick"),
             name="schedule-tick",
+        ),
+        asyncio.create_task(
+            run_every(PLAN_BASELINE_TICK_SECONDS, _record_plan_baseline, "plan_baseline"),
+            name="plan-baseline",
         ),
         asyncio.create_task(
             EventWorker(

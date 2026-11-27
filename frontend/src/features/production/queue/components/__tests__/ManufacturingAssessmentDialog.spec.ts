@@ -98,6 +98,31 @@ describe('ManufacturingAssessmentDialog', () => {
     wrapper.unmount()
   })
 
+  it('enables Save while the minutes are typed, before the field loses focus', async () => {
+    const wrapper = mountWithApp(ManufacturingAssessmentDialog, {
+      attachTo: document.body,
+      props: { visible: true, order: makeOrder() },
+    })
+    await flushPromises()
+
+    const save = () =>
+      Array.from(document.body.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Save Assessment',
+      )!
+    expect(save().disabled).toBe(true)
+
+    const [minutesInput] = wrapper.findAllComponents({ name: 'InputNumber' })
+    minutesInput!.vm.$emit('input', { originalEvent: new Event('input'), value: 6.75 })
+    await flushPromises()
+    expect(save().disabled).toBe(false)
+
+    minutesInput!.vm.$emit('input', { originalEvent: new Event('input'), value: null })
+    await flushPromises()
+    expect(save().disabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('skip closes the dialog without an API call', async () => {
     const wrapper = mountWithApp(ManufacturingAssessmentDialog, {
       attachTo: document.body,

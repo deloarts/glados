@@ -332,6 +332,9 @@ def _seed_admin_settings(_clean_tables: None) -> None:
     from src.modules.external_data.adapters.outbound.persistence.models.admin_settings_model.pdm import (
         AdminPdmSettingsOrmModel,
     )
+    from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings_model.planning import (
+        AdminPlanningSettingsOrmModel,
+    )
     from src.modules.fulfillment.adapters.outbound.persistence.models.admin_settings_model.production import (
         AdminProductionSettingsOrmModel,
     )
@@ -428,6 +431,18 @@ def _seed_admin_settings(_clean_tables: None) -> None:
                     id=1,
                     production_order_number_format="PO-{seq:04d}",
                     external_first_step_needs_no_material=True,
+                )
+            )
+        # Read by the planning settings tab, the nightly baseline and the
+        # booking quality view. Bookings count from long before any test's
+        # data, so a test sees every booking it writes.
+        if not session.scalar(select(AdminPlanningSettingsOrmModel).filter_by(id=1).limit(1)):
+            session.add(
+                AdminPlanningSettingsOrmModel(
+                    id=1,
+                    commit_horizon_working_days=5,
+                    plan_retention_days=400,
+                    booking_quality_since=datetime(2000, 1, 1, tzinfo=UTC),
                 )
             )
         session.commit()

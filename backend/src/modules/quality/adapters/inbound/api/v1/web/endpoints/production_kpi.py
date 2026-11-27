@@ -18,6 +18,7 @@ from src.modules.quality.adapters.inbound.api.deps.production_kpis import (
 from src.modules.quality.adapters.inbound.api.schemas.production_kpi_schema import (
     ProductionKpiFilterParams,
 )
+from src.modules.quality.application.dto.production_kpi_dto import ProductionKpiBookingQualityResult
 from src.modules.quality.application.dto.production_kpi_dto import (
     ProductionKpiEstimateAccuracyResult,
 )
@@ -72,6 +73,17 @@ async def read_estimate_accuracy(
     use_case: ComputeProductionKpis = Depends(get_compute_production_kpis_use_case),
 ) -> ProductionKpiEstimateAccuracyResult:
     return await use_case.estimate_accuracy(params.to_filter())
+
+
+@router.get("/booking-quality", response_model=ProductionKpiBookingQualityResult)
+async def read_booking_quality(
+    params: ProductionKpiFilterParams = Depends(),
+    _: User = Depends(get_current_active_user),
+    use_case: ComputeProductionKpis = Depends(get_compute_production_kpis_use_case),
+) -> ProductionKpiBookingQualityResult:
+    """Orders that ran through hours without working time, final completions
+    without an assessment and manual pauses without a cause, in the period."""
+    return await use_case.booking_quality(params.to_filter())
 
 
 @router.get("/waiting-time", response_model=ProductionKpiWaitingTimeResult)
