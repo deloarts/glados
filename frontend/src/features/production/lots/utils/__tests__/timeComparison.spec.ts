@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildTimeComparison, effectivePerPieceMinutes } from '../timeComparison'
+import { buildTimeComparison, effectivePerPieceMinutes, formatPieceMinutes } from '../timeComparison'
 
 import type { FabricationLotStep, LotStepResponse } from '../../../types/productionLotsResponse'
 import type { ManufacturingAssessmentResponse } from '../../../types/productionOrdersResponse'
@@ -164,5 +164,26 @@ describe('buildTimeComparison', () => {
 
     expect(rows[0]).toMatchObject({ diffMinutes: 5, diffPercent: null })
     expect(rows[2]).toMatchObject({ diffMinutes: 10, diffPercent: null })
+  })
+})
+
+describe('decimal minutes per piece', () => {
+  it('keeps the total and its diff free of float noise', () => {
+    const rows = buildTimeComparison({
+      steps: [makeStep({ estimated_setup_minutes: 0, estimated_minutes_per_piece: 0.2 })],
+      orderQuantity: 3,
+      estimatedDurationMinutes: 0.6,
+      assessment: makeAssessment({ actual_minutes_per_piece: 0.1, actual_setup_minutes: null }),
+    })!
+
+    const total = rows.find((r) => r.metric === 'total')!
+    expect(total.actual).toBe(0.3)
+    expect(total.diffMinutes).toBe(-0.3)
+  })
+
+  it('formats minutes per piece with up to two decimals', () => {
+    expect(formatPieceMinutes(6.75)).toBe('6.75')
+    expect(formatPieceMinutes(6.5)).toBe('6.5')
+    expect(formatPieceMinutes(4)).toBe('4')
   })
 })

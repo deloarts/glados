@@ -61,6 +61,7 @@ from src.modules.fulfillment.domain.services.lot_rules import split_quantity_by_
 from src.modules.fulfillment.domain.services.production_order_rules import (
     compute_estimated_duration_minutes,
 )
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.domain.value_objects.lot_event_type import LotEventType
 from src.modules.fulfillment.domain.value_objects.lot_origin_disposition import LotOriginDisposition
@@ -392,7 +393,9 @@ async def _cut_order(
     )
     await work.production_orders.save(order)
     if quantity_ge(cut.commitment.done, cut.quantity):
-        await close_open_interruptions(work.interruptions, order.id, now, actor.id)
+        await close_open_interruptions(
+            work.interruptions, order.id, now, actor.id, ended_by=InterruptionEndedBy.CUT
+        )
     work.reconciler.touch_production_orders([order.id])
 
 

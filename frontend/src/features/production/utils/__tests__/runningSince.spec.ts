@@ -26,8 +26,8 @@ describe('runningSince', () => {
 
   it('is the end of the latest closed interruption once the order was resumed', () => {
     const interruptions: Interruptions = [
-      { paused_at: '2026-03-03T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null },
-      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null },
+      { paused_at: '2026-03-03T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
+      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
     ]
 
     expect(runningSince({ actual_start: '2026-03-02T08:00:00Z', interruptions })).toEqual(
@@ -39,8 +39,8 @@ describe('runningSince', () => {
     // The backend lists interruptions oldest first, so the latest resume is
     // the last closed row, not the first one met.
     const interruptions: Interruptions = [
-      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null },
-      { paused_at: '2026-03-03T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null },
+      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
+      { paused_at: '2026-03-03T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
     ]
 
     expect(runningSince({ actual_start: '2026-03-02T08:00:00Z', interruptions })).toEqual(
@@ -50,8 +50,8 @@ describe('runningSince', () => {
 
   it('ignores an interruption that is still open', () => {
     const interruptions: Interruptions = [
-      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null },
-      { paused_at: '2026-03-02T14:00:00Z', resumed_at: null, reason: null, paused_operator_id: null },
+      { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-02T11:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
+      { paused_at: '2026-03-02T14:00:00Z', resumed_at: null, reason: null, paused_operator_id: null, pause_cause: null },
     ]
 
     expect(runningSince({ actual_start: '2026-03-02T08:00:00Z', interruptions })).toEqual(
@@ -66,7 +66,7 @@ describe('runningSince', () => {
     expect(
       runningSince({
         actual_start: '2026-03-02T12:00:00+02:00',
-        interruptions: [{ paused_at: '2026-03-02T10:30:00', resumed_at: '2026-03-02T11:00:00', reason: null, paused_operator_id: null }],
+        interruptions: [{ paused_at: '2026-03-02T10:30:00', resumed_at: '2026-03-02T11:00:00', reason: null, paused_operator_id: null, pause_cause: null }],
       }),
     ).toEqual(at('2026-03-02T11:00:00Z'))
   })

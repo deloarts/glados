@@ -74,6 +74,9 @@ class ProductionOrder(Entity):
 
     # The operator of the latest start or resume.
     started_operator_id: int | None = None
+    # The operator of the first start, set once together with actual_start
+    # and never overwritten; None for orders started before it existed.
+    first_started_operator_id: int | None = None
 
     # planned_end frozen at the first start, the baseline for schedule
     # adherence, since the live planned_end keeps moving.

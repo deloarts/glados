@@ -1,7 +1,7 @@
 """
 SQLAlchemy ORM model of a production order interruption: one row per manual
-pause or lot hold of an order, closed when the order resumes and deleted with
-the order.
+pause or lot hold of an order, closed when the order resumes, is canceled or
+is cut back, and deleted with the order.
 """
 
 from datetime import datetime
@@ -96,6 +96,21 @@ class ProductionOrderInterruptionOrmModel(Base):
         nullable=True,
         index=True,
     )
+
+    # The operator who went on with the work when the order's own start
+    # resumed it (production_order_interruption.py).
+    resumed_operator_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("user_table.id", name="fk_production_order_interruption_resumed_operator_id"),
+        nullable=True,
+        index=True,
+    )
+
+    # InterruptionEndedBy: a resume, a cancel or a cut; None while open.
+    ended_by: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # PauseCause: the cause picked for a manual pause, if any.
+    pause_cause: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # InterruptionReason: a manual pause or a hold of the order's lot.
     reason: Mapped[str] = mapped_column(

@@ -65,7 +65,9 @@ from src.modules.fulfillment.domain.entities.production_order_completion import 
 from src.modules.fulfillment.domain.entities.production_order_interruption import (
     ProductionOrderInterruption,
 )
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
+from src.modules.fulfillment.domain.value_objects.pause_cause import PauseCause
 from src.modules.fulfillment.domain.value_objects.production_status import (
     TERMINAL_PRODUCTION_ORDER_STATUSES,
 )
@@ -159,6 +161,9 @@ def interruption_orm_to_entity(
         created=orm.created,
         reason=_interruption_reason(orm.reason),
         paused_operator_id=orm.paused_operator_id,
+        resumed_operator_id=orm.resumed_operator_id,
+        ended_by=_interruption_ended_by(orm.ended_by),
+        pause_cause=_pause_cause(orm.pause_cause),
     )
 
 
@@ -173,6 +178,23 @@ def _interruption_reason(stored: str) -> InterruptionReason:
         return InterruptionReason(stored)
     except ValueError:
         return InterruptionReason.MANUAL
+
+
+def _interruption_ended_by(stored: str | None) -> InterruptionEndedBy | None:
+    """What closed an interruption. A value no writer knows reads as none,
+    like a row closed before the field existed."""
+    try:
+        return InterruptionEndedBy(stored) if stored is not None else None
+    except ValueError:
+        return None
+
+
+def _pause_cause(stored: str | None) -> PauseCause | None:
+    """The cause of a manual pause. A cause no writer knows reads as none."""
+    try:
+        return PauseCause(stored) if stored is not None else None
+    except ValueError:
+        return None
 
 
 def order_orm_to_entity(orm: ProductionOrderOrmModel) -> ProductionOrder:
@@ -205,6 +227,7 @@ def order_orm_to_entity(orm: ProductionOrderOrmModel) -> ProductionOrder:
         lot_position_id=orm.lot_position_id,
         planned_by_id=orm.planned_by_id,
         started_operator_id=orm.started_operator_id,
+        first_started_operator_id=orm.first_started_operator_id,
         planned_end_at_start=orm.planned_end_at_start,
         canceled_at=orm.canceled_at,
         edit_version=orm.edit_version,
@@ -301,6 +324,7 @@ def _order_entity_to_dict(o: ProductionOrder) -> dict[str, Any]:
         "lot_position_id": o.lot_position_id,
         "planned_by_id": o.planned_by_id,
         "started_operator_id": o.started_operator_id,
+        "first_started_operator_id": o.first_started_operator_id,
         "planned_end_at_start": o.planned_end_at_start,
         "canceled_at": o.canceled_at,
         "edit_version": o.edit_version,
@@ -367,14 +391,18 @@ class SqlAlchemyProductionOrderRepository:
     async def _enrich_assessments(
         self, orders: list[ProductionOrder], *, refresh: bool = False
     ) -> None:
-        """Assessments for the whole page in one query."""
+        """The active assessment of every order on the page in one query;
+        a superseded one is history and never the order's assessment."""
         order_ids = [o.id for o in orders if o.id]
         if not order_ids:
             return
         rows = (
             await self._db.scalars(
                 select(ManufacturingAssessmentOrmModel)
-                .where(ManufacturingAssessmentOrmModel.production_order_id.in_(order_ids))
+                .where(
+                    ManufacturingAssessmentOrmModel.production_order_id.in_(order_ids),
+                    ManufacturingAssessmentOrmModel.superseded_at.is_(None),
+                )
                 .options(*manufacturing_assessment_load_options())
                 .execution_options(populate_existing=refresh)
             )
@@ -1008,8 +1036,11 @@ class SqlAlchemyProductionOrderInterruptionRepository:
             paused_by_id=interruption.paused_by_id,
             paused_operator_id=interruption.paused_operator_id,
             resumed_by_id=interruption.resumed_by_id,
+            resumed_operator_id=interruption.resumed_operator_id,
             created=interruption.created,
             reason=interruption.reason.value,
+            ended_by=interruption.ended_by.value if interruption.ended_by else None,
+            pause_cause=interruption.pause_cause.value if interruption.pause_cause else None,
         )
         self._db.add(orm)
         await self._db.flush()
@@ -1021,7 +1052,9 @@ class SqlAlchemyProductionOrderInterruptionRepository:
         resumed_at: datetime,
         resumed_by_id: int,
         *,
+        ended_by: InterruptionEndedBy,
         reason: InterruptionReason | None = None,
+        resumed_operator_id: int | None = None,
     ) -> ProductionOrderInterruption | None:
         query = select(ProductionOrderInterruptionOrmModel).where(
             ProductionOrderInterruptionOrmModel.production_order_id == production_order_id,
@@ -1036,6 +1069,8 @@ class SqlAlchemyProductionOrderInterruptionRepository:
             return None
         orm.resumed_at = resumed_at
         orm.resumed_by_id = resumed_by_id
+        orm.resumed_operator_id = resumed_operator_id
+        orm.ended_by = ended_by.value
         await self._db.flush()
         return interruption_orm_to_entity(orm)
 

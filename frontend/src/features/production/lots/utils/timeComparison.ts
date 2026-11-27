@@ -1,8 +1,20 @@
+import { roundTo, withoutNegativeZero } from '@/core/utils/numbers'
+
 import { stepPerPieceMinutes } from '../../utils/lotStepDisplay'
 import type { LotStepResponse } from '../../types/productionLotsResponse'
 import type { ManufacturingAssessmentResponse } from '../../types/productionOrdersResponse'
 
 export type TimeComparisonMetric = 'setup' | 'perPiece' | 'total'
+
+// Decimal places of an assessment's minutes per piece, as the backend
+// stores them. Sums and differences are rounded to them too, which strips
+// the float noise a product of decimals picks up.
+const MINUTE_DECIMALS = 2
+
+/** Minutes per piece with up to two decimals, without trailing zeros. */
+export function formatPieceMinutes(value: number): string {
+  return String(withoutNegativeZero(roundTo(value, MINUTE_DECIMALS)))
+}
 
 export interface TimeComparisonRow {
   metric: TimeComparisonMetric
@@ -28,7 +40,7 @@ function diffRow(
   actual: number | null,
 ): TimeComparisonRow {
   const comparable = estimated !== null && actual !== null
-  const diffMinutes = comparable ? actual - estimated : null
+  const diffMinutes = comparable ? roundTo(actual - estimated, MINUTE_DECIMALS) : null
   return {
     metric,
     estimated,
@@ -65,7 +77,7 @@ export function buildTimeComparison(input: {
 
   const actualSetup = assessment.actual_setup_minutes
   const actualPerPiece = assessment.actual_minutes_per_piece
-  const actualTotal = (actualSetup ?? 0) + orderQuantity * actualPerPiece
+  const actualTotal = roundTo((actualSetup ?? 0) + orderQuantity * actualPerPiece, MINUTE_DECIMALS)
 
   return [
     diffRow('setup', estimatedSetup, actualSetup),

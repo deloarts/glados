@@ -538,3 +538,39 @@ describe('ProductionQaTaskView', () => {
     expect(wrapper.text()).toContain('This production order is not an inspection task.')
   })
 })
+
+describe('ProductionQaTaskView assessment prompt', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    getProductionOrderMock.mockReset()
+    getLotMock.mockReset()
+    apiPostMock.mockReset()
+    hasPermissionMock = () => true
+    inspectionMethods = []
+    document.body.innerHTML = ''
+  })
+
+  async function recordResult(status: ProductionOrderResponse['status']) {
+    getProductionOrderMock.mockResolvedValue(makeOrder())
+    getLotMock.mockResolvedValue(makeLot([makeInspectionStep(false)]))
+    const { wrapper } = await mountView({ storageEnabled: true })
+    wrapper
+      .findComponent({ name: 'ProductionOrderCompletionDialog' })
+      .vm.$emit('recorded', makeOrder({ status }))
+    await flushPromises()
+    return wrapper.findComponent({ name: 'ManufacturingAssessmentDialog' })
+  }
+
+  it('asks for the assessment once a result completes the order', async () => {
+    const dialog = await recordResult('completed')
+
+    expect(dialog.props('visible')).toBe(true)
+    expect((dialog.props('order') as ProductionOrderResponse).status).toBe('completed')
+  })
+
+  it('does not ask while the order still has pieces to inspect', async () => {
+    const dialog = await recordResult('in_progress')
+
+    expect(dialog.props('visible')).toBe(false)
+  })
+})

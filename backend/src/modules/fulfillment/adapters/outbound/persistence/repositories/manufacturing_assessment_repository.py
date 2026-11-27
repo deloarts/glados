@@ -1,12 +1,16 @@
 """
 Concrete SQLAlchemy implementation for the ManufacturingAssessment
-aggregate. One row per completed production order, create + read
-only, no update/delete (immutable, mirrors OrderItemDelivery).
+aggregate. An order has at most one active row; a later assessment after a
+reversed completion marks the earlier one superseded instead of changing or
+deleting it, so the rows themselves are never edited otherwise.
 """
 
+from datetime import datetime
 from functools import lru_cache
 
 from sqlalchemy import select
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.interfaces import ORMOption
 
@@ -14,6 +18,7 @@ from src.modules.fulfillment.adapters.outbound.persistence.models.manufacturing_
     ManufacturingAssessmentOrmModel,
 )
 from src.modules.fulfillment.domain.entities.manufacturing_assessment import ManufacturingAssessment
+from src.modules.fulfillment.domain.errors import ManufacturingAssessmentAlreadyExistsError
 from src.modules.fulfillment.domain.value_objects.production_status import ComplexityClass
 from src.modules.platform.adapters.outbound.persistence.statements import by_id
 from src.modules.platform.adapters.outbound.persistence.user_loading import load_user
@@ -43,7 +48,18 @@ def manufacturing_assessment_orm_to_entity(
         complexity=ComplexityClass(orm.complexity),
         note=orm.note,
         created=orm.created,
+        superseded_at=orm.superseded_at,
         operator=user_orm_to_entity(orm.operator) if orm.operator else None,
+    )
+
+
+def _is_active_assessment_clash(exc: IntegrityError) -> bool:
+    """Whether the error is the one-active-assessment index: Postgres names
+    the index, SQLite the column."""
+    message = str(exc.orig).lower()
+    return (
+        "ix_manufacturing_assessment_table_production_order_id" in message
+        or "unique constraint failed: manufacturing_assessment_table.production_order_id" in message
     )
 
 
@@ -61,7 +77,10 @@ class SqlAlchemyManufacturingAssessmentRepository:
     ) -> ManufacturingAssessment | None:
         orm = await self._db.scalar(
             select(ManufacturingAssessmentOrmModel)
-            .where(ManufacturingAssessmentOrmModel.production_order_id == production_order_id)
+            .where(
+                ManufacturingAssessmentOrmModel.production_order_id == production_order_id,
+                ManufacturingAssessmentOrmModel.superseded_at.is_(None),
+            )
             .options(*manufacturing_assessment_load_options())
             .limit(1)
         )
@@ -76,9 +95,20 @@ class SqlAlchemyManufacturingAssessmentRepository:
             complexity=assessment.complexity.value,
             note=assessment.note,
             created=assessment.created,
+            superseded_at=assessment.superseded_at,
         )
         self._db.add(orm)
-        await self._db.flush()
+        try:
+            await self._db.flush()
+        except IntegrityError as exc:
+            # The partial unique index clashes when a concurrent record of
+            # the same order won the race after the caller checked.
+            if _is_active_assessment_clash(exc):
+                raise ManufacturingAssessmentAlreadyExistsError(
+                    f"Production order #{assessment.production_order_id} already has a "
+                    "manufacturing assessment."
+                ) from exc
+            raise
         new_id = orm.id
         reloaded = (
             await self._db.scalars(
@@ -91,3 +121,15 @@ class SqlAlchemyManufacturingAssessmentRepository:
             )
         ).one()
         return manufacturing_assessment_orm_to_entity(reloaded)
+
+    async def mark_superseded(self, assessment_id: int, superseded_at: datetime) -> None:
+        # Flushed at once, so the new row the caller adds next does not meet
+        # this one in the partial unique index.
+        await self._db.execute(
+            update(ManufacturingAssessmentOrmModel)
+            .where(
+                ManufacturingAssessmentOrmModel.id == assessment_id,
+                ManufacturingAssessmentOrmModel.superseded_at.is_(None),
+            )
+            .values(superseded_at=superseded_at)
+        )

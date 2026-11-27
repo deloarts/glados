@@ -3,7 +3,7 @@
  * Regenerate with: npm run generate:api-types
  *
  * Source: backend/openapi/web-v0.1.json
- * Generated: 2026-11-27T08:34:27.795Z
+ * Generated: 2026-11-27T10:17:42.643Z
  */
 export interface paths {
     "/api/v1/auth/login/access-token": {
@@ -22859,10 +22859,17 @@ export interface components {
             /** Version */
             version: string;
         };
+        /**
+         * PauseCause
+         * @description The cause of a manual pause of a production order.
+         * @enum {string}
+         */
+        PauseCause: "waiting_for_material" | "waiting_for_tool" | "waiting_for_drawing" | "waiting_for_qa" | "machine_fault" | "other_work" | "end_of_shift";
         /** PauseProductionOrderRequest */
         PauseProductionOrderRequest: {
             /** Operator Id */
             operator_id?: number | null;
+            pause_cause?: components["schemas"]["PauseCause"] | null;
             /** Reason */
             reason?: string | null;
         };
@@ -25653,6 +25660,7 @@ export interface components {
         };
         /** ProductionOrderInterruptionResponse */
         ProductionOrderInterruptionResponse: {
+            pause_cause: components["schemas"]["PauseCause"] | null;
             /**
              * Paused At
              * Format: date-time

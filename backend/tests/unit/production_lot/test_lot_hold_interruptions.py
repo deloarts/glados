@@ -37,6 +37,7 @@ from src.modules.fulfillment.domain.events.production_order_events import (
     ProductionOrderStatusChanged,
 )
 from src.modules.fulfillment.domain.services.production_time_rules import net_work_minutes
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionStatus
@@ -332,3 +333,36 @@ class TestHoldAndResume:
         assert self.order(1).actual_start == _at(8)
         completed = [e for e in self.bus.published if isinstance(e, ProductionOrderCompleted)]
         assert sorted(e.production_order_id for e in completed) == [1, 3]
+
+    # ── What closed the interruption ─────────────────────────────────
+
+    async def test_a_lot_resume_closes_the_hold_as_a_resume_without_an_operator(self):
+        # The lot resume names no operator, so the work after it keeps the
+        # operator of the order's last start.
+        await self.hold(_at(11))
+
+        await self.resume(_at(12))
+
+        [row] = self.order(1).interruptions
+        assert row.ended_by is InterruptionEndedBy.RESUME
+        assert row.resumed_operator_id is None
+
+    async def test_a_force_cancel_closes_every_interruption_as_a_cancel(self):
+        await self.hold(_at(11))
+
+        await self.cancel(_at(13))
+
+        for order_id in (1, 3):
+            assert [r.ended_by for r in self.order(order_id).interruptions] == [
+                InterruptionEndedBy.CANCEL
+            ]
+
+    async def test_a_force_complete_cuts_the_pause_of_an_order_that_processed_pieces(self):
+        # Order 3, paused by hand, ends at the piece it processed, so its
+        # pause ends by the cut and no work follows it.
+        await self._record(3, 1.0)
+
+        await self.complete(_at(13))
+
+        assert [r.ended_by for r in self.order(3).interruptions] == [InterruptionEndedBy.CUT]
+        assert [r.resumed_operator_id for r in self.order(3).interruptions] == [None]

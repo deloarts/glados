@@ -91,7 +91,14 @@ defineExpose({ actualMinutesPerPiece, actualSetupMinutes, complexity, isValid, o
         <label :for="`${uid}-actual-minutes-per-piece`">
           {{ t('productionAssessment.fields.actualMinutesPerPiece') }} *
         </label>
-        <InputNumber v-model="actualMinutesPerPiece" :input-id="`${uid}-actual-minutes-per-piece`" :min="0" fluid />
+        <InputNumber
+          v-model="actualMinutesPerPiece"
+          :input-id="`${uid}-actual-minutes-per-piece`"
+          :min="0"
+          :max-fraction-digits="2"
+          :step="0.01"
+          fluid
+        />
       </div>
 
       <div class="field">

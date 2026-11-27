@@ -47,6 +47,7 @@ export { default as LotPositionProvisionDialog } from './lots/components/LotPosi
 export { default as SourceItemDemandCreateDialog } from './lots/components/SourceItemDemandCreateDialog.vue'
 export { default as ProductionOrderCompletionDialog } from './components/ProductionOrderCompletionDialog.vue'
 export { default as ProductionOrderStartDialog } from './queue/components/ProductionOrderStartDialog.vue'
+export { default as ManufacturingAssessmentDialog } from './queue/components/ManufacturingAssessmentDialog.vue'
 
 // The demand details for the item pages, and the lot history the page
 // hosting the made-item catalogue provides to it.

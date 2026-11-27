@@ -16,7 +16,9 @@ of a pool-assigned order takes the named machine's queue lock before them
 
 The operator must always be resolved. Only completions have an operator
 audit table; start and resume record the operator in the changelog and in
-started_operator_id.
+started_operator_id, the first start also in first_started_operator_id, and
+a resume also on the interruption it closes, so every span of work keeps
+the operator who worked it.
 
 The reconciler also derives the kind and status of the order's position, the
 status of its lot and those of the lot's made demands. When the position's
@@ -77,6 +79,7 @@ from src.modules.fulfillment.domain.services.production_order_rules import (
 )
 from src.modules.fulfillment.domain.services.production_order_rules import position_is_manual
 from src.modules.fulfillment.domain.services.production_order_rules import resolve_operator_id
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.domain.value_objects.lot_event_type import LotEventType
@@ -431,7 +434,11 @@ class StartProductionOrder(_ProductionOrderLifecycleBase):
         """Records the start of the order, or the resume of its pause.
         actual_start keeps the first start, because the net work time
         subtracts the closed interruptions from the span since then; a
-        resume closes the operator's own pause."""
+        resume closes the operator's own pause and names the operator who
+        goes on with the work. The first start's operator is kept apart,
+        since started_operator_id follows every resume."""
+        if order.actual_start is None:
+            order.first_started_operator_id = operator_id
         order.actual_start = order.actual_start or now
         order.changed = now
         order.started_operator_id = operator_id
@@ -444,7 +451,12 @@ class StartProductionOrder(_ProductionOrderLifecycleBase):
         await self._orders.save(order)
         if resuming:
             await self._interruptions.close_open(
-                order.id, now, actor.id, reason=InterruptionReason.MANUAL
+                order.id,
+                now,
+                actor.id,
+                ended_by=InterruptionEndedBy.RESUME,
+                reason=InterruptionReason.MANUAL,
+                resumed_operator_id=operator_id,
             )
 
     async def _publish_start_events(
@@ -510,6 +522,7 @@ class PauseProductionOrder(_ProductionOrderLifecycleBase):
                 created=now,
                 reason=InterruptionReason.MANUAL,
                 paused_operator_id=operator_id,
+                pause_cause=cmd.pause_cause,
             )
         )
         result = await self._reconciler.run(actor, now)
@@ -567,7 +580,9 @@ class CancelProductionOrder(_ProductionOrderLifecycleBase):
         order.changed = now
         order.changes = append_changelog(order.changes, actor.full_name, f"Canceled.{note}")
         await self._orders.save(order)
-        await close_open_interruptions(self._interruptions, order.id, now, actor.id)
+        await close_open_interruptions(
+            self._interruptions, order.id, now, actor.id, ended_by=InterruptionEndedBy.CANCEL
+        )
         result = await self._reconciler.run(actor, now)
         project_id_to_recompute = await self._after_run(result, lot)
         await self._lots.record_event(

@@ -23,7 +23,7 @@ function resumedOrder(overrides: Partial<ProductionOrderResponse> = {}): Product
   return makeOrder({
     status: 'in_progress',
     actual_start: '2026-03-02T08:00:00Z',
-    interruptions: [{ paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null }],
+    interruptions: [{ paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null, pause_cause: null }],
     ...overrides,
   })
 }
@@ -64,8 +64,8 @@ describe('computeProductionSchedule for a started order', () => {
     const order = resumedOrder({
       status: 'paused',
       interruptions: [
-        { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null },
-        { paused_at: '2026-03-05T14:00:00Z', resumed_at: null, reason: null, paused_operator_id: null },
+        { paused_at: '2026-03-02T10:00:00Z', resumed_at: '2026-03-04T09:00:00Z', reason: null, paused_operator_id: null, pause_cause: null },
+        { paused_at: '2026-03-05T14:00:00Z', resumed_at: null, reason: null, paused_operator_id: null, pause_cause: null },
       ],
     })
 

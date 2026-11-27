@@ -63,6 +63,7 @@ from src.modules.fulfillment.domain.services.lot_rules import line_end_action
 from src.modules.fulfillment.domain.services.production_order_rules import (
     compute_estimated_duration_minutes,
 )
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.domain.value_objects.lot_event_type import LotEventType
 from src.modules.fulfillment.domain.value_objects.order_status import OrderItemStatus
@@ -207,7 +208,9 @@ async def cancel_production_order(
     order.changed = now
     order.changes = append_changelog(order.changes, actor.full_name, f"Canceled, {reason}.")
     await order_repo.save(order)
-    await close_open_interruptions(interruption_repo, order.id, now, actor.id)
+    await close_open_interruptions(
+        interruption_repo, order.id, now, actor.id, ended_by=InterruptionEndedBy.CANCEL
+    )
     reconciler.touch_production_orders([order.id])
     await lot_repo.record_event(
         build_lot_event(
@@ -388,7 +391,9 @@ async def close_live_work_short(
             f"Closed at the {processed:.3f} processed of {old_quantity:.3f} pieces, {reason}.",
         )
         await order_repo.save(order)
-        await close_open_interruptions(interruption_repo, order.id, now, actor.id)
+        await close_open_interruptions(
+            interruption_repo, order.id, now, actor.id, ended_by=InterruptionEndedBy.CUT
+        )
         reconciler.touch_production_orders([order.id])
     canceled_ordered: list[OrderItem] = []
     for line in await _live_lines(order_item_repo, positions):

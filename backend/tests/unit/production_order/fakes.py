@@ -32,6 +32,7 @@ from src.modules.fulfillment.domain.entities.production_order_interruption impor
     ProductionOrderInterruption,
 )
 from src.modules.fulfillment.domain.services.scheduling import ExternalForecast
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.ports.outbound.repositories.production_order_repository import (
@@ -492,6 +493,9 @@ class FakeProductionOrderInterruptionRepository:
             created=interruption.created,
             reason=interruption.reason,
             paused_operator_id=interruption.paused_operator_id,
+            resumed_operator_id=interruption.resumed_operator_id,
+            ended_by=interruption.ended_by,
+            pause_cause=interruption.pause_cause,
         )
         order = self._orders.get(saved.production_order_id) if self._orders is not None else None
         if order is None:
@@ -506,7 +510,9 @@ class FakeProductionOrderInterruptionRepository:
         resumed_at: datetime,
         resumed_by_id: int,
         *,
+        ended_by: InterruptionEndedBy,
         reason: InterruptionReason | None = None,
+        resumed_operator_id: int | None = None,
     ) -> ProductionOrderInterruption | None:
         for row in reversed(self._rows_of(production_order_id)):
             if row.resumed_at is not None:
@@ -515,6 +521,8 @@ class FakeProductionOrderInterruptionRepository:
                 continue
             row.resumed_at = resumed_at
             row.resumed_by_id = resumed_by_id
+            row.resumed_operator_id = resumed_operator_id
+            row.ended_by = ended_by
             return row
         return None
 

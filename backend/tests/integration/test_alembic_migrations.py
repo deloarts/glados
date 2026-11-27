@@ -21,10 +21,13 @@ the whole schema is never a downgrade.
 
 import importlib
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy import inspect
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from alembic import command
 from alembic.config import Config
@@ -102,3 +105,62 @@ def test_the_initial_migration_cannot_be_rolled_back(
     command.upgrade(config, initial.revision)
     with pytest.raises(NotImplementedError):
         command.downgrade(config, "base")
+
+
+def test_the_booking_details_migration_round_trips_on_sqlite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The partial unique index lets a superseded assessment sit next to the
+    order's active one, and the downgrade deletes the superseded row, rounds
+    the decimal minutes and drops the new columns, so the upgrade applies
+    again afterwards."""
+    db_path = tmp_path / "alembic_booking_details_test.db"
+    monkeypatch.setattr(cfg.database, "url", f"sqlite:///{db_path}")
+    config = _alembic_config()
+    command.upgrade(config, "1d9522656391")
+    engine = create_engine(f"sqlite:///{db_path}")
+    insert = text(
+        "INSERT INTO manufacturing_assessment_table (id, created, production_order_id, "
+        "operator_id, actual_minutes_per_piece, complexity, public_id, superseded_at) "
+        "VALUES (:id, '2026-03-02 08:00:00', 1, 1, :minutes, 'normal', :public_id, :superseded)"
+    )
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                insert,
+                {"id": 1, "minutes": 4.5, "public_id": uuid4().hex, "superseded": "2026-03-02"},
+            )
+            connection.execute(
+                insert, {"id": 2, "minutes": 6.75, "public_id": uuid4().hex, "superseded": None}
+            )
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(
+                insert, {"id": 3, "minutes": 7.0, "public_id": uuid4().hex, "superseded": None}
+            )
+
+        engine.dispose()
+        command.downgrade(config, "4788f43a8638")
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT id, actual_minutes_per_piece FROM manufacturing_assessment_table")
+            ).all()
+            columns = {
+                table: {c["name"] for c in inspect(connection).get_columns(table)}
+                for table in (
+                    "manufacturing_assessment_table",
+                    "production_order_interruption_table",
+                    "production_order_table",
+                )
+            }
+        assert [(row_id, minutes) for row_id, minutes in rows] == [(2, 7)]
+        assert "superseded_at" not in columns["manufacturing_assessment_table"]
+        assert (
+            not {"resumed_operator_id", "ended_by", "pause_cause"}
+            & columns["production_order_interruption_table"]
+        )
+        assert "first_started_operator_id" not in columns["production_order_table"]
+
+        engine.dispose()
+        command.upgrade(config, "head")
+    finally:
+        engine.dispose()

@@ -1,17 +1,21 @@
 """
 SQLAlchemy ORM model for manufacturing_assessment_table: the operator's
 recorded actual setup and per-piece time and complexity for a completed
-production order, at most one row per order. Infrastructure detail, never
-imported by domain or application layers.
+production order. An order has at most one row that is not superseded, which
+a partial unique index holds; superseded rows stay as history. Infrastructure
+detail, never imported by domain or application layers.
 """
 
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
+from sqlalchemy import Float
 from sqlalchemy import ForeignKey
+from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import text
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
@@ -28,6 +32,17 @@ if TYPE_CHECKING:
 class ManufacturingAssessmentOrmModel(Base):
     __tablename__ = "manufacturing_assessment_table"
 
+    # One active assessment per order; a superseded row does not count.
+    __table_args__ = (
+        Index(
+            "ix_manufacturing_assessment_table_production_order_id",
+            "production_order_id",
+            unique=True,
+            postgresql_where=text("superseded_at IS NULL"),
+            sqlite_where=text("superseded_at IS NULL"),
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
     created: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -39,8 +54,6 @@ class ManufacturingAssessmentOrmModel(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
-        unique=True,
-        index=True,
     )
     production_order: Mapped["ProductionOrderOrmModel"] = relationship(
         "src.modules.fulfillment.adapters.outbound.persistence.models.production_order_model.ProductionOrderOrmModel",
@@ -60,7 +73,9 @@ class ManufacturingAssessmentOrmModel(Base):
         lazy="raise_on_sql",
     )
 
-    actual_minutes_per_piece: Mapped[int] = mapped_column(Integer, nullable=False)
+    actual_minutes_per_piece: Mapped[float] = mapped_column(Float, nullable=False)
     actual_setup_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     complexity: Mapped[str] = mapped_column(String, nullable=False)
     note: Mapped[str | None] = mapped_column(String, nullable=True)
+    # When a later assessment of the same order replaced this one.
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

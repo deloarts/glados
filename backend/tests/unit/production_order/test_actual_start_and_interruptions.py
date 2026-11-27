@@ -37,7 +37,9 @@ from src.modules.fulfillment.application.use_cases.production_order.record_produ
 )
 from src.modules.fulfillment.domain.entities.production_order import ProductionOrder
 from src.modules.fulfillment.domain.services.production_time_rules import net_work_minutes
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.lot_status import LotPositionKind
+from src.modules.fulfillment.domain.value_objects.pause_cause import PauseCause
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.platform.domain.value_objects.permission import Permission
 from src.modules.quality.domain.services.kpi_rules import CapacityRow
@@ -117,7 +119,7 @@ class _OrderOnTheFloor:
             reconciler=production_order_reconciler(self.order_repo, self.lot_repo, self.bus),
         ).execute(self.actor, production_order_id=1, cmd=StartProductionOrderCommand())
 
-    async def _pause(self) -> ProductionOrderResult:
+    async def _pause(self, cmd: PauseProductionOrderCommand | None = None) -> ProductionOrderResult:
         return await PauseProductionOrder(
             self.order_repo,
             self.lot_repo,
@@ -125,7 +127,7 @@ class _OrderOnTheFloor:
             uow=self.uow,
             interruption_repo=self.interruptions,
             reconciler=production_order_reconciler(self.order_repo, self.lot_repo, self.bus),
-        ).execute(self.actor, production_order_id=1, cmd=PauseProductionOrderCommand())
+        ).execute(self.actor, production_order_id=1, cmd=cmd or PauseProductionOrderCommand())
 
     async def _cancel(self) -> ProductionOrderResult:
         return await CancelProductionOrder(
@@ -284,3 +286,72 @@ class TestStartAndPauseRequestAWalk(_OrderOnTheFloor):
         )
 
         assert (started, recompute.calls) == (1, 2)
+
+
+class TestBookingDetails(_OrderOnTheFloor):
+    """What a booking records beyond the times: the operator of the first
+    start, the operator who resumed, what closed a pause, and the cause an
+    operator picked for it."""
+
+    async def test_the_first_start_records_its_operator_once(self, clock: type[_Clock]) -> None:
+        await self._start()
+        clock.current = _at(10)
+        await self._pause()
+        clock.current = _at(11)
+        await self._start()
+
+        order = await self._order()
+        assert order.first_started_operator_id == self.actor.id
+        assert order.started_operator_id == self.actor.id
+
+    async def test_a_resume_closes_the_pause_as_a_resume_and_names_its_operator(
+        self, clock: type[_Clock]
+    ) -> None:
+        await self._start()
+        clock.current = _at(10)
+        await self._pause()
+        clock.current = _at(11)
+
+        await self._start()
+
+        [row] = self.interruptions.rows
+        assert row.ended_by is InterruptionEndedBy.RESUME
+        assert row.resumed_operator_id == self.actor.id
+
+    async def test_a_pause_keeps_the_cause_the_operator_picked(self, clock: type[_Clock]) -> None:
+        await self._start()
+        clock.current = _at(10)
+
+        result = await self._pause(
+            PauseProductionOrderCommand(
+                reason="Fixture cracked", pause_cause=PauseCause.WAITING_FOR_TOOL
+            )
+        )
+
+        [row] = self.interruptions.rows
+        assert row.pause_cause is PauseCause.WAITING_FOR_TOOL
+        assert row.ended_by is None
+        assert [i.pause_cause for i in result.interruptions] == [PauseCause.WAITING_FOR_TOOL.value]
+
+    async def test_a_pause_without_a_cause_stores_none(self, clock: type[_Clock]) -> None:
+        await self._start()
+        clock.current = _at(10)
+
+        await self._pause()
+
+        [row] = self.interruptions.rows
+        assert row.pause_cause is None
+
+    async def test_a_cancel_closes_the_pause_as_a_cancel_without_an_operator(
+        self, clock: type[_Clock]
+    ) -> None:
+        await self._start()
+        clock.current = _at(10)
+        await self._pause()
+        clock.current = _at(10, 30)
+
+        await self._cancel()
+
+        [row] = self.interruptions.rows
+        assert row.ended_by is InterruptionEndedBy.CANCEL
+        assert row.resumed_operator_id is None

@@ -11,10 +11,15 @@ from fastapi import Query
 from pydantic import AwareDatetime
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 from pydantic import model_validator
 
+from src.modules.fulfillment.domain.services.manufacturing_assessment_rules import (
+    assessed_minutes_refusal,
+)
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lot_origin_disposition import LotOriginDisposition
+from src.modules.fulfillment.domain.value_objects.pause_cause import PauseCause
 from src.modules.fulfillment.domain.value_objects.production_status import ComplexityClass
 from src.modules.fulfillment.domain.value_objects.production_status import ProductionOrderStatus
 from src.modules.fulfillment.domain.value_objects.production_status import UrgencyClass
@@ -121,6 +126,8 @@ class StartProductionOrderRequest(BaseModel):
 class PauseProductionOrderRequest(BaseModel):
     operator_id: int | None = None
     reason: str | None = None
+    # Optional, picked from a fixed list next to the free-text reason.
+    pause_cause: PauseCause | None = None
 
 
 class CancelProductionOrderRequest(BaseModel):
@@ -192,10 +199,19 @@ class ScrapProductionPiecesRequest(BaseModel):
 
 
 class RecordManufacturingAssessmentRequest(BaseModel):
-    actual_minutes_per_piece: int = Field(..., ge=0)
+    # Decimal minutes with at most two places.
+    actual_minutes_per_piece: float = Field(..., ge=0, allow_inf_nan=False)
     actual_setup_minutes: int | None = Field(default=None, ge=0)
     complexity: ComplexityClass
     note: str | None = None
+
+    @field_validator("actual_minutes_per_piece")
+    @classmethod
+    def _two_decimals(cls, value: float) -> float:
+        refusal = assessed_minutes_refusal(value)
+        if refusal is not None:
+            raise ValueError(refusal)
+        return value
 
 
 class ProductionOrderFilterParams(PageParams):
@@ -253,13 +269,16 @@ class ProductionOrderInterruptionResponse(ResponseModel):
     reason: InterruptionReason | None = None
     # The operator who paused the work, empty for a hold no one answers for.
     paused_operator_id: int | None = None
+    # The cause picked for a manual pause, empty for a hold and a pause
+    # without one.
+    pause_cause: PauseCause | None = None
 
 
 class ManufacturingAssessmentResponse(EntityResponse):
     production_order_id: int
     operator_id: int
     operator: PublicUserResponse | None
-    actual_minutes_per_piece: int
+    actual_minutes_per_piece: float
     actual_setup_minutes: int | None
     complexity: ComplexityClass
     note: str | None

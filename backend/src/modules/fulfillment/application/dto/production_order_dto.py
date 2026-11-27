@@ -6,9 +6,14 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 from pydantic import model_validator
 
+from src.modules.fulfillment.domain.services.manufacturing_assessment_rules import (
+    assessed_minutes_refusal,
+)
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
+from src.modules.fulfillment.domain.value_objects.pause_cause import PauseCause
 from src.modules.fulfillment.domain.value_objects.production_status import ComplexityClass
 from src.modules.fulfillment.domain.value_objects.production_status import UrgencyClass
 from src.modules.platform.application.dto.base import ResultBase
@@ -108,6 +113,8 @@ class StartProductionOrderCommand(BaseModel):
 class PauseProductionOrderCommand(BaseModel):
     operator_id: int | None = None
     reason: str | None = None
+    # The cause picked from the fixed list, next to the free-text reason.
+    pause_cause: PauseCause | None = None
 
 
 class CancelProductionOrderCommand(BaseModel):
@@ -154,10 +161,18 @@ class ScrapProductionPiecesCommand(BaseModel):
 
 
 class RecordManufacturingAssessmentCommand(BaseModel):
-    actual_minutes_per_piece: int = Field(..., ge=0)
+    actual_minutes_per_piece: float = Field(..., ge=0, allow_inf_nan=False)
     actual_setup_minutes: int | None = Field(default=None, ge=0)
     complexity: ComplexityClass
     note: str | None = None
+
+    @field_validator("actual_minutes_per_piece")
+    @classmethod
+    def _two_decimals(cls, value: float) -> float:
+        refusal = assessed_minutes_refusal(value)
+        if refusal is not None:
+            raise ValueError(refusal)
+        return value
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -190,13 +205,14 @@ class ProductionOrderInterruptionResult(BaseModel):
     resumed_at: datetime | None
     reason: str = InterruptionReason.default().value  # InterruptionReason
     paused_operator_id: int | None = None
+    pause_cause: str | None = None  # PauseCause
 
 
 class ManufacturingAssessmentResult(ResultBase):
     production_order_id: int
     operator_id: int
     operator: PublicUserResult | None
-    actual_minutes_per_piece: int
+    actual_minutes_per_piece: float
     actual_setup_minutes: int | None
     complexity: str
     note: str | None

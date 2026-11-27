@@ -16,6 +16,7 @@ The reconciler protocol for derived lifecycle statuses: what a use case that cha
 - [5 edit versions](#5-edit-versions)
 - [6 concurrency and retries](#6-concurrency-and-retries)
 - [7 drift and tests](#7-drift-and-tests)
+- [8 bookings of a production order](#8-bookings-of-a-production-order)
 
 ## 1 facts, intents and derived fields
 
@@ -146,3 +147,29 @@ A use case that changes facts or intents follows these steps in order.
 - `tests/unit/lifecycle/test_state_transitions.py` explores the model with a few fixed seeds and fails when the code makes a transition the table does not list.
 - After a lifecycle change, regenerate the table with `GLADOS_WRITE_TRANSITIONS=1 poetry run pytest tests/unit/lifecycle/test_state_transitions.py -q` and review its diff, where a transition the code no longer makes drops out. The run takes about twenty minutes, because it explores many more seeds so rare transitions stay listed.
 - A new request of the model's world also needs its lifecycle actions in `TRIGGER_ACTIONS` (`state_machine_catalog.py`) and a trigger label in both `stateMachines` locale files.
+
+## 8 bookings of a production order
+
+The bookings of a production order are its start and resume, its pauses, its completions and their reversals, and its manufacturing assessment. They record enough to tell afterwards who worked on the order, when, and why it stood still.
+
+- `actual_start` keeps the first start. `first_started_operator_id` is set together with it, once, and never overwritten, while `started_operator_id` follows every start and resume.
+- A pause opens an interruption (`production_order_interruption.py`), and every closing writes `ended_by` (`InterruptionEndedBy`). Each caller of `IProductionOrderInterruptionRepository.close_open`, directly or through `close_open_interruptions`, passes its value:
+
+  | Caller | `ended_by` | Operator |
+  | ------ | ---------- | -------- |
+  | the resume path of `StartProductionOrder` | `resume` | `resumed_operator_id`, the resolved operator |
+  | `ResumeLot` | `resume` | none |
+  | `CancelProductionOrder` | `cancel` | none |
+  | `lot_cascades.cancel_production_order`, for a lot cancel, a forced lot completion and a disposition that cancels an order | `cancel` | none |
+  | `lot_cascades.close_live_work_short`, for a forced lot completion that ends an order at what it processed | `cut` | none |
+  | `piece_disposition._cut_order`, for a scrap, an inspection reject or a loss at goods receipt that cuts an order to what it processed | `cut` | none |
+
+- A `cancel` and a `cut` stamp `resumed_at` like a resume, but no work follows them, so a reader of the booked work time treats only `resume` as work going on. A new caller of `close_open` passes the value that says why the pause ended.
+- A normal completion never closes an interruption, since it is allowed only on a running order, and a merge takes only queued orders, which have none.
+- After a lot resume the work continues under the operator of the order's last start or resume, since the lot resume names no operator.
+- Rows written before these fields existed hold none of them, and there is no backfill.
+- `pause_cause` (`PauseCause`) is the cause an operator picks for a manual pause, next to its free-text reason. It is optional, and a lot hold never sets it.
+- A reversal of the completion that completed an order keeps `actual_start`, clears `actual_end` and opens no interruption, so the order runs again without a new start.
+- An order has one active manufacturing assessment, which a partial unique index over the rows without `superseded_at` holds. A second one is refused with `ManufacturingAssessmentAlreadyExistsError` unless a reversal of one of the order's completions was booked after the active one was recorded (`manufacturing_assessment_rules.py`). The new one then replaces it: the earlier row gets `superseded_at` and stays as history.
+- Every read of an order's assessment filters on `superseded_at IS NULL`, and the response never carries a superseded one.
+- `actual_minutes_per_piece` is stored as a float with at most two decimal places, which the request and the command both validate.

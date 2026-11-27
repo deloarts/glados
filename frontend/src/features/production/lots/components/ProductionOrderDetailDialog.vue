@@ -8,6 +8,7 @@ import {
   conflictTooltipKey,
 } from '../../utils/productionOrderConflicts'
 import { formatDecimal } from '@/core/utils/numbers'
+import { formatPieceMinutes } from '../utils/timeComparison'
 import { formatMinutesDuration } from '../../utils/lotStepDisplay'
 import {
   productionOrderPrioritySeverity,
@@ -194,7 +195,7 @@ const { format: madeItemLabel } = useMadeItemLabel()
               t('production.lots.detail.record.execution.actualPerPiece')
             }}</span>
             <span class="field-value"
-              >{{ formatDecimal(assessment.actual_minutes_per_piece) }} min</span
+              >{{ formatPieceMinutes(assessment.actual_minutes_per_piece) }} min</span
             >
           </div>
           <div v-if="assessment.actual_setup_minutes !== null" class="field">

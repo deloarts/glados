@@ -187,6 +187,17 @@ export default {
   pause: {
     title: 'Pause Production Order',
     explain: 'How pausing works',
+    cause: 'Cause',
+    causePlaceholder: 'Select a cause (optional)',
+    causes: {
+      waiting_for_material: 'Waiting for Material',
+      waiting_for_tool: 'Waiting for Tool or Fixture',
+      waiting_for_drawing: 'Waiting for Drawing or Program',
+      waiting_for_qa: 'Waiting for QA',
+      machine_fault: 'Machine Fault',
+      other_work: 'Pulled to Other Work',
+      end_of_shift: 'End of Shift',
+    },
     reason: 'Reason',
     submit: 'Pause',
     errors: {

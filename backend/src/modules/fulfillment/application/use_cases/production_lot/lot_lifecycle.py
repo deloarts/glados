@@ -84,6 +84,7 @@ from src.modules.fulfillment.domain.services.lot_rules import assert_lot_action
 from src.modules.fulfillment.domain.services.lot_rules import close_lot_short
 from src.modules.fulfillment.domain.services.lot_rules import dropped_wip
 from src.modules.fulfillment.domain.services.lot_rules import unused_raw_material
+from src.modules.fulfillment.domain.value_objects.interruption_ended_by import InterruptionEndedBy
 from src.modules.fulfillment.domain.value_objects.interruption_reason import InterruptionReason
 from src.modules.fulfillment.domain.value_objects.lifecycle_aggregate import LifecycleAggregate
 from src.modules.fulfillment.domain.value_objects.lot_event_type import LotEventType
@@ -813,7 +814,11 @@ class ResumeLot:
             if not _open_lot_hold(order):
                 continue
             await self._interruptions.close_open(
-                order.id, now, actor.id, reason=InterruptionReason.LOT_HOLD
+                order.id,
+                now,
+                actor.id,
+                ended_by=InterruptionEndedBy.RESUME,
+                reason=InterruptionReason.LOT_HOLD,
             )
             order.changed = now
             order.changes = append_changelog(
