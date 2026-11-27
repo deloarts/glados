@@ -93,7 +93,7 @@ defineExpose({ form })
         />
       </div>
       <div class="field-row">
-        <span :id="`${uid}-booking-quality-since`">
+        <span :id="`${uid}-booking-quality-since`" class="field-caption">
           {{ t('adminSettings.planning.bookingQualitySince') }}
           <small class="hint">{{ t('adminSettings.planning.bookingQualitySinceHint') }}</small>
         </span>

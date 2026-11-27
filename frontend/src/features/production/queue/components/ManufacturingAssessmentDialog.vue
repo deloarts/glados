@@ -6,6 +6,7 @@ import { useSubmitAction } from '@/shared/composables/useSubmitAction'
 import { useProductionQueueStore } from '../../stores/productionQueueStore'
 import { MANUFACTURING_COMPLEXITIES } from '../../utils/productionOrderStatus'
 
+import type { InputNumberInputEvent } from 'openvue/inputnumber'
 import type {
   ManufacturingComplexity,
   ProductionOrderResponse,
@@ -50,6 +51,13 @@ watch(visible, (isVisible) => {
 const isValid = computed(
   () => actualMinutesPerPiece.value !== null && actualMinutesPerPiece.value >= 0,
 )
+
+// InputNumber writes its model only when the field loses focus, so the
+// required minutes follow every keystroke instead, and Save is enabled as
+// soon as what is typed is valid.
+function onMinutesInput(event: InputNumberInputEvent): void {
+  actualMinutesPerPiece.value = typeof event.value === 'number' ? event.value : null
+}
 
 function onSkip(): void {
   visible.value = false
@@ -98,6 +106,7 @@ defineExpose({ actualMinutesPerPiece, actualSetupMinutes, complexity, isValid, o
           :max-fraction-digits="2"
           :step="0.01"
           fluid
+          @input="onMinutesInput"
         />
       </div>
 
