@@ -114,6 +114,9 @@ class FakeAdminSettingsRepo:
     async def save_production(self, s: Any) -> Any:
         return self._capture("production", s)
 
+    async def save_planning(self, s: Any) -> Any:
+        return self._capture("planning", s)
+
     async def save_banner(self, s: Any) -> Any:
         return self._capture("banner", s)
 
@@ -201,6 +204,7 @@ async def test_domains_are_seeded_and_logged_in_a_fixed_order(glados_caplog):
         ("made_items", "made item"),
         ("pdm", "PDM"),
         ("production", "production"),
+        ("planning", "planning"),
         ("banner", "banner"),
         ("agents", "agent"),
         ("data_import", "data import"),

@@ -13,6 +13,7 @@ from src.modules.catalogue.domain.entities.inspection_method import InspectionMe
 from src.modules.catalogue.domain.policies.item_field_ownership import default_policy
 from src.modules.external_data.domain.entities.admin_settings.pdm import AdminPdmSettings
 from src.modules.external_data.domain.entities.pdm_file_snapshot import PdmFileSnapshot
+from src.modules.fulfillment.domain.entities.admin_settings.planning import AdminPlanningSettings
 from src.modules.fulfillment.domain.entities.admin_settings.production import (
     AdminProductionSettings,
 )
@@ -219,6 +220,12 @@ class FakeAdminSettingsRepository:
             require_qa=False,
             require_source_item_approval=False,
         )
+        self.planning = AdminPlanningSettings(
+            id=1,
+            commit_horizon_working_days=5,
+            plan_retention_days=400,
+            booking_quality_since=datetime(2026, 1, 1, tzinfo=UTC),
+        )
         self.banner = AdminBannerSettings(
             id=1,
             enabled=False,
@@ -360,6 +367,13 @@ class FakeAdminSettingsRepository:
 
     async def save_production(self, settings: AdminProductionSettings) -> AdminProductionSettings:
         self.production = settings
+        return settings
+
+    async def get_planning(self) -> AdminPlanningSettings:
+        return self.planning
+
+    async def save_planning(self, settings: AdminPlanningSettings) -> AdminPlanningSettings:
+        self.planning = settings
         return settings
 
     async def get_banner(self) -> AdminBannerSettings:

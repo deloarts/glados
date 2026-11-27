@@ -5,6 +5,7 @@ inside the committed horizon and every open lot, nothing before half past
 midnight, and plans older than the retention purged.
 """
 
+from datetime import UTC
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
@@ -22,6 +23,7 @@ from src.modules.fulfillment.domain.value_objects.plan_kind import PlanKind
 from src.modules.fulfillment.domain.value_objects.plan_kind import PlanStatus
 from src.modules.fulfillment.domain.value_objects.plan_kind import SchedulerMode
 from src.modules.platform.const import SERVER_DEFAULT_TIMEZONE
+from src.shared_kernel.domain.services.clock import as_utc
 from tests.integration import _lifecycle_seed as seed
 
 ZONE = ZoneInfo(SERVER_DEFAULT_TIMEZONE)
@@ -29,7 +31,9 @@ ZONE = ZoneInfo(SERVER_DEFAULT_TIMEZONE)
 # to Friday, so five working days reach the next Wednesday.
 THURSDAY = date(2026, 3, 5)
 MORNING = datetime(2026, 3, 5, 6, 0, tzinfo=ZONE)
-HORIZON_END = datetime(2026, 3, 12, 0, 0, tzinfo=ZONE)
+# Stored datetimes are UTC; SQLite would keep only the wall clock of a
+# value in another zone and hand it back naive.
+HORIZON_END = datetime(2026, 3, 12, 0, 0, tzinfo=ZONE).astimezone(UTC)
 
 
 async def _seed_two_orders(db: AsyncSession) -> tuple[int, int, int]:
@@ -72,7 +76,7 @@ async def test_the_baseline_records_the_horizon_and_every_open_lot(db: AsyncSess
     assert lot.lot_id == lot_id
     # The lot finishes with its later order, beyond the horizon.
     assert lot.planned_finish is not None
-    assert lot.planned_finish.astimezone(ZONE) == HORIZON_END + timedelta(hours=10)
+    assert as_utc(lot.planned_finish) == HORIZON_END + timedelta(hours=10)
     assert (stored.kind, stored.scheduler_mode, stored.status) == (
         PlanKind.BASELINE,
         SchedulerMode.CURRENT,
