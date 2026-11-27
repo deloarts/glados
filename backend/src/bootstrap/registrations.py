@@ -26,8 +26,14 @@ from src.modules.catalogue.adapters.outbound.persistence.models.fabrication_meth
 from src.modules.catalogue.adapters.outbound.persistence.models.item_picture_model import (
     ItemPictureOrmModel,
 )
+from src.modules.catalogue.adapters.outbound.persistence.models.made_item_file_model import (
+    MadeItemFileOrmModel,
+)
 from src.modules.catalogue.adapters.outbound.persistence.models.made_item_model import (
     MadeItemOrmModel,
+)
+from src.modules.catalogue.adapters.outbound.persistence.models.source_item_file_model import (
+    SourceItemFileOrmModel,
 )
 from src.modules.catalogue.adapters.outbound.persistence.models.source_item_model import (
     SourceItemOrmModel,
@@ -389,8 +395,19 @@ def register_all() -> None:
             BoughtItemAllocationOrmModel: (
                 LiveTopic(LiveResource.BOUGHT_ITEM_DEMANDS, "demand_item_id", child=True),
             ),
+            # The catalogue tables follow their items through these, including
+            # items a PDM ingestion or another user creates or changes.
+            BoughtItemOrmModel: (LiveTopic(LiveResource.BOUGHT_ITEMS, "id"),),
+            MadeItemOrmModel: (LiveTopic(LiveResource.MADE_ITEMS, "id"),),
+            SourceItemOrmModel: (LiveTopic(LiveResource.SOURCE_ITEMS, "id"),),
+            # A file stored in the background, such as a mesh ingested from PDM,
+            # reaches the files of an open item dialog or page this way.
             BoughtItemFileOrmModel: (
                 LiveTopic(LiveResource.BOUGHT_ITEMS, "bought_item_id", child=True),
+            ),
+            MadeItemFileOrmModel: (LiveTopic(LiveResource.MADE_ITEMS, "made_item_id", child=True),),
+            SourceItemFileOrmModel: (
+                LiveTopic(LiveResource.SOURCE_ITEMS, "source_item_id", child=True),
             ),
             # A picture stored in the background, such as the Data Portal picture or
             # a CAD rendering from PDM, reaches the thumbnails and the pictures of an

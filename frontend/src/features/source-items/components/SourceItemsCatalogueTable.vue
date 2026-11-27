@@ -11,6 +11,8 @@ import {
 } from '@/core/constants/table'
 import { useI18n } from 'vue-i18n'
 import { useServerTable } from '@/core/composables/useServerTable'
+import { LiveResource } from '@/core/realtime/resources'
+import { useLiveRows } from '@/core/realtime/useLiveRows'
 import { extractApiError } from '@/core/utils/errors'
 import { usePrint } from '@/shared/print'
 import FilePreviewDialog from '@/core/components/FilePreviewDialog.vue'
@@ -109,19 +111,33 @@ function navigateToDetail(item: SourceItemResponse): void {
 const { filters, dateRangeFilters, search, showArchived, clearTrigger } = storeToRefs(filtersStore)
 const { sortBy, sortDir } = storeToRefs(viewStore)
 
+/** The table's filters without the page window, shared by the page fetch and the live refetch. */
+function listQuery() {
+  return {
+    ...(search.value ? { search: search.value } : {}),
+    ...toSourceItemFilterParams(filters.value),
+    ...toDateRangeFilterParams(dateRangeFilters.value),
+    ...(sortBy.value ? { order_by: sortBy.value, order_dir: sortDir.value } : {}),
+    ...(showArchived.value ? { include_archived: true } : {}),
+  }
+}
+
 const { first, rows, fetchItems, resetAndFetch, resetAndFetchDebounced, onPage, onFilter } =
   useServerTable({
-    fetchParams: ({ first, rows }) => ({
-      skip: first,
-      limit: rows,
-      ...(search.value ? { search: search.value } : {}),
-      ...toSourceItemFilterParams(filters.value),
-      ...toDateRangeFilterParams(dateRangeFilters.value),
-      ...(sortBy.value ? { order_by: sortBy.value, order_dir: sortDir.value } : {}),
-      ...(showArchived.value ? { include_archived: true } : {}),
-    }),
+    fetchParams: ({ first, rows }) => ({ skip: first, limit: rows, ...listQuery() }),
     fetch: (params) => sourceItemsStore.refresh(params),
   })
+
+// Items created or changed elsewhere, such as by another user, reach the open
+// table without a manual sync.
+const { items: sourceItems, total: sourceItemsTotal } = storeToRefs(sourceItemsStore)
+useLiveRows<SourceItemResponse>({
+  resource: LiveResource.SOURCE_ITEMS,
+  items: sourceItems,
+  total: sourceItemsTotal,
+  fetchByIds: async (ids) => (await sourceItemsApi.list({ ...listQuery(), ids })).items,
+  onFullRefresh: fetchItems,
+})
 
 const { getDateRangeModel, setDateRangeModel } = useKeyedDateRangeFilter(dateRangeFilters, onFilter)
 const { getFilterValue, setFilterValue } = useKeyedFilterMetaModel(filters, onFilter)

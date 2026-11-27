@@ -4,6 +4,7 @@ Manages the central article database: create, read, update, soft-delete.
 """
 
 from datetime import tzinfo
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi import Query
@@ -21,13 +22,13 @@ from src.modules.catalogue.adapters.inbound.api.deps.items import get_merge_boug
 from src.modules.catalogue.adapters.inbound.api.deps.items import get_restore_bought_item_use_case
 from src.modules.catalogue.adapters.inbound.api.deps.items import get_update_bought_item_use_case
 from src.modules.catalogue.adapters.inbound.api.schemas.bought_item_schema import (
-    BoughtItemFilterParams,
-)
-from src.modules.catalogue.adapters.inbound.api.schemas.bought_item_schema import (
     BoughtItemMergeTargetResponse,
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.bought_item_schema import (
     BoughtItemWebCreateRequest,
+)
+from src.modules.catalogue.adapters.inbound.api.schemas.bought_item_schema import (
+    BoughtItemWebFilterParams,
 )
 from src.modules.catalogue.adapters.inbound.api.schemas.bought_item_schema import (
     BoughtItemWebResponse,
@@ -73,7 +74,9 @@ router = APIRouter()
 
 @router.get("/", response_model=PageResponse[BoughtItemWebResponse])
 async def read_bought_items(
-    params: BoughtItemFilterParams = Depends(),
+    # A query-parameter model, not `Depends()`: only this binds `ids` from
+    # repeated query keys.
+    params: Annotated[BoughtItemWebFilterParams, Query()],
     actor: User = Depends(get_current_active_user),
     zone: tzinfo = Depends(get_tenant_zone),
     use_case: GetBoughtItems = Depends(get_bought_items_use_case),

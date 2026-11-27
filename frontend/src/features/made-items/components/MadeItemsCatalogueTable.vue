@@ -14,6 +14,8 @@ import {
 } from '@/core/constants/table'
 import { useServerTable } from '@/core/composables/useServerTable'
 import { watchLoadingBar } from '@/core/composables/useLoadingBar'
+import { LiveResource } from '@/core/realtime/resources'
+import { useLiveRows } from '@/core/realtime/useLiveRows'
 import { useLayoutStore } from '@/core/stores/layoutStore'
 import { useHostStore } from '@/core/host/stores/hostStore'
 import { getEmptyPlaceholder } from '@/core/utils/emptyValue'
@@ -29,6 +31,7 @@ import { useKeyedFilterMetaModel } from '@/shared/composables/useFilterMetaModel
 import { disabledItemTooltipPt } from '@/shared/utils/menuItemTooltip'
 import UserDateFilter from '@/shared/components/user/UserDateFilter.vue'
 
+import { getMadeItems } from '../api/getMadeItems'
 import { getMadeItemFileBlob } from '../api/madeItemFilesApi'
 import { useMadeItemsStore } from '../stores/madeItemsStore'
 import { useMadeItemsCatalogueEditStore } from '../stores/madeItemsCatalogueEditStore'
@@ -160,6 +163,17 @@ const { first, rows, fetchItems, resetAndFetch, resetAndFetchDebounced, onPage, 
     }),
     fetch: (params) => madeItemsStore.refresh(params),
   })
+
+// Items created or changed elsewhere, such as by a PDM ingestion or another
+// user, reach the open table without a manual sync.
+const { items: madeItems, total: madeItemsTotal } = storeToRefs(madeItemsStore)
+useLiveRows<MadeItemResponse>({
+  resource: LiveResource.MADE_ITEMS,
+  items: madeItems,
+  total: madeItemsTotal,
+  fetchByIds: async (ids) => (await getMadeItems({ ...listQuery(), ids })).items,
+  onFullRefresh: fetchItems,
+})
 
 const FIXED_COLUMN_WIDTHS: Record<string, string> = {
   id: TABLE_COL_WIDTH_ID,

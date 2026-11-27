@@ -14,6 +14,7 @@ from src.modules.catalogue.domain.entities.source_item import SourceItem
 class SourceItemFilterDto:
     skip: int | None = None
     limit: int | None = None
+    ids: list[int] | None = None  # live row-sync: refetch specific rows, ignore paging
     search: str | None = None
     id: int | None = None
     status: str | None = None

@@ -1,3 +1,4 @@
+import { LiveResource } from '@/core/realtime/resources'
 import { createFilesStore } from '@/core/stores/createFilesStore'
 
 import {
@@ -18,5 +19,6 @@ export const useSourceItemFilesStore = createFilesStore<SourceItemFile, SourceIt
     remove: deleteSourceItemFile,
     itemIdOf: (file) => file.source_item_id,
     singletonCategories: SINGLETON_FILE_CATEGORIES,
+    liveResource: LiveResource.SOURCE_ITEMS,
   },
 )

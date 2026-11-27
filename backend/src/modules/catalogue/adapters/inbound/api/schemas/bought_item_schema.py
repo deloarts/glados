@@ -218,6 +218,16 @@ class BoughtItemFilterParams(PageParams):
         return BoughtItemFilterDto(**expand_change_window(self.model_dump(), zone))
 
 
+class BoughtItemWebFilterParams(BoughtItemFilterParams):
+    """The web catalogue's list filter. It adds `ids`, with which live
+    row-sync refetches the rows a signal names, and stays off the `pat` list
+    so its frozen snapshot does not change. Bound as `Annotated[...,
+    Query()]`, since only that binds `ids` from repeated query keys, see the
+    note on DemandItemFilterParams in bought_item_demand_schema.py."""
+
+    ids: list[int] | None = Query(default=None, max_length=200)
+
+
 # ══════════════════════════════════════════════════════════════════════
 # DemandItem
 # ══════════════════════════════════════════════════════════════════════

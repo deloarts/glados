@@ -323,6 +323,11 @@ class SqlAlchemyMadeItemRepository:
             item_model = aliased(MadeItemOrmModel, ranked)
             q = select(item_model).where(or_(ranked.c.part_number.is_(None), ranked.c.rn == 1))
 
+        # Applied after the revision window, so a refetched old revision is
+        # ranked against its whole family and drops out as it does in the table.
+        if filters.ids:
+            q = q.where(item_model.id.in_(filters.ids))
+
         _sort_column_map = {
             "id": item_model.id,
             "article_name": item_model.article_name,
@@ -337,6 +342,7 @@ class SqlAlchemyMadeItemRepository:
             filters.limit,
             order_term(sort_col, filters.order_dir, default="desc"),
             options=item_load_options(item_model),
+            min_limit=len(filters.ids) if filters.ids else None,
         )
         rows: list[Any] = list(page)
         return total, [item_orm_to_entity(r) for r in rows]
